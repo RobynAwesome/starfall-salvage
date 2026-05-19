@@ -59,3 +59,4 @@
 - Final proof report: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`.
 - Current `origin/main` was merged into `codex/starfall-mobile-weapon-ecosystem` without reverting the movement fix. Merge proof passed `npm run vault:check`, `npm run gate`, `git diff --check`, and Chrome CDP movement proof.
 - Merged proof report: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`; keyboard, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag all moved `x=0 -> 2.2`, `targetLane=1`.
+- Branch and `main` were pushed to `eac68f9`; production proof passed on `https://starfallsalvage.kopanolabs.com` with live build `20260519-movement-control`: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json`, failures `[]`.

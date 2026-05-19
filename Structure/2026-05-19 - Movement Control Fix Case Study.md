@@ -30,6 +30,7 @@ Treat this as a control-path blocker. The game must prove numeric player movemen
 | Whitespace | `git diff --check` PASS |
 | Movement proof r3 | `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`, failures `[]` |
 | Merged browser proof r4 | `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]` |
+| Production browser proof r1 | `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json`, failures `[]` |
 | KC student audit | `npm run gate` PASS, 104/104 curriculum proofs across Lessons 001-018 |
 
 ## Movement Results
@@ -44,6 +45,7 @@ Treat this as a control-path blocker. The game must prove numeric player movemen
 | Merged desktop mouse drag | Drag moved player `x` from `0` to `2.2`, `targetLane=1`. |
 | Merged Redmi 393 touch drag | Touch drag moved player `x` from `0` to `2.2`, `targetLane=1`. |
 | Merged narrow 360 touch drag | Touch drag moved player `x` from `0` to `2.2`, `targetLane=1`. |
+| Production keyboard/mouse/touch | Live site served build `20260519-movement-control`; keyboard, mouse drag, Redmi touch, and narrow touch all moved `x=0 -> 2.2`, `targetLane=1`. |
 
 ## KC Teacher/Student Note
 
@@ -62,4 +64,4 @@ Teacher instruction: KC must reject any future "playable" claim unless movement 
 - Branch: `codex/starfall-mobile-weapon-ecosystem`.
 - Build marker: `20260519-movement-control`.
 - Current merged proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`.
-- Production remains unchanged until the branch is merged and redeployed.
+- Production was fast-forwarded to `eac68f9` and passed live movement proof.

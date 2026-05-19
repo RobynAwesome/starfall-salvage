@@ -17,7 +17,7 @@
 - Branch proof docs: this file now records the movement-control proof before final commit/push.
 - Remote branch tip: use `git log -1` / `git ls-remote` for hash truth after the merge-resolution commit; production still requires merge or fast-forward to `main`.
 - Manual PR URL: `https://github.com/Kopano-Labs/starfall-salvage/pull/new/codex/starfall-mobile-weapon-ecosystem`.
-- Production redeploy: pending merge to `main`.
+- Production redeploy: completed on 2026-05-19 after `main` fast-forwarded to `eac68f9`.
 
 - **Sovereign Identity (2026-05-16):** Implemented biologically-adaptive flight deck (XY/XX theme switching), device-bound cryptographic Sovereign ID generation, and premium 'Neural Scan' onboarding.
 - **Kinetic Gameplay (Turing Standard):** Added 'Temple Run' fluid lane shifting, 90° Yaw transitions, banking animations, and 'Neural Gate' procedural obstacles.
@@ -69,7 +69,7 @@
 ## Not Yet Proven
 
 - Physical Redmi 13 recapture after this branch merges and Vercel redeploys production.
-- Production has not received the movement-control fix until this branch is merged and redeployed.
+- Production has received the movement-control fix; live marker and runtime proof passed on 2026-05-19.
 - GitHub PR creation from this agent lane is blocked by invalid `gh` token / connector 403; branch push can continue.
 - MAIN-BRAIN path drift remains on WATCH: older registry path is `C:\Users\rkhol\Starfall Salvage`; expected current clone was `C:\Users\rkhol\OneDrive\Documents\Kopano Labs\starfall-salvage`; this run recovered `C:\Users\rkhol\.cursor\projects\empty-window\starfall-salvage`.
 - Kasi-Comm chat backend is **not deployed** on production — frontend gracefully shows "Lobby offline." Phase C of 2026-05-06 session adds mailto-based idea capture with bounty incentive.
@@ -96,6 +96,7 @@
 - `npm run gate` (`node --check` + `kc_starfall_watch.py --once --skip-backend`) passes on dev lane.
 - Merged-with-main browser movement proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`, keyboard/mouse/Redmi/narrow all moved `x=0 -> 2.2`, `targetLane=1`.
 - Merged-with-main KC gate passed: `npm run gate`, 104/104 curriculum proofs across Lessons 001-018.
+- Production movement proof passed after `main` fast-forward: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json`, failures `[]`, live build `20260519-movement-control`.
 - `node --check src\game.js` passed.
 - `python -m py_compile backend\starfall_server.py tools\kc_starfall_watch.py` passed.
 - Backend `/api/health`, `/api/signin`, `/api/score`, and `/api/leaderboard` passed locally against SQLite.
