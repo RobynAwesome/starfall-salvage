@@ -85,7 +85,7 @@
   }
 
   canvas.addEventListener("mousedown", (event) => {
-    if (isAccountModalOpen() || isGuestCtaModalOpen() || isTypingTarget(event.target)) {
+    if (isGameInputBlocked(event.target)) {
       return;
     }
     if (event.button !== 0) {
@@ -102,7 +102,11 @@
   window.addEventListener("mouseup", () => {
     mouseFireHeld = false;
   });
-  window.addEventListener("pointerdown", () => canvas.focus());
+  window.addEventListener("pointerdown", (event) => {
+    if (!isGameInputBlocked(event.target)) {
+      canvas.focus();
+    }
+  });
 
   function syncShellPlayState() {
     const playing = state.mode === "playing";
@@ -290,7 +294,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260515-orbital-wreck-lane";
+  const GAME_BUILD = "20260519-movement-control";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 8;
   const REVIVE_CORES_NEEDED = 3;
@@ -995,6 +999,10 @@
   const isTouchCapable = (typeof window !== "undefined") && (
     "ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
   );
+  const supportsPointerEvents = (typeof window !== "undefined") && "PointerEvent" in window;
+  let activePointerId = null;
+  let activePointerType = "";
+  let pointerStartedRun = false;
   let pilotProfile = loadPilotProfile();
   let wasPlayingBeforeHidden = false;
   let contextLost = false;
@@ -1046,9 +1054,18 @@
     keys.delete(event.key.toLowerCase());
   });
 
-  function applyTouchVector(touch) {
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
+  function beginSteerInput(clientX, clientY) {
+    touchStartX = clientX;
+    touchStartY = clientY;
+    touchStartTime = performance.now();
+    touchMaxTravel = 0;
+    touchAxis.x = 0;
+    touchAxis.y = 0;
+  }
+
+  function applySteerVector(clientX, clientY) {
+    const dx = clientX - touchStartX;
+    const dy = clientY - touchStartY;
     const dist = Math.hypot(dx, dy);
     if (dist > touchMaxTravel) {
       touchMaxTravel = dist;
@@ -1065,10 +1082,22 @@
     touchAxis.y = -(dy / dist) * magnitude;
   }
 
+  function applyTouchVector(touch) {
+    applySteerVector(touch.clientX, touch.clientY);
+  }
+
   function clearTouchAxis() {
     touchAxis.x = 0;
     touchAxis.y = 0;
     activeTouchId = null;
+  }
+
+  function clearPointerSteer() {
+    touchAxis.x = 0;
+    touchAxis.y = 0;
+    activePointerId = null;
+    activePointerType = "";
+    pointerStartedRun = false;
   }
 
   function isOnboardingDone() {
@@ -1172,9 +1201,70 @@
 
   refreshOpsConsoleVisibility();
 
-  if (canvas && isTouchCapable && !mobileLockdownActive) {
+  if (hud.shell && supportsPointerEvents && !mobileLockdownActive) {
+    hud.shell.addEventListener("pointerdown", (event) => {
+      if (isGameInputBlocked(event.target) || activePointerId !== null) {
+        return;
+      }
+      if (event.pointerType === "mouse" && event.button !== 0) {
+        return;
+      }
+      event.preventDefault();
+      activePointerId = event.pointerId;
+      activePointerType = event.pointerType || "pointer";
+      pointerStartedRun = state.mode !== "playing";
+      beginSteerInput(event.clientX, event.clientY);
+      canvas.focus();
+      if (state.mode === "ready" || state.mode === "gameover") {
+        startGame();
+      }
+      if (typeof hud.shell.setPointerCapture === "function") {
+        try {
+          hud.shell.setPointerCapture(event.pointerId);
+        } catch {
+          /* pointer capture can fail if the browser already released it */
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener("pointermove", (event) => {
+      if (activePointerId === null || event.pointerId !== activePointerId) {
+        return;
+      }
+      event.preventDefault();
+      applySteerVector(event.clientX, event.clientY);
+    }, { passive: false });
+
+    const finishPointerSteer = (event) => {
+      if (activePointerId === null || event.pointerId !== activePointerId) {
+        return;
+      }
+      const elapsed = performance.now() - touchStartTime;
+      const wasTap = elapsed <= TOUCH_TAP_MAX_MS && touchMaxTravel <= TOUCH_TAP_MAX_PX;
+      if (wasTap && !pointerStartedRun && activePointerType !== "mouse") {
+        if (state.mode !== "playing") {
+          startGame();
+        } else {
+          dashRequested = true;
+          logEvent("touch_dash", { source: "pointer", type: activePointerType });
+        }
+      }
+      if (typeof hud.shell.releasePointerCapture === "function") {
+        try {
+          hud.shell.releasePointerCapture(activePointerId);
+        } catch {
+          /* pointer capture may already be gone */
+        }
+      }
+      clearPointerSteer();
+    };
+    window.addEventListener("pointerup", finishPointerSteer, { passive: true });
+    window.addEventListener("pointercancel", () => clearPointerSteer(), { passive: true });
+  }
+
+  if (canvas && isTouchCapable && !mobileLockdownActive && !supportsPointerEvents) {
     canvas.addEventListener("touchstart", (event) => {
-      if (isAccountModalOpen() || isGuestCtaModalOpen() || isTypingTarget(event.target)) {
+      if (isGameInputBlocked(event.target)) {
         return;
       }
       if (activeTouchId !== null) {
@@ -1186,12 +1276,7 @@
       }
       event.preventDefault();
       activeTouchId = touch.identifier;
-      touchStartX = touch.clientX;
-      touchStartY = touch.clientY;
-      touchStartTime = performance.now();
-      touchMaxTravel = 0;
-      touchAxis.x = 0;
-      touchAxis.y = 0;
+      beginSteerInput(touch.clientX, touch.clientY);
     }, { passive: false });
 
     canvas.addEventListener("touchmove", (event) => {
@@ -1404,6 +1489,46 @@
     createStarLayer(isTouchCapable ? 18 : 32, 8, 58, 0.92, 0.075, 0.19, 0.95)
   ];
   const salvageDressing = Array.from({ length: isTouchCapable ? 18 : 28 }, (_, index) => createSalvageDressing(index));
+
+  function readDebugState() {
+    const bounds = getPlayerBounds();
+    return {
+      build: GAME_BUILD,
+      mode: state.mode,
+      player: {
+        x: Number(player.x.toFixed(4)),
+        y: Number(player.y.toFixed(4)),
+        vx: Number(player.vx.toFixed(4)),
+        vy: Number(player.vy.toFixed(4)),
+        dash: Number(player.dash.toFixed(4))
+      },
+      input: {
+        keys: Array.from(keys),
+        touchAxis: {
+          x: Number(touchAxis.x.toFixed(4)),
+          y: Number(touchAxis.y.toFixed(4))
+        },
+        activeTouchId,
+        activePointerId,
+        activePointerType,
+        fireHeld,
+        mouseFireHeld
+      },
+      camera: {
+        roll: Number(state.cameraRoll.toFixed(4)),
+        swayX: Number(state.cameraSwayX.toFixed(4)),
+        swayY: Number(state.cameraSwayY.toFixed(4)),
+        follow: getCameraFollow()
+      },
+      bounds,
+      touchCapable: Boolean(isTouchCapable),
+      pointerEvents: Boolean(supportsPointerEvents)
+    };
+  }
+
+  if (DIAG_ENABLED && typeof window !== "undefined") {
+    window.__starfallDebug = readDebugState;
+  }
 
   function getPlayerBounds() {
     const base = (SIM.lanes && SIM.lanes.playerBounds) || SIM_LAW_DEFAULT.lanes.playerBounds;
@@ -1710,7 +1835,7 @@
     }
     updateHud();
     syncShellPlayState();
-    setStatus("Ready", "One flight deck on every device. Fire with F, canvas, or FIRE.", false);
+    setStatus("Ready", "One flight deck on every device. Drag anywhere on the flight deck or use WASD. Fire with F, canvas, or FIRE.", false);
   }
 
   function startGame() {
@@ -1759,12 +1884,34 @@
     return Boolean(hud.guestCtaModal && !hud.guestCtaModal.classList.contains("is-hidden"));
   }
 
+  function isOnboardingModalOpen() {
+    return Boolean(hud.onboardingModal && !hud.onboardingModal.classList.contains("is-hidden"));
+  }
+
   function isTypingTarget(target) {
     if (!target || !(target instanceof HTMLElement)) {
       return false;
     }
     const tag = target.tagName.toLowerCase();
     return tag === "input" || tag === "textarea" || target.isContentEditable;
+  }
+
+  function isInteractiveControlTarget(target) {
+    if (!target || !(target instanceof HTMLElement)) {
+      return false;
+    }
+    return Boolean(target.closest("button, a, input, textarea, select, label, [role='button']"));
+  }
+
+  function isGameInputBlocked(target) {
+    return (
+      mobileLockdownActive ||
+      isOnboardingModalOpen() ||
+      isAccountModalOpen() ||
+      isGuestCtaModalOpen() ||
+      isTypingTarget(target) ||
+      isInteractiveControlTarget(target)
+    );
   }
 
   function defaultPilotProfile() {

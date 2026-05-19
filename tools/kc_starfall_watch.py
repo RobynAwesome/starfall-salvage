@@ -107,6 +107,10 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     orbital_case_study = _read_text(
         "Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md"
     )
+    movement_case_study = _read_text(
+        "Structure/2026-05-19 - Movement Control Fix Case Study.md"
+    )
+    current_build = "20260519-movement-control"
 
     proofs = {
         # Lesson 001 — Kopano Labs Upgrade
@@ -193,7 +197,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "mobile_fire_button_handler": "mobileFireButton" in game_js
         and "spawnPlayerBullet()" in game_js,
         # Lesson 013 — Orbital Wreck Lane Visual Identity
-        "orbital_build_marker": "20260515-orbital-wreck-lane" in game_js,
+        "orbital_build_marker": "20260515-orbital-wreck-lane" in orbital_case_study,
         "camera_bank_state": "cameraRoll" in game_js and "BANK_MAX" in game_js,
         "corridor_pose_transform": "corridorPose" in game_js
         and "corridorPoint" in game_js,
@@ -202,10 +206,20 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         and "planetTexture" in game_js,
         "salvage_dressing_world": "salvageDressing" in game_js
         and "renderSalvageDressing" in game_js,
-        "cache_bust_aligned": "20260515-orbital-wreck-lane" in index_html,
-        "pwa_boot_aligned": "20260515-orbital-wreck-lane" in pwa_boot_js,
-        "pwa_cache_aligned": "20260515-orbital-wreck-lane" in service_worker_js,
+        "cache_bust_aligned": current_build in index_html,
+        "pwa_boot_aligned": current_build in pwa_boot_js,
+        "pwa_cache_aligned": current_build in service_worker_js,
         "visual_slice_case_study": "Save / Kill / Watch" in orbital_case_study,
+        # Lesson 014 — Movement Control Unstuck
+        "movement_build_marker": current_build in game_js,
+        "pointer_steer_support": "supportsPointerEvents" in game_js
+        and 'hud.shell.addEventListener("pointerdown"' in game_js,
+        "flight_deck_drag_copy": "Drag anywhere on the flight deck" in game_js
+        and "Drag the flight deck" in index_html,
+        "debug_movement_probe": "__starfallDebug" in game_js,
+        "pointer_focus_guard": 'window.addEventListener("pointerdown", (event)' in game_js
+        and "!isGameInputBlocked(event.target)" in game_js,
+        "movement_case_study": "Save / Kill / Watch" in movement_case_study,
     }
     missing = [name for name, ok in proofs.items() if not ok]
     return {

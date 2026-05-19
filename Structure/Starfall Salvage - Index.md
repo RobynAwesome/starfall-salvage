@@ -20,7 +20,7 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - Historical expected clone: `C:\Users\rkhol\OneDrive\Documents\Kopano Labs\starfall-salvage` (missing in the resumed environment; WATCH until path drift is reconciled)
 - Historical registry clone: `C:\Users\rkhol\Starfall Salvage` (WATCH until MAIN-BRAIN path drift is fully reconciled)
 - GitHub repo: `https://github.com/Kopano-Labs/starfall-salvage`
-- Local static proof URL: `http://127.0.0.1:5178/`
+- Local static proof URL: `http://127.0.0.1:5180/`
 - Local backend proof URL: `http://127.0.0.1:8765/` (optional Python backend lane)
 - Live public URL: `https://starfallsalvage.kopanolabs.com` (Vercel Hobby + IONOS CNAME; production updates after merge to `main`).
 - Main Brain root: `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics`
@@ -31,7 +31,7 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - The game is live on the public Kopano Labs GitHub repo (public 2026-05-06 per Sovereign Tech / CONTRIBUTING.md doctrine).
 - The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; branch `codex/starfall-mobile-weapon-ecosystem` is pushed for review before production redeploy.
 - The older mobile-lockdown notes are historical context, not the current branch truth. Current work unifies PC, Android, Xiaomi, and Apple browser gameplay under one ruleset and adapts only presentation density, safe-area, and touch affordances.
-- Build `20260515-orbital-wreck-lane` is the current branch visual truth. It preserves the unified PC/mobile ruleset and comfort patch, then adds the first orbital wreck lane slice: parallax space, planet/nebula backdrop, salvage dressing, corridor deck identity, and camera banking/drift.
+- Build `20260519-movement-control` is the current branch truth. It preserves the orbital wreck lane visual slice and fixes the control path so keyboard, desktop mouse drag, Redmi touch drag, and narrow mobile touch drag move the player under one ruleset.
 - Root node alignment: 5 Pillars, 15 Commandments, CRUD-only mandate, 80% Optimal Threshold, Asymmetric Edge Reality, Testimony Delta.
 - Thesis alignment: Starfall demonstrates Pillar 5 (Expansion) — raw WebGL under township constraints proves Commandment 9 (Offline-First Mandate) and the AER test.
 - KC is wired as a strict local QA/dev lane through documentation, context-store entries, `tools/kc_starfall_watch.py` (sub-brain proofs), and `tools/kc_main_brain_scan.py` (main-brain alignment).
@@ -62,3 +62,5 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - Comfort speed proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260515-comfort-speed-r1\report.json` with failures `[]`.
 - `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` - visual-identity proof for the first space salvage runner slice.
 - Orbital wreck lane browser proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260518-orbital-wreck-r3\report.json` with failures `[]`.
+- `Structure/2026-05-19 - Movement Control Fix Case Study.md` - field-report proof for static/no-movement control failure.
+- Movement proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json` with failures `[]`.

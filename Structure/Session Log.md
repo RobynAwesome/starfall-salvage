@@ -44,3 +44,11 @@
 - Responsive browser proof passed across Redmi 393x873, narrow 360x800, and desktop 1280x720: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260518-orbital-wreck-r3\report.json`, failures `[]`.
 - KC teacher/student lane updated to audit visual identity via screenshot proof, not only syntax and DOM proof strings.
 - KC watcher patched for Lesson 013 and passed with `kc_context_id=kc-39`, 69/69 proofs.
+
+## 2026-05-19
+
+- Field report: "THE GAME IS STATIC PLAYERS CAN'T GET TO THE GAME BECAUSE THEY CAN'T MOVE."
+- Movement control fix applied on `codex/starfall-mobile-weapon-ecosystem`: unified pointer steering now starts from the flight deck, desktop mouse drag moves the ship, mobile touch drag works beyond canvas-only assumptions, and UI controls keep their own focus.
+- Cache/build markers bumped to `20260519-movement-control` to kill stale service-worker assets.
+- Browser movement proof passed: keyboard arrow-right, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag all moved player state numerically with failures `[]`.
+- Final proof report: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`.

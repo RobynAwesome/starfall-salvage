@@ -6,7 +6,7 @@
 
 ## Last Updated
 
-2026-05-18
+2026-05-19
 
 ## Current Branch Proof
 
@@ -14,8 +14,8 @@
 - Expected OneDrive clone `C:\Users\rkhol\OneDrive\Documents\Kopano Labs\starfall-salvage` was missing in the resumed environment; path drift stays on WATCH.
 - Branch: `codex/starfall-mobile-weapon-ecosystem`.
 - Code commit: do not trust stale static hashes here; use `git log -1` on the active clone for branch tip truth.
-- Branch proof docs: this file now records the orbital wreck lane proof before final commit/push.
-- Remote push: pending for the 2026-05-18 orbital wreck lane slice.
+- Branch proof docs: this file now records the movement-control proof before final commit/push.
+- Remote branch tip: use `git log -1` / `git ls-remote` for hash truth; production still requires merge to `main`.
 - Manual PR URL: `https://github.com/Kopano-Labs/starfall-salvage/pull/new/codex/starfall-mobile-weapon-ecosystem`.
 - Production redeploy: pending merge to `main`.
 
@@ -66,9 +66,18 @@
 - Camera banking, sway, corridor drift, and shared corridor transforms create motion through a world without forking PC/mobile gameplay.
 - This is not declared industry-competitive yet; it is a stronger visual slice with proof artifacts.
 
+## Movement Control Fix (2026-05-19)
+
+- Field report said the game was static and players could not move.
+- Unified pointer steering now starts from the flight deck, so desktop mouse drag and mobile touch drag both move the ship.
+- Keyboard movement remains active through WASD/arrow keys.
+- UI controls and text inputs are guarded from the global canvas focus handler.
+- Build/cache marker is `20260519-movement-control` so stale service-worker assets cannot keep serving the broken input path.
+
 ## Not Yet Proven
 
 - Physical Redmi 13 recapture after this branch merges and Vercel redeploys production.
+- Production has not received the movement-control fix until this branch is merged and redeployed.
 - GitHub PR creation from this agent lane is blocked by invalid `gh` token / connector 403; branch push succeeded.
 - MAIN-BRAIN path drift remains on WATCH: older registry path is `C:\Users\rkhol\Starfall Salvage`; expected current clone was `C:\Users\rkhol\OneDrive\Documents\Kopano Labs\starfall-salvage`; this run recovered `C:\Users\rkhol\.cursor\projects\empty-window\starfall-salvage`.
 - Kasi-Comm chat backend is **not deployed** on production — frontend gracefully shows "Lobby offline." Phase C of 2026-05-06 session adds mailto-based idea capture with bounty incentive.
@@ -90,6 +99,8 @@
 - Comfort speed proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260515-comfort-speed-r1\report.json`.
 - Orbital wreck lane responsive proof passed across Redmi 393x873, narrow 360x800, and desktop 1280x720: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260518-orbital-wreck-r3\report.json`, failures `[]`.
 - KC student audit passed after Lesson 013 watcher wiring: `python tools\kc_starfall_watch.py --once --seed-kc`, `kc_context_id=kc-39`, 69/69 curriculum proofs.
+- Movement proof passed across keyboard, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`, failures `[]`.
+- KC student audit passed after Lesson 014 movement wiring: `python tools\kc_starfall_watch.py --once --seed-kc`, `kc_context_id=kc-41`, 75/75 curriculum proofs.
 - `node --check src\game.js` passed.
 - `python -m py_compile backend\starfall_server.py tools\kc_starfall_watch.py` passed.
 - Backend `/api/health`, `/api/signin`, `/api/score`, and `/api/leaderboard` passed locally against SQLite.

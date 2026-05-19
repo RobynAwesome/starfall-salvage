@@ -1,6 +1,6 @@
 import { KopanoVault } from "./kopano-vault.js";
 
-const BUILD = "20260515-orbital-wreck-lane";
+const BUILD = "20260519-movement-control";
 
 window.__kopanoVault = null;
 window.__kopanoVaultReady = KopanoVault.open()

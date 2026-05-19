@@ -314,15 +314,15 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 | # | Proof Key | File | Search String |
 |---|-----------|------|---------------|
-| 60 | `orbital_build_marker` | `src/game.js` | `20260515-orbital-wreck-lane` |
+| 60 | `orbital_build_marker` | `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` | `20260515-orbital-wreck-lane` |
 | 61 | `camera_bank_state` | `src/game.js` | `cameraRoll` AND `BANK_MAX` |
 | 62 | `corridor_pose_transform` | `src/game.js` | `corridorPose` AND `corridorPoint` |
 | 63 | `parallax_star_layers` | `src/game.js` | `starLayers` AND `createStarLayer` |
 | 64 | `planet_nebula_backdrop` | `src/game.js` | `nebulaTexture` AND `planetTexture` |
 | 65 | `salvage_dressing_world` | `src/game.js` | `salvageDressing` AND `renderSalvageDressing` |
-| 66 | `cache_bust_aligned` | `index.html` | `20260515-orbital-wreck-lane` |
-| 67 | `pwa_boot_aligned` | `src/pwa-boot.js` | `20260515-orbital-wreck-lane` |
-| 68 | `pwa_cache_aligned` | `service-worker.js` | `20260515-orbital-wreck-lane` |
+| 66 | `cache_bust_aligned` | `index.html` | current build marker |
+| 67 | `pwa_boot_aligned` | `src/pwa-boot.js` | current build marker |
+| 68 | `pwa_cache_aligned` | `service-worker.js` | current build marker |
 | 69 | `visual_slice_case_study` | `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` | `Save / Kill / Watch` |
 
 ### Acceptance Criteria
@@ -332,6 +332,35 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 - `git diff --check` passes.
 - Browser proof report passes with failures `[]` for Redmi 393x873, narrow 360x800, and desktop 1280x720.
 - Screenshot must show space, salvage, lane identity, danger, and readable mobile playfield. If it still looks like a flat tunnel, KC refuses the pass.
+
+---
+
+## Lesson 014: Movement Control Unstuck (2026-05-19)
+
+**Why:** Field report said the game felt static and players could not get to movement. The UI promised drag-to-move, but pointer/mouse drag was not steering the ship and mobile touch was too dependent on starting exactly on the canvas.
+
+**Spec:** Keep one PC/mobile ruleset. Add unified pointer steering on the flight deck, preserve keyboard and FIRE controls, prevent UI controls from losing focus to the canvas, and bump the cache/build marker so stale service-worker assets cannot keep serving the broken control path.
+
+**Files in scope:** `src/game.js`, `index.html`, `src/pwa-boot.js`, `service-worker.js`, `tools/kc_starfall_watch.py`, `Structure/2026-05-19 - Movement Control Fix Case Study.md`.
+
+### Required Proofs (Lesson 014)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 70 | `movement_build_marker` | `src/game.js` | `20260519-movement-control` |
+| 71 | `pointer_steer_support` | `src/game.js` | `supportsPointerEvents` AND `hud.shell.addEventListener("pointerdown"` |
+| 72 | `flight_deck_drag_copy` | `src/game.js`, `index.html` | `Drag anywhere on the flight deck` AND `Drag the flight deck` |
+| 73 | `debug_movement_probe` | `src/game.js` | `__starfallDebug` |
+| 74 | `pointer_focus_guard` | `src/game.js` | `window.addEventListener("pointerdown", (event)` AND `!isGameInputBlocked(event.target)` |
+| 75 | `movement_case_study` | `Structure/2026-05-19 - Movement Control Fix Case Study.md` | `Save / Kill / Watch` |
+
+### Acceptance Criteria
+
+- `node --check .\src\game.js` passes.
+- `npm run vault:check` passes.
+- `git diff --check` passes.
+- Browser movement proof passes keyboard, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag with failures `[]`.
+- Proof must include numeric player movement, not only screenshots.
 
 ---
 
