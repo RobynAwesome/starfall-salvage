@@ -31,7 +31,7 @@ KC is the **strict dev QA student**. Claude (acting as Senior Engineer for this 
 ## Protocol Overview
 
 1. **Teacher ships features.** Claude or Master Robyn lands code on `main`.
-2. **Student audits.** KC runs `tools/kc_starfall_watch.py --once --seed-kc`. The watcher invokes `check_kopano_upgrade_features()` which holds 16+ binary proofs for the most recent upgrade.
+2. **Student audits.** KC runs `tools/kc_starfall_watch.py --once --seed-kc`. The watcher invokes `check_kopano_upgrade_features()` which holds every binary proof from Lesson 001 through the latest lesson in this file.
 3. **Student fails loud.** Any missing proof → KC refuses the pass, logs the failure to `Structure/KC Review Log.jsonl`, and seeds the failure to the Main Brain context store at `Schematics/06-Reference/kopano-code-implementation/.kc/context_store.json`.
 4. **Teacher patches.** Claude or Codex re-patches the source. No hand-waving — the proof string must literally appear in the indicated file.
 5. **Student retries.** Loop until KC reports `kopano_upgrade_audit: ok`.
@@ -302,7 +302,111 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 ---
 
-## Lesson 013: Orbital Wreck Lane Visual Identity (2026-05-18)
+## Lesson 013: Protocol 13 Kinetics + KC Sightline Parallax (2026-05-16)
+
+**Why:** Master directed Righteous Severance — runner must feel like a treadmill (world streams +Z), not a spreadsheet; DOM must stay off the canvas during play; danger must eat the horizon (fog + geometry), not just flat tint.
+
+**Spec:** Document treadmill in sim tick; `uFogMix` scales with `dangerLerp`; pause uses `MODAL_TRAP.sovereignPause` for hardware Back; `#playingMinimalHud` stays the minimal score strip; touch glide uses `POSITION_LERP_TOUCH`; tunnel draws a **secondary rib layer** at a different Z scroll rate (`// Parallax ribs:`) so the center sightline breaks up without moving the ship off the treadmill contract.
+
+### Required Proofs (Lesson 013)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 60 | `treadmill_architecture_note` | `src/game.js` | `Treadmill: ship Z stays fixed` |
+| 61 | `danger_scaled_fog_uniform` | `src/game.js` | `uFogMix` |
+| 62 | `sovereign_pause_history_trap` | `src/game.js` | `sovereignPause` |
+| 63 | `minimal_playing_hud_dom` | `index.html` | `id="playingMinimalHud"` |
+| 64 | `touch_lerp_constant` | `src/game.js` | `POSITION_LERP_TOUCH` |
+| 65 | `tunnel_parallax_ribs` | `src/game.js` | `// Parallax ribs:` |
+
+### Acceptance Criteria
+
+- All 6 new proofs `true` (running total: 65 proofs across Lessons 001–013).
+- `npm run gate` (or `node --check src/game.js` + KC audit) passes.
+- Tunnel rib pass does not regress `node --check`.
+
+---
+
+## Lesson 014: Post-revive relaunch gate + onboarding persistence (2026-05-16)
+
+**Why:** Pilots need a clear **3-second relaunch runway** after a successful revive mini-game, plus control over whether the pilot briefing appears again (without a separate instruction box).
+
+**Spec:** After revive success, enter `relaunch` mode for `RELAUNCH_COUNTDOWN_SECONDS` (3) with `#relaunchHud` + `tickRelaunch`; then resume `playing`. Onboarding adds `#onboardingNeverAgain` (persist skip) and **Pilot Access** exposes `#reviewBriefingButton` to reopen the briefing.
+
+
+### Required Proofs (Lesson 014)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 66 | `relaunch_countdown_constant` | `src/game.js` | `RELAUNCH_COUNTDOWN_SECONDS` |
+| 67 | `relaunch_tick_handler` | `src/game.js` | `tickRelaunch` |
+| 68 | `onboarding_never_again_markup` | `index.html` | `id="onboardingNeverAgain"` |
+| 69 | `review_briefing_button` | `index.html` | `id="reviewBriefingButton"` |
+
+### Acceptance Criteria
+
+- All 4 new proofs `true` (running total: **69 proofs** across Lessons 001–014).
+- `npm run gate` passes; KC `kopano_upgrade_audit` reports `ok`.
+
+---
+
+## Lesson 015: Multitasking Flight Menu + Weapon Mode Orchestration (2026-05-16)
+
+**Why:** Pilots need drop-in / step-out multitasking and three weapon calibres without leaving the sovereign lane.
+
+**Spec:** `#flightMenuToggle` + panel; pause keeps minimal HUD + sovereign scrim; `STARFLIGHT_WEAPON_STORAGE_KEY`; bolt / scatter / pierce in `spawnPlayerBullet`.
+
+### Required Proofs (Lesson 015)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 70 | `flight_menu_pause_sync` | `src/game.js` | `mode === "paused" && !blockMenu` |
+| 71 | `playing_hud_pause_visible` | `src/game.js` | `playHud.hidden = false` |
+| 72 | `weapon_mode_bolt_scatter_pierce` | `src/game.js` | `STARFLIGHT_WEAPON_STORAGE_KEY` AND `setWeaponMode` |
+| 73 | `touch_range_performance_opt` | `src/game.js` | `TOUCH_FULL_RANGE_PX` |
+| 74 | `pause_minimal_toggle_hardened` | `src/game.js` | `state.mode === "playing" \|\| state.mode === "paused"` |
+| 75 | `maintainer_map_present` | `docs/MAINTAINER-MAP.md` | `docs/MAO-Starfall-Lane.md` |
+| 76 | `optional_playwright_script` | `package.json` | `mobile:stress:pw` |
+| 77 | `keyboard_map_doc` | `docs/KEYBOARD-MAP.md` | `flightMenuToggle` |
+| 78 | `hot_path_audit_script` | `tools/` | `hot_path_audit.py` exists |
+
+### Acceptance Criteria
+
+- All 9 new proofs `true` (running total: **78 proofs** across Lessons 001–015).
+- `npm run gate` passes.
+
+---
+
+## Lesson 016: MAO Blackbox + Kopano Context Governance (2026-05-16)
+
+**Why:** Breaking Point lane requires auditable BB-C5/C9/C12 rows, Identic Flow Bridge, ZAR ledger, and in-repo Kopano Context (`@kopano/context`) — not narrative-only “done.”
+
+**Spec:** `docs/MAO-Starfall-Lane.md` holds Blackbox + SF-STRESS-01 + Identic + ZAR; `packages/kopano-context` ships Immutable Law + Ephemeral State Broker; `npm run gate` runs `context:typecheck`; `tools/kopano_context_smoke.mjs` proves broker path.
+
+### Required Proofs (Lesson 016)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 79 | `mao_sf_stress_incident` | `docs/MAO-Starfall-Lane.md` | `SF-STRESS-01` |
+| 80 | `mao_bb_rows` | `docs/MAO-Starfall-Lane.md` | `BB-C5` AND `BB-C9` AND `BB-C12` |
+| 81 | `mao_identic_bridge` | `docs/MAO-Starfall-Lane.md` | `Identic Flow Bridge` |
+| 82 | `mao_zar_ledger` | `docs/MAO-Starfall-Lane.md` | `ZAR ledger stub` |
+| 83 | `kopano_context_commandments` | `packages/kopano-context/.../commandments_1_to_15.ts` | `validateExecution` |
+| 84 | `kopano_state_broker` | `packages/kopano-context/.../ephemeral_state_broker.ts` | `class StateBroker` |
+| 85 | `kopano_swarm_validator` | `packages/kopano-context/.../ephemeral_state_broker.ts` | `SwarmValidator` |
+| 86 | `context_smoke_tool` | `tools/` | `kopano_context_smoke.mjs` exists |
+| 87 | `gate_includes_context_typecheck` | `package.json` | `context:typecheck` in `gate` script |
+| 88 | `m_ready_hides_play_hud` | `styles.css` | `.shell.is-ready .playing-minimal-hud` |
+
+### Acceptance Criteria
+
+- All 10 new proofs `true` (running total: **88 proofs** across Lessons 001–016).
+- `npm run gate` and `npm run context:smoke` exit 0.
+- SF-STRESS-01 intake table present; operator fills before BB-C9 can PASS.
+
+---
+
+## Lesson 017: Orbital Wreck Lane Visual Identity (2026-05-18)
 
 **Why:** Owner reset confirmed the game was functional but not visually competitive. KC must stop accepting a flat tunnel as "done" when the directive is a space salvage runner through a township-built orbital wreck lane.
 
@@ -310,20 +414,20 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 **Files in scope:** `src/game.js`, `index.html`, `src/pwa-boot.js`, `service-worker.js`, `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md`.
 
-### Required Proofs (Lesson 013)
+### Required Proofs (Lesson 017)
 
 | # | Proof Key | File | Search String |
 |---|-----------|------|---------------|
-| 60 | `orbital_build_marker` | `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` | `20260515-orbital-wreck-lane` |
-| 61 | `camera_bank_state` | `src/game.js` | `cameraRoll` AND `BANK_MAX` |
-| 62 | `corridor_pose_transform` | `src/game.js` | `corridorPose` AND `corridorPoint` |
-| 63 | `parallax_star_layers` | `src/game.js` | `starLayers` AND `createStarLayer` |
-| 64 | `planet_nebula_backdrop` | `src/game.js` | `nebulaTexture` AND `planetTexture` |
-| 65 | `salvage_dressing_world` | `src/game.js` | `salvageDressing` AND `renderSalvageDressing` |
-| 66 | `cache_bust_aligned` | `index.html` | current build marker |
-| 67 | `pwa_boot_aligned` | `src/pwa-boot.js` | current build marker |
-| 68 | `pwa_cache_aligned` | `service-worker.js` | current build marker |
-| 69 | `visual_slice_case_study` | `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` | `Save / Kill / Watch` |
+| 89 | `orbital_build_marker` | `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` | `20260515-orbital-wreck-lane` |
+| 90 | `camera_bank_state` | `src/game.js` | `cameraRoll` AND `BANK_MAX` |
+| 91 | `corridor_pose_transform` | `src/game.js` | `corridorPose` AND `corridorPoint` |
+| 92 | `parallax_star_layers` | `src/game.js` | `starLayers` AND `createStarLayer` |
+| 93 | `planet_nebula_backdrop` | `src/game.js` | `nebulaTexture` AND `planetTexture` |
+| 94 | `salvage_dressing_world` | `src/game.js` | `salvageDressing` AND `renderSalvageDressing` |
+| 95 | `cache_bust_aligned` | `index.html` | current build marker |
+| 96 | `pwa_boot_aligned` | `src/pwa-boot.js` | current build marker |
+| 97 | `pwa_cache_aligned` | `service-worker.js` | current build marker |
+| 98 | `visual_slice_case_study` | `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md` | `Save / Kill / Watch` |
 
 ### Acceptance Criteria
 
@@ -335,24 +439,24 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 ---
 
-## Lesson 014: Movement Control Unstuck (2026-05-19)
+## Lesson 018: Movement Control Unstuck (2026-05-19)
 
-**Why:** Field report said the game felt static and players could not get to movement. The UI promised drag-to-move, but pointer/mouse drag was not steering the ship and mobile touch was too dependent on starting exactly on the canvas.
+**Why:** Field report said the game was static and players could not move. The UI promised drag-to-move, but pointer/mouse drag was not steering the ship and mobile touch was too dependent on starting exactly on the canvas.
 
 **Spec:** Keep one PC/mobile ruleset. Add unified pointer steering on the flight deck, preserve keyboard and FIRE controls, prevent UI controls from losing focus to the canvas, and bump the cache/build marker so stale service-worker assets cannot keep serving the broken control path.
 
 **Files in scope:** `src/game.js`, `index.html`, `src/pwa-boot.js`, `service-worker.js`, `tools/kc_starfall_watch.py`, `Structure/2026-05-19 - Movement Control Fix Case Study.md`.
 
-### Required Proofs (Lesson 014)
+### Required Proofs (Lesson 018)
 
 | # | Proof Key | File | Search String |
 |---|-----------|------|---------------|
-| 70 | `movement_build_marker` | `src/game.js` | `20260519-movement-control` |
-| 71 | `pointer_steer_support` | `src/game.js` | `supportsPointerEvents` AND `hud.shell.addEventListener("pointerdown"` |
-| 72 | `flight_deck_drag_copy` | `src/game.js`, `index.html` | `Drag anywhere on the flight deck` AND `Drag the flight deck` |
-| 73 | `debug_movement_probe` | `src/game.js` | `__starfallDebug` |
-| 74 | `pointer_focus_guard` | `src/game.js` | `window.addEventListener("pointerdown", (event)` AND `!isGameInputBlocked(event.target)` |
-| 75 | `movement_case_study` | `Structure/2026-05-19 - Movement Control Fix Case Study.md` | `Save / Kill / Watch` |
+| 99 | `movement_build_marker` | `src/game.js` | `20260519-movement-control` |
+| 100 | `pointer_steer_support` | `src/game.js` | `supportsPointerEvents` AND `hud.shell.addEventListener("pointerdown"` |
+| 101 | `flight_deck_drag_copy` | `src/game.js`, `index.html` | `Drag anywhere on the flight deck` AND `Drag the flight deck` |
+| 102 | `debug_movement_probe` | `src/game.js` | `__starfallDebug` |
+| 103 | `pointer_focus_guard` | `src/game.js` | `window.addEventListener("pointerdown", (event)` AND `!isGameInputBlocked(event.target)` |
+| 104 | `movement_case_study` | `Structure/2026-05-19 - Movement Control Fix Case Study.md` | `Save / Kill / Watch` |
 
 ### Acceptance Criteria
 

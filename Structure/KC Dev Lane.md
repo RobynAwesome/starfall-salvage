@@ -30,9 +30,20 @@ Current KC wiring is local and file-backed. It uses:
 
 - `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics\06-Reference\kopano-code-implementation\src\kc_mcp.py`
 - `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics\06-Reference\kopano-code-implementation\.kc\context_store.json`
-- `C:\Users\rkhol\Starfall Salvage\tools\kc_starfall_watch.py`
+- `C:\Users\rkhol\Starfall Salvage\tools\kc_starfall_watch.py` (canonical clone; Cursor worktrees use the same file at their repo root)
 
 KC is not a separate autonomous AI process until a real external runtime or endpoint is connected.
+
+## Apprenticeship trail (2026-05-16)
+
+The **curriculum** (`Structure/KC Student-Teacher Curriculum.md`) is the apprenticeship contract: each lesson adds proofs; `tools/kc_starfall_watch.py` re-audits **every** proof every pass. **Lesson 013** locks Protocol 13 kinetics (treadmill note, `uFogMix`, pause history trap, minimal HUD id, `POSITION_LERP_TOUCH`, tunnel parallax ribs).
+
+```powershell
+cd <repo-root>
+python tools\kc_starfall_watch.py --once --skip-backend
+```
+
+Append-only proof log: `Structure/KC Review Log.jsonl`. Optional Main Brain handoff: add `--seed-kc` when the KC impl path in the watcher resolves on your machine.
 
 ## Hard QA Cycle 001
 

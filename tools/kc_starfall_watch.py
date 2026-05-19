@@ -71,9 +71,13 @@ def check_required_files() -> dict[str, Any]:
         "README.md",
         "DEPLOYMENT.md",
         "CONTRIBUTING.md",
+        "docs/MAINTAINER-MAP.md",
+        "docs/MAO-Starfall-Lane.md",
+        "docs/KEYBOARD-MAP.md",
         "Structure/Starfall Salvage - Index.md",
         "Structure/KC Dev Lane.md",
         "Structure/KC Student-Teacher Curriculum.md",
+        "Structure/Microsoft Store Integration.md",
     ]
     missing = [path for path in required if not (ROOT / path).exists()]
     return {
@@ -95,6 +99,89 @@ def _read_text(relative: str) -> str:
         return ""
 
 
+def check_mobile_stress_score(*, min_pass_pct: int = 80) -> dict[str, Any]:
+    """Static mobile-readiness stress score (layout, touch, PWA, resize paths).
+
+    Real-device p99 frame time (microsoft-readiness C10) still requires a physical
+    capture; this gate blocks obvious mobile gaps before ship.
+    """
+    index_html = _read_text("index.html")
+    styles_css = _read_text("styles.css")
+    game_js = _read_text("src/game.js")
+    manifest_json = _read_text("manifest.webmanifest")
+
+    proofs: dict[str, bool] = {
+        "m_viewport_device_width": "width=device-width" in index_html,
+        "m_viewport_fit_cover": "viewport-fit=cover" in index_html,
+        "m_viewport_no_zoom": "user-scalable=0" in index_html
+        and "maximum-scale=1" in index_html,
+        "m_theme_color": 'name="theme-color"' in index_html,
+        "m_manifest_linked": 'rel="manifest"' in index_html,
+        "m_apple_touch_icon": 'rel="apple-touch-icon"' in index_html,
+        "m_gl_canvas": 'id="glCanvas"' in index_html,
+        "m_mobile_fire_markup": 'id="mobileFireButton"' in index_html,
+        "m_shell_dvh": "100dvh" in styles_css,
+        "m_glcanvas_touch_action_none": "#glCanvas" in styles_css
+        and "touch-action: none" in styles_css,
+        "m_mobile_fire_min_target": "width: 84px" in styles_css
+        and "height: 84px" in styles_css
+        and ".mobile-fire-button" in styles_css,
+        "m_mobile_fire_tap_highlight": "-webkit-tap-highlight-color: transparent"
+        in styles_css,
+        "m_safe_area_shell": "env(safe-area-inset-bottom" in styles_css
+        or "env(safe-area-inset-top" in styles_css,
+        "m_visual_viewport_resize": "visualViewport" in game_js
+        and "visualViewport.addEventListener" in game_js,
+        "m_orientation_change": "orientationchange" in game_js,
+        "m_resize_canvas_fn": "function resizeCanvas" in game_js
+        or "resizeCanvas()" in game_js,
+        "m_passive_touchend": "touchend" in game_js and "{ passive: true }" in game_js,
+        "m_touch_axis": "touchAxis" in game_js and "activeTouchId" in game_js,
+        "m_pwa_display_standalone": '"display": "standalone"' in manifest_json,
+        "m_pwa_lang_za": '"lang": "en-ZA"' in manifest_json,
+        "m_playing_minimal_hud": 'id="playingMinimalHud"' in index_html,
+        "m_sovereign_menu": 'id="sovereignPrimaryCta"' in index_html,
+        "m_game_over_modal": 'id="gameOverSovereign"' in index_html,
+        "m_hud_responsive_clamp": "clamp(" in styles_css,
+        "m_min_vw_constraints": "min(560px" in styles_css or "min(520px" in styles_css,
+        "m_overscroll_or_body": "overscroll-behavior" in styles_css
+        or "overscroll-behavior" in index_html,
+        "m_kasi_toggle_min_touch": "min-height: 44px" in styles_css
+        and ".kasi-comm-toggle" in styles_css,
+        "m_position_lerp_touch": "POSITION_LERP_TOUCH" in game_js,
+        "m_vibrate_optional": "navigator.vibrate" in game_js,
+        "m_onboarding_modal": 'id="onboardingModal"' in index_html,
+        "m_flight_multitask_menu": 'id="flightMenuToggle"' in index_html
+        and 'id="flightMenuPanel"' in index_html,
+        "m_flight_drop_resume": 'id="flightResumeItem"' in index_html,
+        "m_flight_step_out": 'id="flightStepOutItem"' in index_html,
+        "m_weapon_storage_key": "STARFLIGHT_WEAPON_STORAGE_KEY" in game_js,
+        "m_flight_menu_css": ".flight-menu-toggle" in styles_css
+        and ".flight-menu-panel" in styles_css,
+        "m_ready_hides_play_hud": ".shell.is-ready .playing-minimal-hud" in styles_css,
+    }
+
+    passed = sum(1 for ok in proofs.values() if ok)
+    total = len(proofs)
+    pct = round(100 * passed / total) if total else 0
+    ok = pct >= min_pass_pct
+    missing = [name for name, hit in proofs.items() if not hit]
+    return {
+        "name": "mobile_stress_static",
+        "expected": f">= {min_pass_pct}% of static mobile stress proofs pass ({total} checks)",
+        "ok": ok,
+        "actual": f"{pct}% ({passed}/{total})"
+        + ("" if ok else f" — missing: {', '.join(missing[:12])}"
+           + ("…" if len(missing) > 12 else "")),
+        "retry": (
+            "close each missing proof in index.html, styles.css, src/game.js, or "
+            "manifest.webmanifest; rerun npm run gate"
+        ),
+        "proofs": proofs,
+        "score_pct": pct,
+    }
+
+
 def check_kopano_upgrade_features() -> dict[str, Any]:
     """Student check: prove the 2026-05-05 Kopano Labs Upgrade actually shipped."""
     game_js = _read_text("src/game.js")
@@ -111,8 +198,13 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
     current_build = "20260519-movement-control"
+    mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
 
     proofs = {
+        "mao_starfall_lane_doc": "**Architect**" in mao_lane_doc
+        and "**Business**" in mao_lane_doc
+        and "**Forensic Sociology**" in mao_lane_doc
+        and "SF-MT-01" in mao_lane_doc,
         # Lesson 001 — Kopano Labs Upgrade
         "haptic_vibrate_present": "navigator.vibrate" in game_js,
         "haptic_damage_pattern": "[200, 100, 200]" in game_js,
@@ -166,7 +258,8 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "tap_to_start_or_dash": "wasTap" in game_js and "dashRequested = true" in game_js,
         "touch_axis_in_movement": "moveX += touchAxis.x" in game_js,
         "touch_action_none_css": "touch-action: none" in _read_text("styles.css"),
-        "mobile_control_hint_html": "Mobile:" in index_html and "tap to start" in index_html,
+        "mobile_control_hint_html": "Mobile:" in index_html
+        and "tap to start" in index_html.lower(),
         # Lesson 008 — Onboarding Pop-up
         "onboarding_modal_markup": 'id="onboardingModal"' in index_html
         and 'id="onboardingAck"' in index_html
@@ -196,7 +289,55 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "mobile_fire_button_css": ".mobile-fire-button" in _read_text("styles.css"),
         "mobile_fire_button_handler": "mobileFireButton" in game_js
         and "spawnPlayerBullet()" in game_js,
-        # Lesson 013 — Orbital Wreck Lane Visual Identity
+        # Lesson 013 — Protocol 13 kinetic stack + tunnel sightline parallax (2026-05-16)
+        "treadmill_architecture_note": "Treadmill: ship Z stays fixed" in game_js,
+        "danger_scaled_fog_uniform": "uFogMix" in game_js,
+        "sovereign_pause_history_trap": "sovereignPause" in game_js,
+        "minimal_playing_hud_dom": 'id="playingMinimalHud"' in index_html,
+        "touch_lerp_constant": "POSITION_LERP_TOUCH" in game_js,
+        "tunnel_parallax_ribs": "// Parallax ribs:" in game_js,
+        # Lesson 014 — Post-revive relaunch gate + onboarding persistence (2026-05-16)
+        "relaunch_countdown_constant": "RELAUNCH_COUNTDOWN_SECONDS" in game_js,
+        "relaunch_tick_handler": "tickRelaunch" in game_js,
+        "onboarding_never_again_markup": 'id="onboardingNeverAgain"' in index_html,
+        "review_briefing_button": 'id="reviewBriefingButton"' in index_html,
+        # Lesson 015 — Multitasking Flight Menu + Weapon Mode Orchestration (2026-05-16)
+        "flight_menu_pause_sync": 'mode === "paused" && !blockMenu' in game_js
+        and 'scrim.classList.remove("sovereign-scrim--backdrop-only")' in game_js,
+        "playing_hud_pause_visible": "playHud.hidden = false" in game_js
+        and 'mode === "paused" && !blockMenu' in game_js,
+        "weapon_mode_bolt_scatter_pierce": "STARFLIGHT_WEAPON_STORAGE_KEY" in game_js
+        and 'w === "scatter"' in game_js
+        and 'w === "pierce"' in game_js
+        and "setWeaponMode" in game_js,
+        "touch_range_performance_opt": 'TOUCH_FULL_RANGE_PX = Math.floor(70 *' in game_js,
+        "pause_minimal_toggle_hardened": 'state.mode === "playing" || state.mode === "paused"' in game_js,
+        "maintainer_map_present": "npm run gate" in _read_text("docs/MAINTAINER-MAP.md")
+        and "docs/MAO-Starfall-Lane.md" in _read_text("docs/MAINTAINER-MAP.md"),
+        "optional_playwright_script": "mobile:stress:pw" in _read_text("package.json")
+        and "flightMenuToggle" in _read_text("tools/playwright_mobile_audit.js"),
+        "keyboard_map_doc": "flightMenuToggle" in _read_text("docs/KEYBOARD-MAP.md"),
+        "hot_path_audit_script": (ROOT / "tools/hot_path_audit.py").exists(),
+        # Lesson 016 — MAO Blackbox + Kopano Context governance (2026-05-16)
+        "mao_sf_stress_incident": "SF-STRESS-01" in _read_text("docs/MAO-Starfall-Lane.md"),
+        "mao_bb_rows": "BB-C5" in _read_text("docs/MAO-Starfall-Lane.md")
+        and "BB-C9" in _read_text("docs/MAO-Starfall-Lane.md")
+        and "BB-C12" in _read_text("docs/MAO-Starfall-Lane.md"),
+        "mao_identic_bridge": "Identic Flow Bridge" in _read_text("docs/MAO-Starfall-Lane.md"),
+        "mao_zar_ledger": "ZAR ledger stub" in _read_text("docs/MAO-Starfall-Lane.md"),
+        "kopano_context_commandments": "validateExecution" in _read_text(
+            "packages/kopano-context/src/governance/commandments_1_to_15.ts"
+        ),
+        "kopano_state_broker": "class StateBroker" in _read_text(
+            "packages/kopano-context/src/governance/ephemeral_state_broker.ts"
+        ),
+        "kopano_swarm_validator": "SwarmValidator" in _read_text(
+            "packages/kopano-context/src/governance/ephemeral_state_broker.ts"
+        ),
+        "context_smoke_tool": (ROOT / "tools/kopano_context_smoke.mjs").exists(),
+        "gate_includes_context_typecheck": "context:typecheck" in _read_text("package.json")
+        and "npm run context:typecheck" in _read_text("package.json"),
+        # Lesson 017 — Orbital Wreck Lane Visual Identity
         "orbital_build_marker": "20260515-orbital-wreck-lane" in orbital_case_study,
         "camera_bank_state": "cameraRoll" in game_js and "BANK_MAX" in game_js,
         "corridor_pose_transform": "corridorPose" in game_js
@@ -210,7 +351,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "pwa_boot_aligned": current_build in pwa_boot_js,
         "pwa_cache_aligned": current_build in service_worker_js,
         "visual_slice_case_study": "Save / Kill / Watch" in orbital_case_study,
-        # Lesson 014 — Movement Control Unstuck
+        # Lesson 018 — Movement Control Unstuck
         "movement_build_marker": current_build in game_js,
         "pointer_steer_support": "supportsPointerEvents" in game_js
         and 'hud.shell.addEventListener("pointerdown"' in game_js,
@@ -224,7 +365,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     missing = [name for name, ok in proofs.items() if not ok]
     return {
         "name": "kopano_upgrade_audit",
-        "expected": f"all {len(proofs)} curriculum proofs present in shipped files",
+        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–018) present in shipped files",
         "ok": not missing,
         "actual": "all proofs satisfied" if not missing else f"missing proofs: {', '.join(missing)}",
         "retry": (
@@ -288,22 +429,39 @@ def check_backend_health(url: str) -> dict[str, Any]:
     }
 
 
-def build_report(health_url: str) -> dict[str, Any]:
+def build_report(health_url: str, *, skip_backend: bool) -> dict[str, Any]:
     checks: list[dict[str, Any]] = [check_required_files(), check_git_clean_enough()]
     checks.extend(check_syntax())
-    checks.append(check_backend_health(health_url))
+    if skip_backend:
+        checks.append(
+            {
+                "name": "backend_health",
+                "expected": "skipped (--skip-backend): no live server required",
+                "ok": True,
+                "actual": "skipped",
+                "retry": "omit --skip-backend and start backend/starfall_server.py to test /api/health",
+            }
+        )
+    else:
+        checks.append(check_backend_health(health_url))
     checks.append(check_kopano_upgrade_features())
+    checks.append(check_mobile_stress_score(min_pass_pct=80))
     failed = [check for check in checks if not check.get("ok")]
+    summary: dict[str, Any] = {
+        "ok": not failed,
+        "checks": len(checks),
+        "failures": len(failed),
+    }
+    for check in checks:
+        if check.get("name") == "mobile_stress_static" and "score_pct" in check:
+            summary["mobile_stress_pct"] = check["score_pct"]
+            break
     return {
         "timestamp": utc_now(),
         "project": "Starfall Salvage",
         "root": str(ROOT),
         "kc_role": "strict_dev_qa_lane",
-        "summary": {
-            "ok": not failed,
-            "checks": len(checks),
-            "failures": len(failed),
-        },
+        "summary": summary,
         "checks": checks,
     }
 
@@ -357,13 +515,18 @@ def main() -> int:
     parser.add_argument("--seed-kc", action="store_true", help="write the report to the KC context store")
     parser.add_argument("--interval", type=int, default=60)
     parser.add_argument("--health-url", default="http://127.0.0.1:8765/api/health")
+    parser.add_argument(
+        "--skip-backend",
+        action="store_true",
+        help="do not call /api/health (use in CI or when server is not running)",
+    )
     parser.add_argument("--kc-root", type=Path, default=DEFAULT_KC_ROOT)
     parser.add_argument("--kc-impl", type=Path, default=DEFAULT_KC_IMPL)
     parser.add_argument("--kc-store", type=Path, default=Path(os.environ.get("KC_CONTEXT_STORE", DEFAULT_KC_STORE)))
     args = parser.parse_args()
 
     while True:
-        report = build_report(args.health_url)
+        report = build_report(args.health_url, skip_backend=args.skip_backend)
         if args.seed_kc:
             try:
                 report["kc_context_id"] = seed_kc_context(report, args.kc_impl, args.kc_store)

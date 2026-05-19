@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-05-14T15:45:00+02:00",
+  "active_track": "STARFALL",
+  "blocked_tracks": ["ARENA_FIXTURES"],
+  "repo": "Kopano-Labs/starfall-salvage",
+  "branch": "main",
+  "commit": "982932c",
+  "build_tag": "20260514-guest-cta-b",
+  "prior_build_tag": "20260514-guest-cta-a",
+  "deploy_url": "https://starfallsalvage.kopanolabs.com",
+  "package_id": "com.kopanolabs.starfall.salvage",
+  "twa_status": "parked",
+  "next_target": "Verify guest CTA on production after deploy",
+  "doctrine_locks": [
+    "Commandment VIII — one WebGL flight deck",
+    "Protocol 13 — no sub-80% mobile ship",
+    "Commandment IX — offline-first PWA"
+  ],
+  "human_gates": [
+    {
+      "id": "twa_assetlinks_sha256",
+      "status": "parked",
+      "owner": "chief_architect",
+      "note": "Play App signing SHA-256 to live /.well-known/assetlinks.json"
+    }
+  ],
+  "incidents": [
+    {
+      "id": "INC-001",
+      "date": "2026-05-14",
+      "title": "Copilot cross-contamination (Fixtures → Starfall)",
+      "status": "logged"
+    }
+  ],
+  "session_derivative": "Session 1 shipped engage-swarm (6313b01). Session 2 Target A guest CTA shipped (863cbfa). TWA parked. Production confirmed by Chief Architect on metal.",
+  "kc_seed_command": "python tools/kc_main_brain_scan.py --once --seed-kc",
+  "tierzero_urls": [],
+  "acceptance_gates": [
+    "Guest CTA shows once after first game over (guest mode)",
+    "Core Salvage still once per run",
+    "Hard refresh picks up ?v=20260514-guest-cta-a"
+  ]
+}

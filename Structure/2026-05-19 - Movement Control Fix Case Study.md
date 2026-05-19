@@ -14,11 +14,11 @@ Treat this as a control-path blocker. The game must prove numeric player movemen
 |---|---|
 | `src/game.js` | Added unified pointer steering on the flight deck so mouse and touch drag move the ship. |
 | `src/game.js` | Kept keyboard movement, FIRE, and legacy touch fallback active under one ruleset. |
-| `src/game.js` | Added a diagnostic `window.__starfallDebug` probe behind `?diag=1` for numeric movement proof. |
+| `src/game.js` | Added a diagnostic `window.__starfallDebug` probe behind `?diag=1` for numeric movement proof, including `targetLane` after the main merge. |
 | `src/game.js` | Guarded the global pointer focus handler so UI controls and text inputs keep focus. |
 | `index.html` | Updated control copy from canvas-only drag to flight-deck drag. |
 | `index.html`, `src/pwa-boot.js`, `service-worker.js` | Bumped cache/build markers to `20260519-movement-control`. |
-| `tools/kc_starfall_watch.py` | Added Lesson 014 movement-control proofs and aligned cache-bust checks to the current build marker. |
+| `tools/kc_starfall_watch.py` | Added Lesson 018 movement-control proofs after merging current `origin/main` Lessons 013-016. |
 
 ## Proof
 
@@ -26,9 +26,11 @@ Treat this as a control-path blocker. The game must prove numeric player movemen
 |---|---|
 | Syntax | `node --check .\src\game.js` PASS |
 | Vault | `npm run vault:check` PASS |
+| Gate | `npm run gate` PASS after merge with current `origin/main` |
 | Whitespace | `git diff --check` PASS |
 | Movement proof r3 | `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`, failures `[]` |
-| KC student audit | `python tools\kc_starfall_watch.py --once --seed-kc` PASS, `kc_context_id=kc-41`, 75/75 curriculum proofs |
+| Merged browser proof r4 | `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]` |
+| KC student audit | `npm run gate` PASS, 104/104 curriculum proofs across Lessons 001-018 |
 
 ## Movement Results
 
@@ -38,6 +40,10 @@ Treat this as a control-path blocker. The game must prove numeric player movemen
 | Desktop mouse drag | Drag moved player `x` from `0` to `3.8`, pointer type `mouse`. |
 | Redmi 393 touch drag | Touch drag moved player `x` from `0` to `2.66`, pointer type `touch`. |
 | Narrow 360 touch drag | Touch drag moved player `x` from `0` to `2.66`, pointer type `touch`. |
+| Merged desktop keyboard | Arrow-right moved player `x` from `0` to `2.2`, `targetLane=1`. |
+| Merged desktop mouse drag | Drag moved player `x` from `0` to `2.2`, `targetLane=1`. |
+| Merged Redmi 393 touch drag | Touch drag moved player `x` from `0` to `2.2`, `targetLane=1`. |
+| Merged narrow 360 touch drag | Touch drag moved player `x` from `0` to `2.2`, `targetLane=1`. |
 
 ## KC Teacher/Student Note
 
@@ -55,5 +61,5 @@ Teacher instruction: KC must reject any future "playable" claim unless movement 
 
 - Branch: `codex/starfall-mobile-weapon-ecosystem`.
 - Build marker: `20260519-movement-control`.
-- Current proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`, failures `[]`.
+- Current merged proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`.
 - Production remains unchanged until the branch is merged and redeployed.

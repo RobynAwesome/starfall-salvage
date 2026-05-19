@@ -2,6 +2,10 @@
   "use strict";
 
   const canvas = document.getElementById("glCanvas");
+  if (!canvas) {
+    console.error("starfall: #glCanvas missing — abort");
+    return;
+  }
   const gl = canvas.getContext("webgl", { antialias: true });
 
   const hud = {
@@ -25,6 +29,7 @@
     leaderboardList: document.getElementById("leaderboardList"),
     leaderboardStatus: document.getElementById("leaderboardStatus"),
     refreshLeaderboardButton: document.getElementById("refreshLeaderboardButton"),
+    leaderboardSheetClose: document.getElementById("leaderboardSheetClose"),
     shareWhatsappButton: document.getElementById("shareWhatsappButton"),
     accountModal: document.getElementById("accountModal"),
     accountSummary: document.getElementById("accountSummary"),
@@ -48,6 +53,9 @@
     onboardingModal: document.getElementById("onboardingModal"),
     onboardingAck: document.getElementById("onboardingAck"),
     onboardingContinueButton: document.getElementById("onboardingContinueButton"),
+    onboardingSkipButton: document.getElementById("onboardingSkipButton"),
+    onboardingNeverAgain: document.getElementById("onboardingNeverAgain"),
+    reviewBriefingButton: document.getElementById("reviewBriefingButton"),
     mobileFireButton: document.getElementById("mobileFireButton"),
     mobileLockdown: document.getElementById("mobileLockdown"),
     opsConsoleButton: document.getElementById("opsConsoleButton"),
@@ -61,11 +69,46 @@
     reviveTimer: document.getElementById("reviveTimer"),
     reviveProgress: document.getElementById("reviveProgress"),
     reviveSkipButton: document.getElementById("reviveSkipButton"),
+    relaunchHud: document.getElementById("relaunchHud"),
+    relaunchCountdownValue: document.getElementById("relaunchCountdownValue"),
     kasiCommEmojiBar: document.getElementById("kasiCommEmojiBar"),
     guestCtaModal: document.getElementById("guestCtaModal"),
     guestCtaScore: document.getElementById("guestCtaScore"),
     guestCtaSaveButton: document.getElementById("guestCtaSaveButton"),
-    guestCtaDismissButton: document.getElementById("guestCtaDismissButton")
+    guestCtaDismissButton: document.getElementById("guestCtaDismissButton"),
+    ecosystemPanel: document.getElementById("ecosystemPanel"),
+    ecosystemToggle: document.getElementById("ecosystemToggle"),
+    ecosystemClose: document.getElementById("ecosystemClose"),
+    leaderboardPanel: document.getElementById("leaderboardPanel"),
+    sovereignScrim: document.getElementById("sovereignScrim"),
+    sovereignSubline: document.getElementById("sovereignSubline"),
+    sovereignPrimaryCta: document.getElementById("sovereignPrimaryCta"),
+    playingMinimalHud: document.getElementById("playingMinimalHud"),
+    pmhScore: document.getElementById("pmhScore"),
+    pmhSpeed: document.getElementById("pmhSpeed"),
+    pauseMinimalButton: document.getElementById("pauseMinimalButton"),
+    flightMenuToggle: document.getElementById("flightMenuToggle"),
+    flightMenuPanel: document.getElementById("flightMenuPanel"),
+    flightResumeItem: document.getElementById("flightResumeItem"),
+    flightStepOutItem: document.getElementById("flightStepOutItem"),
+    gameOverSovereign: document.getElementById("gameOverSovereign"),
+    gameOverFinal: document.getElementById("gameOverFinal"),
+    gameOverBest: document.getElementById("gameOverBest"),
+    gameOverFlyAgain: document.getElementById("gameOverFlyAgain"),
+    gameOverLeaderboard: document.getElementById("gameOverLeaderboard"),
+    gameOverHub: document.getElementById("gameOverHub"),
+    countdownOverlay: document.getElementById("countdownOverlay"),
+    countdownNumber: document.getElementById("countdownNumber"),
+    deckToneIon: document.getElementById("deckToneIon"),
+    deckToneSolar: document.getElementById("deckToneSolar"),
+    deckToneIonLabel: document.getElementById("deckToneIonLabel"),
+    deckToneSolarLabel: document.getElementById("deckToneSolarLabel"),
+    relaunchHudLabel: document.getElementById("relaunchHudLabel"),
+    surveyModal: document.getElementById("surveyModal"),
+    surveyQuestion: document.getElementById("surveyQuestion"),
+    surveyOptions: document.getElementById("surveyOptions"),
+    surveySkip: document.getElementById("surveySkip"),
+    surveyNeverAgain: document.getElementById("surveyNeverAgain")
   };
 
   // Mobile: playable by default (touch + FIRE). Append ?strictMobile=1 to show the audit lockdown wall again.
@@ -109,11 +152,164 @@
   });
 
   function syncShellPlayState() {
-    const playing = state.mode === "playing";
+    const playing = state.mode === "playing" || state.mode === "relaunch";
+    const gameover = state.mode === "gameover";
     hud.shell.classList.toggle("is-playing", playing);
+    hud.shell.classList.toggle("is-relaunch", state.mode === "relaunch");
     hud.shell.classList.toggle("is-paused", state.mode === "paused");
-    hud.shell.classList.toggle("is-ready", state.mode === "ready" || state.mode === "gameover");
-    hud.shell.classList.toggle("is-gameover", state.mode === "gameover");
+    hud.shell.classList.toggle("is-ready", state.mode === "ready");
+    hud.shell.classList.toggle("is-gameover", gameover);
+    hud.shell.dataset.uiState = state.mode;
+    syncSovereignPresentation();
+  }
+
+  function isOnboardingBlockingReady() {
+    return Boolean(hud.onboardingModal && !hud.onboardingModal.classList.contains("is-hidden"));
+  }
+
+  function syncSovereignPresentation() {
+    const mode = state.mode;
+    const scrim = hud.sovereignScrim;
+    const playHud = hud.playingMinimalHud;
+    const go = hud.gameOverSovereign;
+    if (!scrim || !playHud || !go) {
+      return;
+    }
+    scrim.classList.remove("sovereign-scrim--backdrop-only");
+    const blockMenu = isOnboardingBlockingReady() || isAccountModalOpen() || isGuestCtaModalOpen();
+
+    if (mode === "gameover") {
+      closeFlightMenu();
+      scrim.hidden = false;
+      scrim.setAttribute("aria-hidden", "false");
+      scrim.classList.add("sovereign-scrim--backdrop-only");
+      playHud.hidden = true;
+      playHud.setAttribute("aria-hidden", "true");
+      go.hidden = false;
+      go.setAttribute("aria-hidden", "false");
+      return;
+    }
+
+    go.hidden = true;
+    go.setAttribute("aria-hidden", "true");
+
+    const showMinimalPlayHud =
+      mode === "playing" || mode === "relaunch" || (mode === "paused" && !blockMenu);
+
+    if (showMinimalPlayHud) {
+      if (mode === "playing" || mode === "relaunch") {
+        scrim.hidden = true;
+        scrim.setAttribute("aria-hidden", "true");
+        scrim.classList.remove("sovereign-scrim--backdrop-only");
+      } else {
+        scrim.hidden = false;
+        scrim.setAttribute("aria-hidden", "false");
+        scrim.classList.remove("sovereign-scrim--backdrop-only");
+        if (hud.sovereignSubline) {
+          hud.sovereignSubline.textContent = "Paused — salvage lane on hold";
+        }
+        if (hud.sovereignPrimaryCta) {
+          hud.sovereignPrimaryCta.textContent = "Resume";
+        }
+      }
+      playHud.hidden = false;
+      playHud.setAttribute("aria-hidden", "false");
+      return;
+    }
+
+    closeFlightMenu();
+    playHud.hidden = true;
+    playHud.setAttribute("aria-hidden", "true");
+    if (blockMenu) {
+      scrim.hidden = true;
+      scrim.setAttribute("aria-hidden", "true");
+      return;
+    }
+    scrim.hidden = false;
+    scrim.setAttribute("aria-hidden", "false");
+    scrim.classList.remove("sovereign-scrim--backdrop-only");
+    if (hud.sovereignSubline) {
+      hud.sovereignSubline.textContent = "Tap to fly — sovereign lane";
+    }
+    if (hud.sovereignPrimaryCta) {
+      hud.sovereignPrimaryCta.textContent = "Tap to fly";
+    }
+    syncEventTicker();
+  }
+
+  function syncEventTicker() {
+    if (!hud.eventTicker) return;
+    const isHackathonTime = true; // May 2026 Window
+    hud.eventTicker.textContent = isHackathonTime ? "LIVE: Midnight Hackathon — May 15-17" : "";
+    hud.eventTicker.classList.toggle("is-hidden", !isHackathonTime);
+  }
+
+  function isFlightMenuOpen() {
+    return Boolean(hud.flightMenuPanel && !hud.flightMenuPanel.classList.contains("is-hidden"));
+  }
+
+  function closeFlightMenu() {
+    if (!hud.flightMenuToggle || !hud.flightMenuPanel) {
+      return;
+    }
+    hud.flightMenuPanel.classList.add("is-hidden");
+    hud.flightMenuToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function openFlightMenu() {
+    if (!hud.flightMenuToggle || !hud.flightMenuPanel) {
+      return;
+    }
+    hud.flightMenuPanel.classList.remove("is-hidden");
+    hud.flightMenuToggle.setAttribute("aria-expanded", "true");
+  }
+
+  function toggleFlightMenu() {
+    if (isFlightMenuOpen()) {
+      closeFlightMenu();
+    } else {
+      openFlightMenu();
+    }
+  }
+
+  function closeLeaderboardOverlay() {
+    if (hud.shell) {
+      hud.shell.classList.remove("leaderboard-overlay");
+    }
+  }
+
+  function openLeaderboardOverlay() {
+    if (hud.shell) {
+      hud.shell.classList.add("leaderboard-overlay");
+    }
+    refreshLeaderboard();
+  }
+
+  function isEcosystemFlyoutExpanded() {
+    return Boolean(hud.ecosystemPanel && !hud.ecosystemPanel.classList.contains("is-collapsed"));
+  }
+
+  function collapseEcosystemFlyout() {
+    if (!hud.ecosystemPanel || !hud.ecosystemToggle) {
+      return;
+    }
+    hud.ecosystemPanel.classList.add("is-collapsed");
+    hud.ecosystemToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleEcosystemFlyout() {
+    if (!hud.ecosystemPanel || !hud.ecosystemToggle) {
+      return;
+    }
+    const willExpand = hud.ecosystemPanel.classList.contains("is-collapsed");
+    if (willExpand && hud.kasiComm && !hud.kasiComm.classList.contains("is-collapsed")) {
+      hud.kasiComm.classList.add("is-collapsed");
+      hud.kasiCommToggle.setAttribute("aria-expanded", "false");
+      stopChatPolling();
+    }
+    hud.ecosystemPanel.classList.toggle("is-collapsed");
+    const collapsed = hud.ecosystemPanel.classList.contains("is-collapsed");
+    hud.ecosystemToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
   }
 
   function applyBuff(kind) {
@@ -155,8 +351,9 @@
   }
 
   function updateSpeedVisuals(multiplier) {
-    const palette = document.body.dataset.pilotPalette || "default";
-    const paletteHue = palette === "blossom" ? 318 : palette === "ember" ? 28 : palette === "mono" ? 210 : 188;
+    const isMidnight = true; // Hackathon mode
+    const palette = isMidnight ? "midnight" : (document.body.dataset.pilotPalette || "default");
+    const paletteHue = palette === "midnight" ? 258 : (palette === "blossom" ? 318 : (palette === "ember" ? 28 : (palette === "mono" ? 210 : 188)));
     const t = Math.max(0, Math.min(1, (multiplier - 1) / 3.2));
     const hue = Math.round(paletteHue - t * (palette === "mono" ? 18 : 112));
     const sat = Math.round((palette === "mono" ? 8 : 38) + t * 30);
@@ -209,6 +406,7 @@
     uniform vec3 uLightDirection;
     uniform float uAmbientLight;
     uniform float uDiffuseStrength;
+    uniform float uFogMix;
 
     varying vec3 vNormal;
     varying vec2 vTexCoord;
@@ -222,7 +420,7 @@
       vec4 textureColor = texture2D(uTexture, vTexCoord);
       vec4 base = mix(uColor, uColor * textureColor, uTextureMix);
       vec3 fog = vec3(0.012, 0.016, 0.036);
-      vec3 lit = mix(base.rgb * light, fog, vDepth * 0.62);
+      vec3 lit = mix(base.rgb * light, fog, min(1.0, vDepth * uFogMix));
       gl_FragColor = vec4(lit + base.rgb * uPulse * 0.24, base.a);
     }
   `;
@@ -269,7 +467,8 @@
     pulse: gl.getUniformLocation(program, "uPulse"),
     lightDirection: gl.getUniformLocation(program, "uLightDirection"),
     ambientLight: gl.getUniformLocation(program, "uAmbientLight"),
-    diffuseStrength: gl.getUniformLocation(program, "uDiffuseStrength")
+    diffuseStrength: gl.getUniformLocation(program, "uDiffuseStrength"),
+    fogMix: gl.getUniformLocation(program, "uFogMix")
   };
 
   const BASE_FOV = Math.PI / 3.1;
@@ -283,6 +482,10 @@
   const PROFILE_STORAGE_KEY = "starfallSalvagePilotProfile";
   const SCORES_STORAGE_KEY = "starfallSalvageLocalScores";
   const ONBOARDING_STORAGE_KEY = "starfallSalvageOnboardingComplete";
+  /** HUD accent lane — not biological metadata (Commandment 8 / Store inclusion). */
+  const HUD_RESONANCE_STORAGE_KEY = "starfallSalvageHudResonance";
+  const LEGACY_GENDER_STORAGE_KEY = "starfallSalvagePilotGender";
+  const DISCOVERY_SURVEY_RECORD_KEY = "starfallSalvageDiscoverySurveyV1";
   const GUEST_CTA_SEEN_KEY = "starfall:guest_cta_seen_v1";
   const GUEST_CTA_SEEN_LEGACY_KEYS = ["starfallSalvageGuestCtaSeen"];
   const EVENTS_STORAGE_KEY = "starfallSalvageEventLog";
@@ -296,15 +499,26 @@
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
   const GAME_BUILD = "20260519-movement-control";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
-  const REVIVE_TIME_SECONDS = 8;
-  const REVIVE_CORES_NEEDED = 3;
-  const REVIVE_CORE_COUNT = 6;
+  const REVIVE_TIME_SECONDS = 3;
+  const REVIVE_TAPS_NEEDED = 5;
+  const REVIVE_WORLD_TIME_SCALE = 0.1;
+  const TURN_DURATION_SEC = 0.3;
+  const TURN_ANGLE = Math.PI / 2;
+  const CORNER_INTERVAL_SEC = 16;
+  const SWIPE_TURN_WINDOW_SEC = 0.55;
+  const SWIPE_TURN_MIN_PX = 42;
+  const SURVEY_PLAY_THRESHOLD = 5; // Show survey every N completed runs (non-extractive discovery)
+
+  let playCountSinceSurvey = 0;
+  const RELAUNCH_COUNTDOWN_SECONDS = 3;
   const MODAL_TRAP = {
     account: "account",
     guestCta: "guestCta",
     onboarding: "onboarding",
     revive: "revive",
-    ops: "ops"
+    ops: "ops",
+    sovereignPause: "sovereignPause",
+    survey: "survey"
   };
   const modalBackTraps = new Map();
 
@@ -451,6 +665,11 @@
     const scale = tier.particleScale || 1;
     sparksMax = Math.max(80, Math.floor(200 * scale));
     trailMax = Math.max(60, Math.floor(150 * scale));
+    if (isTouchCapable) {
+      sparksMax = Math.max(72, Math.floor(sparksMax * 0.88));
+      trailMax = Math.max(52, Math.floor(trailMax * 0.88));
+      TOUCH_FULL_RANGE_PX = Math.floor(70 * (scale < 1 ? 0.85 : 1));
+    }
   }
 
   function getSectorForMultiplier(multiplier) {
@@ -586,7 +805,20 @@
     forceBossSpawn: false,
     sectorIndex: 1,
     sectorLabel: "Approach",
-    reviveUsedThisRun: false
+    reviveUsedThisRun: false,
+    smoothCamX: 0,
+    smoothCamY: 0,
+    viewRoll: 0,
+    cameraYaw: 0,
+    turnAnimActive: false,
+    turnAnimFrom: 0,
+    turnAnimTo: 0,
+    turnAnimElapsed: 0,
+    cornerTimer: CORNER_INTERVAL_SEC,
+    swipeTurnWindow: 0,
+    pendingCorner: false,
+    lastHudScore: -1,
+    lastHudSpeedLabel: ""
   };
 
   const Mat4 = {
@@ -958,6 +1190,24 @@
     ]);
   }
 
+  function createSalvageMesh() {
+    // Stable "Shattered" Shard geometry
+    const pts = [
+      [0.2, 0.4, 0.1], [-0.3, 0.2, -0.2], [0.1, -0.4, 0.3],
+      [-0.2, -0.3, -0.1], [0, 0.75, 0], [0, -0.75, 0]
+    ];
+    return createFaceMesh([
+      [pts[0], pts[1], pts[4]],
+      [pts[1], pts[2], pts[4]],
+      [pts[2], pts[3], pts[4]],
+      [pts[3], pts[0], pts[4]],
+      [pts[1], pts[0], pts[5]],
+      [pts[2], pts[1], pts[5]],
+      [pts[3], pts[2], pts[5]],
+      [pts[0], pts[3], pts[5]]
+    ]);
+  }
+
   function createShipMesh() {
     const nose = [0, 0, -0.9];
     const rearTop = [0, 0.42, 0.62];
@@ -977,6 +1227,7 @@
   const meshes = {
     cube: createCubeMesh(),
     crystal: createOctahedronMesh(),
+    shard: createSalvageMesh(),
     ship: createShipMesh(),
     disc: createDiscMesh(56)
   };
@@ -993,7 +1244,7 @@
   let touchStartTime = 0;
   let touchMaxTravel = 0;
   const TOUCH_DEADZONE_PX = 8;
-  const TOUCH_FULL_RANGE_PX = 70;
+  let TOUCH_FULL_RANGE_PX = 70;
   const TOUCH_TAP_MAX_PX = 14;
   const TOUCH_TAP_MAX_MS = 260;
   const isTouchCapable = (typeof window !== "undefined") && (
@@ -1004,6 +1255,7 @@
   let activePointerType = "";
   let pointerStartedRun = false;
   let pilotProfile = loadPilotProfile();
+  applyDeckResonance(pilotProfile.deckResonance);
   let wasPlayingBeforeHidden = false;
   let contextLost = false;
 
@@ -1020,15 +1272,44 @@
       }
       return;
     }
+    if (event.key === "Escape" && isEcosystemFlyoutExpanded()) {
+      event.preventDefault();
+      collapseEcosystemFlyout();
+      return;
+    }
+    if (event.key === "Escape" && hud.shell?.classList.contains("leaderboard-overlay")) {
+      event.preventDefault();
+      closeLeaderboardOverlay();
+      return;
+    }
+    if (event.key === "Escape" && isFlightMenuOpen()) {
+      event.preventDefault();
+      closeFlightMenu();
+      return;
+    }
     const key = event.key.toLowerCase();
     if (blockingKeys.has(key)) {
       event.preventDefault();
     }
     keys.add(key);
+    if (event.code === "BracketLeft" && state.mode === "playing" && state.pendingCorner && !event.repeat) {
+      event.preventDefault();
+      queueTurn(-1);
+    }
+    if (event.code === "BracketRight" && state.mode === "playing" && state.pendingCorner && !event.repeat) {
+      event.preventDefault();
+      queueTurn(1);
+    }
     if (key === " ") {
       dashRequested = true;
     }
-    if (key === "enter" && state.mode !== "playing") {
+    if (key === "a" || key === "arrowleft") {
+      player.targetLane = Math.max(-1, player.targetLane - 1);
+    }
+    if (key === "d" || key === "arrowright") {
+      player.targetLane = Math.min(1, player.targetLane + 1);
+    }
+    if (key === "enter" && state.mode !== "playing" && state.mode !== "relaunch") {
       startGame();
     }
     if (key === "p") {
@@ -1080,10 +1361,19 @@
     touchAxis.x = (dx / dist) * magnitude;
     // Browser y-axis is inverted vs game world Y (up is negative pixel delta).
     touchAxis.y = -(dy / dist) * magnitude;
+    // Mobile salvage lane: absolute X tracking + lateral relative nudge — no vertical drag
+    if (dist > TOUCH_DEADZONE_PX) {
+      if (navigator.vibrate) navigator.vibrate(8); // Subtle haptic nudge
+    }
+    // (Temple-runner sightline; avoids fighting camera bias — see MOBILE_LANE_TARGET_Y).
+    if (isTouchCapable) {
+      touchAxis.y = 0;
+    }
   }
 
   function applyTouchVector(touch) {
     applySteerVector(touch.clientX, touch.clientY);
+    player.targetLane = laneFromClientX(touch.clientX);
   }
 
   function clearTouchAxis() {
@@ -1116,6 +1406,116 @@
     }
   }
 
+  function hideOnboardingModal() {
+    if (!hud.onboardingModal) {
+      return;
+    }
+    hud.onboardingModal.classList.add("is-hidden");
+    syncSovereignPresentation();
+  }
+
+  function normalizeDeckTone(raw) {
+    if (raw === "ion" || raw === "solar") {
+      return raw;
+    }
+    if (raw === "male") {
+      return "ion";
+    }
+    if (raw === "female") {
+      return "solar";
+    }
+    return "ion";
+  }
+
+  function applyDeckResonance(tone) {
+    const deck = normalizeDeckTone(tone);
+    if (hud.shell) {
+      hud.shell.dataset.deck = deck;
+    }
+    return deck;
+  }
+
+  function syncDeckToneRadiosFromProfile() {
+    const tone = normalizeDeckTone(pilotProfile.deckResonance);
+    if (hud.deckToneIon) {
+      hud.deckToneIon.checked = tone === "ion";
+    }
+    if (hud.deckToneSolar) {
+      hud.deckToneSolar.checked = tone === "solar";
+    }
+    if (hud.deckToneIonLabel) {
+      hud.deckToneIonLabel.classList.toggle("is-selected", tone === "ion");
+    }
+    if (hud.deckToneSolarLabel) {
+      hud.deckToneSolarLabel.classList.toggle("is-selected", tone === "solar");
+    }
+  }
+
+  function getDiscoverySurveyRecord() {
+    try {
+      const raw = window.localStorage.getItem(DISCOVERY_SURVEY_RECORD_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function isDiscoverySurveySilenced() {
+    const rec = getDiscoverySurveyRecord();
+    if (!rec || typeof rec !== "object") {
+      return false;
+    }
+    if (rec.never) {
+      return true;
+    }
+    return Boolean(rec.answered);
+  }
+
+  function showSurvey() {
+    if (isDiscoverySurveySilenced()) {
+      return;
+    }
+    if (!hud.surveyModal || !hud.surveyQuestion) {
+      return;
+    }
+    hud.surveyQuestion.textContent = "What is your primary ecosystem?";
+    if (hud.surveyNeverAgain) {
+      hud.surveyNeverAgain.checked = false;
+    }
+    hud.surveyModal.classList.remove("is-hidden");
+    attachModalBackTrap(MODAL_TRAP.survey, hideSurvey);
+    logEvent("survey_open", { kind: "ecosystem_primary" });
+  }
+
+  function hideSurvey() {
+    if (hud.surveyModal) {
+      hud.surveyModal.classList.add("is-hidden");
+    }
+    detachModalBackTrap(MODAL_TRAP.survey, false);
+  }
+
+  function recordDiscoverySurveyAnswer(ecosystem) {
+    const never = Boolean(hud.surveyNeverAgain && hud.surveyNeverAgain.checked);
+    try {
+      window.localStorage.setItem(
+        DISCOVERY_SURVEY_RECORD_KEY,
+        JSON.stringify({
+          v: 1,
+          answered: true,
+          ecosystem,
+          never,
+          savedAt: new Date().toISOString()
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+    logEvent("survey_answer", { kind: "ecosystem_primary", ecosystem, never });
+    persistPilotProfile({ ...pilotProfile, discoveryEcosystem: ecosystem });
+    playCountSinceSurvey = 0;
+    hideSurvey();
+  }
+
   function showOnboardingModal() {
     if (!hud.onboardingModal) {
       return;
@@ -1124,33 +1524,123 @@
     if (hud.onboardingAck) {
       hud.onboardingAck.checked = false;
     }
+    if (hud.onboardingNeverAgain) {
+      hud.onboardingNeverAgain.checked = true;
+    }
     if (hud.onboardingContinueButton) {
       hud.onboardingContinueButton.disabled = true;
     }
     attachModalBackTrap(MODAL_TRAP.onboarding, hideOnboardingModal);
     logEvent("onboarding_open", {});
+    syncDeckToneRadiosFromProfile();
+    syncSovereignPresentation();
   }
 
-  function hideOnboardingModal() {
-    if (!hud.onboardingModal) {
-      return;
+  function reopenPilotBriefing() {
+    syncDeckToneRadiosFromProfile();
+    showOnboardingModal();
+  }
+
+  function deferOnboardingBriefing() {
+    detachModalBackTrap(MODAL_TRAP.onboarding, false);
+    hideOnboardingModal();
+    logEvent("onboarding_deferred", {});
+  }
+
+  function initIdentity() {
+    let savedGender = window.localStorage.getItem('starfallSalvagePilotGender');
+    if (!savedGender) {
+      savedGender = 'male';
+      window.localStorage.setItem('starfallSalvagePilotGender', savedGender);
     }
-    hud.onboardingModal.classList.add("is-hidden");
+
+    let savedId = window.localStorage.getItem('starfallSovereignId');
+    if (!savedId) {
+      savedId = (function() {
+        const array = new Uint32Array(4);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, dec => dec.toString(16).padStart(8, '0')).join('-');
+      })();
+      window.localStorage.setItem('starfallSovereignId', savedId);
+    }
+
+    state.pilotGender = savedGender;
+    state.sovereignId = savedId;
+
+    document.querySelector('.shell').setAttribute('data-gender', savedGender);
+
+    const radio = document.getElementById(`gender${savedGender.charAt(0).toUpperCase() + savedGender.slice(1)}`);
+    if (radio) radio.checked = true;
+
+    document.querySelectorAll('.gender-option').forEach(el => el.classList.remove('is-selected'));
+    const label = document.getElementById(`gender${savedGender.charAt(0).toUpperCase() + savedGender.slice(1)}Label`);
+    if (label) label.classList.add('is-selected');
+
+    // Sync UI with masked ID
+    const statusText = document.getElementById('authStatusText');
+    if (statusText && state.authStatus === 'guest') {
+      statusText.textContent = `Pilot ${savedId.slice(0, 8)}`;
+    }
+
+    // Sync deck resonance
+    applyDeckResonance(savedGender === "female" ? "solar" : "ion");
   }
 
   function dismissOnboarding() {
     if (hud.onboardingAck && !hud.onboardingAck.checked) {
       return;
     }
-    markOnboardingDone();
+    try {
+      if (hud.onboardingNeverAgain && hud.onboardingNeverAgain.checked) {
+        markOnboardingDone();
+      } else {
+        window.localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+      }
+    } catch {
+      markOnboardingDone();
+    }
+
+    initIdentity();
+
     detachModalBackTrap(MODAL_TRAP.onboarding, false);
     hideOnboardingModal();
-    logEvent("onboarding_complete", {});
+    logEvent("onboarding_complete", { pilotGender: state.pilotGender });
+
     if (pilotProfile.mode === "guest") {
       window.setTimeout(() => {
         setEventMessage("Sign in to save scores and squad up with friends");
       }, 700);
     }
+  }
+
+  // --- IDENTITY LISTENERS ---
+  const genderOptions = document.querySelectorAll('input[name="pilotGender"]');
+  genderOptions.forEach(opt => {
+    opt.addEventListener('change', (e) => {
+      const gender = e.target.value;
+      state.pilotGender = gender;
+      document.querySelector('.shell').setAttribute('data-gender', gender);
+      window.localStorage.setItem('starfallSalvagePilotGender', gender);
+
+      // Update visual selection
+      document.querySelectorAll('.gender-option').forEach(el => el.classList.remove('is-selected'));
+      const label = document.getElementById(`gender${gender.charAt(0).toUpperCase() + gender.slice(1)}Label`);
+      if (label) label.classList.add('is-selected');
+
+      const sid = state.sovereignId ? String(state.sovereignId) : "";
+      logEvent("identity_scan", { gender, maskedId: sid ? `${sid.slice(0, 8)}…` : "" });
+    });
+  });
+
+  const authLoginBtn = document.getElementById('authLoginBtn');
+  if (authLoginBtn) {
+    authLoginBtn.addEventListener('click', () => {
+      setEventMessage("Sovereign Portal — Authentication Pending");
+      logEvent("auth_click", {
+        currentStatus: state.authStatus,
+        sovereignId: state.sovereignId ? String(state.sovereignId).slice(0, 12) : ""
+      });
+    });
   }
 
   if (hud.onboardingAck) {
@@ -1162,6 +1652,12 @@
   }
   if (hud.onboardingContinueButton) {
     hud.onboardingContinueButton.addEventListener("click", dismissOnboarding);
+  }
+  if (hud.onboardingSkipButton) {
+    hud.onboardingSkipButton.addEventListener("click", deferOnboardingBriefing);
+  }
+  if (hud.reviewBriefingButton) {
+    hud.reviewBriefingButton.addEventListener("click", reopenPilotBriefing);
   }
   if (!isOnboardingDone()) {
     showOnboardingModal();
@@ -1214,6 +1710,7 @@
       activePointerType = event.pointerType || "pointer";
       pointerStartedRun = state.mode !== "playing";
       beginSteerInput(event.clientX, event.clientY);
+      player.targetLane = laneFromClientX(event.clientX);
       canvas.focus();
       if (state.mode === "ready" || state.mode === "gameover") {
         startGame();
@@ -1233,6 +1730,7 @@
       }
       event.preventDefault();
       applySteerVector(event.clientX, event.clientY);
+      player.targetLane = laneFromClientX(event.clientX);
     }, { passive: false });
 
     const finishPointerSteer = (event) => {
@@ -1277,6 +1775,10 @@
       event.preventDefault();
       activeTouchId = touch.identifier;
       beginSteerInput(touch.clientX, touch.clientY);
+      player.targetX = mapTouchClientXToWorld(touch.clientX);
+      player.targetLane = laneFromClientX(touch.clientX);
+      const startBounds = getPlayerBounds();
+      player.targetY = clamp(player.targetY, startBounds.yMin, startBounds.yMax);
     }, { passive: false });
 
     canvas.addEventListener("touchmove", (event) => {
@@ -1286,6 +1788,8 @@
       for (const touch of event.changedTouches) {
         if (touch.identifier === activeTouchId) {
           event.preventDefault();
+          player.targetX = mapTouchClientXToWorld(touch.clientX);
+          player.targetLane = laneFromClientX(touch.clientX);
           applyTouchVector(touch);
           break;
         }
@@ -1298,9 +1802,18 @@
       }
       for (const touch of event.changedTouches) {
         if (touch.identifier === activeTouchId) {
+          const dx = touch.clientX - touchStartX;
+          const dy = touch.clientY - touchStartY;
           const elapsed = performance.now() - touchStartTime;
           const wasTap = elapsed <= TOUCH_TAP_MAX_MS && touchMaxTravel <= TOUCH_TAP_MAX_PX;
-          if (wasTap) {
+          let swipeCommitted = false;
+          if (state.mode === "playing" && state.pendingCorner &&
+              Math.abs(dx) >= SWIPE_TURN_MIN_PX &&
+              Math.abs(dx) > Math.abs(dy) * 0.72) {
+            queueTurn(dx < 0 ? -1 : 1);
+            swipeCommitted = true;
+          }
+          if (!swipeCommitted && wasTap) {
             if (state.mode !== "playing") {
               startGame();
             } else {
@@ -1318,6 +1831,47 @@
   }
 
   hud.startButton.addEventListener("click", startGame);
+  if (hud.sovereignPrimaryCta) {
+    hud.sovereignPrimaryCta.addEventListener("click", () => {
+      if (state.mode === "paused") {
+        togglePause();
+      } else if (state.mode === "ready") {
+        startGame();
+      }
+    });
+  }
+  if (hud.pauseMinimalButton) {
+    hud.pauseMinimalButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      closeFlightMenu();
+      if (state.mode === "playing" || state.mode === "paused") {
+        togglePause();
+      }
+    });
+  }
+  if (hud.gameOverFlyAgain) {
+    hud.gameOverFlyAgain.addEventListener("click", () => {
+      closeLeaderboardOverlay();
+      resetGame();
+      startGame();
+    });
+  }
+  if (hud.gameOverLeaderboard) {
+    hud.gameOverLeaderboard.addEventListener("click", () => {
+      openLeaderboardOverlay();
+    });
+  }
+  if (hud.gameOverHub) {
+    hud.gameOverHub.addEventListener("click", () => {
+      window.open("https://kopanolabs.com/", "_blank", "noopener,noreferrer");
+    });
+  }
+  if (hud.leaderboardSheetClose) {
+    hud.leaderboardSheetClose.addEventListener("click", () => {
+      closeLeaderboardOverlay();
+    });
+  }
   hud.pauseButton.addEventListener("click", togglePause);
   hud.resetButton.addEventListener("click", () => {
     resetGame();
@@ -1371,6 +1925,14 @@
     shareScoreToWhatsapp();
   });
   hud.kasiCommToggle.addEventListener("click", toggleKasiComm);
+  if (hud.ecosystemToggle) {
+    hud.ecosystemToggle.addEventListener("click", toggleEcosystemFlyout);
+  }
+  if (hud.ecosystemClose) {
+    hud.ecosystemClose.addEventListener("click", () => {
+      collapseEcosystemFlyout();
+    });
+  }
   hud.kasiCommForm.addEventListener("submit", (event) => {
     event.preventDefault();
     sendChatMessage();
@@ -1435,13 +1997,16 @@
   }
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      wasPlayingBeforeHidden = state.mode === "playing";
-      if (wasPlayingBeforeHidden || state.mode === "revive") {
+      wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
+      if (wasPlayingBeforeHidden || state.mode === "revive" || state.mode === "relaunch") {
         if (state.mode === "revive") {
           wasPlayingBeforeHidden = true;
           if (hud.reviveModal) {
             hud.reviveModal.classList.add("is-hidden");
           }
+        }
+        if (state.mode === "relaunch" && hud.relaunchHud) {
+          hud.relaunchHud.classList.add("is-hidden");
         }
         state.mode = "paused";
         hud.pauseButton.textContent = "Resume";
@@ -1464,10 +2029,39 @@
     window.location.reload();
   });
 
+  const STARFLIGHT_WEAPON_STORAGE_KEY = "starfall_salvage_weapon_v1";
+
+  function readWeaponModeFromStorage() {
+    try {
+      const raw = window.localStorage.getItem(STARFLIGHT_WEAPON_STORAGE_KEY);
+      if (raw === "scatter" || raw === "pierce" || raw === "bolt") {
+        return raw;
+      }
+    } catch {
+      /* ignore */
+    }
+    return "bolt";
+  }
+
+  function persistWeaponMode(mode) {
+    try {
+      window.localStorage.setItem(STARFLIGHT_WEAPON_STORAGE_KEY, mode);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const POSITION_LERP_TOUCH = 0.42;
+  const POSITION_LERP_DESKTOP = 0.28;
+  /** Locked runner lane height on touch devices (paired with camera viewBias — execution ledger baseline). */
+  const MOBILE_LANE_TARGET_Y = -0.68;
   const player = {
     x: 0,
-    y: -0.45,
+    y: isTouchCapable ? MOBILE_LANE_TARGET_Y : -0.45,
     z: -7.8,
+    targetX: 0,
+    targetY: isTouchCapable ? MOBILE_LANE_TARGET_Y : -0.45,
+    targetLane: 0, // -1: Left, 0: Center, 1: Right
     vx: 0,
     vy: 0,
     radius: 0.62,
@@ -1477,8 +2071,86 @@
     fireBoostTimer: 0,
     buffKind: "",
     buffTimer: 0,
-    aegisHits: 0
+    aegisHits: 0,
+    weaponMode: readWeaponModeFromStorage(),
+    viewPitch: 0,
+    viewRoll: 0
   };
+
+  function setWeaponMode(mode) {
+    const next = mode === "scatter" || mode === "pierce" ? mode : "bolt";
+    player.weaponMode = next;
+    persistWeaponMode(next);
+    syncFlightWeaponButtons();
+    if (next === "bolt") {
+      setEventMessage("Bolt lane", 0.55);
+    } else if (next === "scatter") {
+      setEventMessage("Scatter burst", 0.55);
+    } else {
+      setEventMessage("Pierce core", 0.55);
+    }
+    logEvent("weapon_mode_set", { mode: next });
+  }
+
+  function syncFlightWeaponButtons() {
+    if (!hud.flightMenuPanel) {
+      return;
+    }
+    const mode = player.weaponMode || "bolt";
+    hud.flightMenuPanel.querySelectorAll(".flight-weapon").forEach((btn) => {
+      const on = btn.dataset.weapon === mode;
+      btn.classList.toggle("is-selected", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  if (hud.flightMenuToggle && hud.flightMenuPanel) {
+    hud.flightMenuToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleFlightMenu();
+    });
+    if (hud.flightResumeItem) {
+      hud.flightResumeItem.addEventListener("click", () => {
+        closeFlightMenu();
+        if (state.mode === "paused") {
+          togglePause();
+        }
+      });
+    }
+    if (hud.flightStepOutItem) {
+      hud.flightStepOutItem.addEventListener("click", () => {
+        closeFlightMenu();
+        if (state.mode === "playing") {
+          togglePause();
+        }
+      });
+    }
+    hud.flightMenuPanel.querySelectorAll(".flight-weapon").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const w = btn.dataset.weapon;
+        if (w) {
+          setWeaponMode(w);
+        }
+        closeFlightMenu();
+      });
+    });
+    document.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (!isFlightMenuOpen()) {
+          return;
+        }
+        const t = event.target;
+        if (hud.flightMenuToggle.contains(t) || hud.flightMenuPanel.contains(t)) {
+          return;
+        }
+        closeFlightMenu();
+      },
+      true
+    );
+    syncFlightWeaponButtons();
+  }
 
   const objects = [];
   const sparks = [];
@@ -1498,6 +2170,8 @@
       player: {
         x: Number(player.x.toFixed(4)),
         y: Number(player.y.toFixed(4)),
+        targetX: Number(player.targetX.toFixed(4)),
+        targetLane: player.targetLane,
         vx: Number(player.vx.toFixed(4)),
         vy: Number(player.vy.toFixed(4)),
         dash: Number(player.dash.toFixed(4))
@@ -1545,17 +2219,49 @@
 
   function getCameraFollow() {
     if (isTouchCapable) {
-      return { x: 0.72, y: 0.72 };
+      // Relaxed follow — ship stays visible but player sees further ahead.
+      return { x: 0.42, y: 0.22 };
     }
     return { x: 0.018, y: 0.016 };
   }
 
+  function mapTouchClientXToWorld(clientX) {
+    const rect = canvas.getBoundingClientRect();
+    const t = clamp((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+    const bounds = getPlayerBounds();
+    return bounds.xMin + t * (bounds.xMax - bounds.xMin);
+  }
+
+  function laneFromClientX(clientX) {
+    const worldX = mapTouchClientXToWorld(clientX);
+    const laneWidth = 2.2;
+    if (worldX < -laneWidth * 0.45) {
+      return -1;
+    }
+    if (worldX > laneWidth * 0.45) {
+      return 1;
+    }
+    return 0;
+  }
+
   function getViewportCssSize() {
+    const minCss = 32;
     const vv = window.visualViewport;
-    if (vv && Number.isFinite(vv.width) && Number.isFinite(vv.height)) {
+    if (
+      vv &&
+      Number.isFinite(vv.width) &&
+      Number.isFinite(vv.height) &&
+      vv.width >= minCss &&
+      vv.height >= minCss
+    ) {
       return { width: vv.width, height: vv.height };
     }
-    return { width: canvas.clientWidth, height: canvas.clientHeight };
+    const rect = canvas.getBoundingClientRect();
+    let width = Math.round(rect.width) || canvas.clientWidth || window.innerWidth || 320;
+    let height = Math.round(rect.height) || canvas.clientHeight || window.innerHeight || 240;
+    width = Math.max(minCss, width);
+    height = Math.max(minCss, height);
+    return { width, height };
   }
 
   function randomRange(min, max) {
@@ -1643,13 +2349,17 @@
     });
   }
 
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
   function resizeCanvas() {
     const budget = getRenderBudgetTier();
-    const dprCap = budget.maxDpr || (isTouchCapable ? 1.5 : 2);
+    const dprCap = budget.maxDpr || (isTouchCapable ? 2.0 : 2.5); // 80% optimality cap for mobile
     const dpr = Math.min(window.devicePixelRatio || 1, dprCap);
     const { width: cssWidth, height: cssHeight } = getViewportCssSize();
-    const width = Math.floor(cssWidth * dpr);
-    const height = Math.floor(cssHeight * dpr);
+    const width = Math.max(32, Math.floor(cssWidth * dpr));
+    const height = Math.max(32, Math.floor(cssHeight * dpr));
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
@@ -1668,49 +2378,53 @@
 
   const reviveState = {
     timer: 0,
-    caught: 0,
-    need: REVIVE_CORES_NEEDED
+    taps: 0,
+    need: REVIVE_TAPS_NEEDED
+  };
+  let reviveTapHandler = null;
+
+  const relaunchState = {
+    remain: 0
   };
 
   function clearReviveArena() {
     if (!hud.reviveArena) {
       return;
     }
-    hud.reviveArena.textContent = "";
+    hud.reviveArena.innerHTML = "";
   }
 
-  function spawnReviveCores() {
-    if (!hud.reviveArena) {
-      return;
+  function unbindReviveTapStorm() {
+    if (reviveTapHandler && hud.reviveModal) {
+      hud.reviveModal.removeEventListener("pointerdown", reviveTapHandler, true);
     }
-    clearReviveArena();
-    const rect = hud.reviveArena.getBoundingClientRect();
-    const width = Math.max(rect.width, 280);
-    const height = Math.max(rect.height, 200);
-    for (let i = 0; i < REVIVE_CORE_COUNT; i += 1) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "revive-core";
-      button.style.left = `${randomRange(12, width - 12)}px`;
-      button.style.top = `${randomRange(12, height - 12)}px`;
-      button.setAttribute("aria-label", `Salvage core ${i + 1}`);
-      button.addEventListener("click", () => {
-        if (button.classList.contains("is-caught") || state.mode !== "revive") {
-          return;
-        }
-        button.classList.add("is-caught");
-        reviveState.caught += 1;
-        if (hud.reviveProgress) {
-          hud.reviveProgress.textContent = `${reviveState.caught} / ${reviveState.need}`;
-        }
-        if (navigator.vibrate) {
-          navigator.vibrate(18);
-        }
-        if (reviveState.caught >= reviveState.need) {
-          completeRevive(true);
-        }
-      });
-      hud.reviveArena.append(button);
+    reviveTapHandler = null;
+  }
+
+  function bindReviveTapStorm() {
+    unbindReviveTapStorm();
+    reviveTapHandler = (event) => {
+      if (state.mode !== "revive") {
+        return;
+      }
+      const target = event.target;
+      if (target && (target.id === "reviveSkipButton" || target.closest("#reviveSkipButton"))) {
+        return;
+      }
+      event.preventDefault();
+      reviveState.taps += 1;
+      if (hud.reviveProgress) {
+        hud.reviveProgress.textContent = `${reviveState.taps} / ${reviveState.need}`;
+      }
+      if (navigator.vibrate) {
+        navigator.vibrate(12);
+      }
+      if (reviveState.taps >= reviveState.need) {
+        completeRevive(true);
+      }
+    };
+    if (hud.reviveModal) {
+      hud.reviveModal.addEventListener("pointerdown", reviveTapHandler, true);
     }
   }
 
@@ -1718,8 +2432,11 @@
     state.reviveUsedThisRun = true;
     state.mode = "revive";
     reviveState.timer = REVIVE_TIME_SECONDS;
-    reviveState.caught = 0;
-    reviveState.need = REVIVE_CORES_NEEDED;
+    reviveState.taps = 0;
+    reviveState.need = REVIVE_TAPS_NEEDED;
+    if (hud.shell) {
+      hud.shell.classList.add("is-revive-slow");
+    }
     if (hud.reviveModal) {
       hud.reviveModal.classList.remove("is-hidden");
     }
@@ -1728,26 +2445,34 @@
       hud.reviveTimer.textContent = REVIVE_TIME_SECONDS.toFixed(1);
     }
     if (hud.reviveProgress) {
-      hud.reviveProgress.textContent = `0 / ${REVIVE_CORES_NEEDED}`;
+      hud.reviveProgress.textContent = `0 / ${REVIVE_TAPS_NEEDED}`;
     }
-    window.requestAnimationFrame(() => spawnReviveCores());
-    setEventMessage("Core Salvage — tap three cores to relaunch");
+    clearReviveArena();
+    bindReviveTapStorm();
+    setEventMessage("SYSTEM FAILURE — tap to reboot");
     syncShellPlayState();
   }
 
   function completeRevive(success) {
+    unbindReviveTapStorm();
     detachModalBackTrap(MODAL_TRAP.revive, false);
     if (hud.reviveModal) {
       hud.reviveModal.classList.add("is-hidden");
     }
     clearReviveArena();
+    if (hud.shell) {
+      hud.shell.classList.remove("is-revive-slow");
+    }
     if (success) {
       state.hull = 1;
-      state.mode = "playing";
-      setEventMessage("Hull restored — keep flying!");
+      runCountdown(() => {
+        state.mode = "playing";
+        setEventMessage("Hull restored — keep flying!");
+        syncShellPlayState();
+        updateHud();
+        canvas.focus();
+      });
       logEvent("revive_success", { score: Math.floor(state.score) });
-      syncShellPlayState();
-      updateHud();
       return;
     }
     handleGameOver();
@@ -1761,12 +2486,32 @@
     if (hud.reviveTimer) {
       hud.reviveTimer.textContent = Math.max(0, reviveState.timer).toFixed(1);
     }
-    if (reviveState.caught >= reviveState.need) {
+    if (reviveState.taps >= reviveState.need) {
       completeRevive(true);
       return;
     }
     if (reviveState.timer <= 0) {
       completeRevive(false);
+    }
+  }
+
+  function tickRelaunch(dt) {
+    if (state.mode !== "relaunch") {
+      return;
+    }
+    relaunchState.remain -= dt;
+    const shown = Math.max(0, Math.ceil(relaunchState.remain));
+    if (hud.relaunchCountdownValue) {
+      hud.relaunchCountdownValue.textContent = String(shown);
+    }
+    if (relaunchState.remain <= 0) {
+      if (hud.relaunchHud) {
+        hud.relaunchHud.classList.add("is-hidden");
+      }
+      state.mode = "playing";
+      setEventMessage("Hull restored — keep flying!");
+      syncShellPlayState();
+      updateHud();
     }
   }
 
@@ -1779,6 +2524,8 @@
   }
 
   function resetGame() {
+    detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
+    closeLeaderboardOverlay();
     state.mode = "ready";
     state.time = 0;
     state.score = 0;
@@ -1811,9 +2558,17 @@
     state.sectorIndex = 1;
     state.sectorLabel = "Approach";
     state.reviveUsedThisRun = false;
+    state.smoothCamX = 0;
+    state.smoothCamY = 0;
+    state.viewRoll = 0;
+    state.lastHudScore = -1;
+    state.lastHudSpeedLabel = "";
     player.x = 0;
-    player.y = -0.45;
+    const laneY = isTouchCapable ? MOBILE_LANE_TARGET_Y : -0.45;
+    player.y = laneY;
     player.z = -7.8;
+    player.targetX = 0;
+    player.targetY = laneY;
     player.vx = 0;
     player.vy = 0;
     player.dash = 0;
@@ -1830,31 +2585,87 @@
     hud.shell.classList.remove("is-hit");
     hud.eventToast.classList.remove("is-visible");
     hud.eventToast.textContent = "";
+    closeFlightMenu();
     if (hud.shareWhatsappButton) {
       hud.shareWhatsappButton.classList.add("is-hidden");
     }
+    if (hud.relaunchHud) {
+      hud.relaunchHud.classList.add("is-hidden");
+    }
+    relaunchState.remain = 0;
+    resetLaneTurnState();
     updateHud();
     syncShellPlayState();
     setStatus("Ready", "One flight deck on every device. Drag anywhere on the flight deck or use WASD. Fire with F, canvas, or FIRE.", false);
   }
 
+  function runCountdown(onComplete) {
+    if (!hud.countdownOverlay || !hud.countdownNumber) {
+      onComplete();
+      return;
+    }
+
+    state.mode = "countdown";
+    hud.countdownOverlay.classList.remove("is-engage");
+    hud.countdownOverlay.classList.remove("is-hidden");
+    let count = 3;
+    hud.countdownNumber.textContent = String(count);
+
+    const interval = setInterval(() => {
+      count--;
+      if (count <= 0) {
+        clearInterval(interval);
+        hud.countdownNumber.textContent = "ENGAGE";
+        hud.countdownOverlay.classList.add("is-engage");
+        window.setTimeout(() => {
+          hud.countdownOverlay.classList.remove("is-engage");
+          hud.countdownOverlay.classList.add("is-hidden");
+          onComplete();
+        }, 720);
+      } else {
+        hud.countdownNumber.textContent = String(count);
+      }
+    }, 1000);
+  }
+
   function startGame() {
+    detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
     if (state.mode === "gameover") {
       resetGame();
     }
-    state.mode = "playing";
-    hud.pauseButton.textContent = "Pause";
-    setStatus("", "", true);
-    syncShellPlayState();
-    canvas.focus();
+    closeLeaderboardOverlay();
+    collapseEcosystemFlyout();
+
+    runCountdown(() => {
+      resetLaneTurnState();
+      state.mode = "playing";
+      hud.pauseButton.textContent = "Pause";
+      setStatus("", "", true);
+      syncShellPlayState();
+      canvas.focus();
+    });
   }
 
   function togglePause() {
+    if (state.mode === "relaunch" || state.mode === "revive") {
+      return;
+    }
     if (state.mode === "playing") {
       state.mode = "paused";
       hud.pauseButton.textContent = "Resume";
       setStatus("Paused", "The salvage drone is holding position.", false);
+      attachModalBackTrap(MODAL_TRAP.sovereignPause, () => {
+        if (state.mode !== "paused") {
+          return;
+        }
+        state.mode = "playing";
+        hud.pauseButton.textContent = "Pause";
+        setStatus("", "", true);
+        syncShellPlayState();
+        canvas.focus();
+      });
     } else if (state.mode === "paused") {
+      detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
       state.mode = "playing";
       hud.pauseButton.textContent = "Pause";
       setStatus("", "", true);
@@ -1921,6 +2732,8 @@
       mode: "guest",
       palette: "default",
       bestScore: 0,
+      deckResonance: "ion",
+      discoveryEcosystem: "",
       lastSeen: new Date().toISOString()
     };
   }
@@ -1961,12 +2774,33 @@
     if (!saved || typeof saved !== "object" || !saved.callsign) {
       return defaultPilotProfile();
     }
+    let deck = normalizeDeckTone(saved.deckResonance ?? saved.gender);
+    try {
+      const hudStored = window.localStorage.getItem(HUD_RESONANCE_STORAGE_KEY);
+      if (hudStored === "ion" || hudStored === "solar") {
+        deck = hudStored;
+      }
+    } catch {
+      /* ignore */
+    }
+    if (!saved.deckResonance && !saved.gender) {
+      try {
+        const legacy = window.localStorage.getItem(LEGACY_GENDER_STORAGE_KEY);
+        if (legacy === "male" || legacy === "female") {
+          deck = normalizeDeckTone(legacy);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     return {
       id: saved.id || localPilotId(saved.callsign),
       callsign: normalizeCallsign(saved.callsign) || "Guest Pilot",
       mode: saved.mode || "local",
       palette: PILOT_PALETTES.includes(saved.palette) ? saved.palette : "default",
       bestScore: Number(saved.bestScore) || 0,
+      deckResonance: deck,
+      discoveryEcosystem: typeof saved.discoveryEcosystem === "string" ? saved.discoveryEcosystem : "",
       lastSeen: saved.lastSeen || new Date().toISOString()
     };
   }
@@ -1977,10 +2811,16 @@
       callsign: normalizeCallsign(profile.callsign) || "Guest Pilot",
       palette: PILOT_PALETTES.includes(profile.palette) ? profile.palette : "default",
       bestScore: Number(profile.bestScore) || 0,
+      deckResonance: normalizeDeckTone(profile.deckResonance ?? pilotProfile.deckResonance),
+      discoveryEcosystem:
+        typeof profile.discoveryEcosystem === "string"
+          ? profile.discoveryEcosystem
+          : (pilotProfile.discoveryEcosystem || ""),
       lastSeen: new Date().toISOString()
     };
     writeJsonStorage(PROFILE_STORAGE_KEY, pilotProfile);
     applyPilotPalette(pilotProfile.palette);
+    applyDeckResonance(pilotProfile.deckResonance);
     updatePilotBadge();
   }
 
@@ -2153,6 +2993,7 @@
     if (hud.guestCtaModal) {
       hud.guestCtaModal.classList.add("is-hidden");
     }
+    syncSovereignPresentation();
   }
 
   function dismissGuestSignUpCta() {
@@ -2195,10 +3036,18 @@
       window.requestAnimationFrame(() => hud.guestCtaSaveButton.focus());
     }
     logEvent("guest_cta_shown", { score: finalScore });
+    syncSovereignPresentation();
   }
 
   function openAccountModal() {
-    if (state.mode === "playing") {
+    const wasRelaunch = state.mode === "relaunch";
+    if (wasRelaunch) {
+      if (hud.relaunchHud) {
+        hud.relaunchHud.classList.add("is-hidden");
+      }
+      relaunchState.remain = 0;
+    }
+    if (state.mode === "playing" || wasRelaunch) {
       state.mode = "paused";
       hud.pauseButton.textContent = "Resume";
       setStatus("Pilot Access", "Mission paused while pilot credentials are entered.", false);
@@ -2215,11 +3064,13 @@
     hud.accountModal.classList.remove("is-hidden");
     attachModalBackTrap(MODAL_TRAP.account, hideAccountModalUi);
     hud.callsignInput.focus();
+    syncSovereignPresentation();
   }
 
   function hideAccountModalUi() {
     hud.accountModal.classList.add("is-hidden");
     canvas.focus();
+    syncSovereignPresentation();
   }
 
   function closeAccountModal() {
@@ -2234,6 +3085,8 @@
     } catch {
       // Local storage may be unavailable in locked-down browsers.
     }
+    applyDeckResonance(pilotProfile.deckResonance);
+    syncDeckToneRadiosFromProfile();
     updatePilotBadge();
     hud.accountStatus.textContent = "Guest pilot active. Scores stay in this browser session.";
     refreshLeaderboard({ quiet: true });
@@ -2248,6 +3101,8 @@
     } catch {
       // Local storage may be unavailable in locked-down browsers.
     }
+    applyDeckResonance(pilotProfile.deckResonance);
+    syncDeckToneRadiosFromProfile();
     updatePilotBadge();
     renderLeaderboard([], "Local pilot data cleared. SQLite scores remain on the backend.");
     setEventMessage("Pilot reset");
@@ -2567,6 +3422,7 @@
     const collapsed = hud.kasiComm.classList.toggle("is-collapsed");
     hud.kasiCommToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
     if (!collapsed) {
+      collapseEcosystemFlyout();
       refreshChatMessages();
       startChatPolling();
       window.setTimeout(() => hud.kasiCommInput.focus(), 30);
@@ -2793,13 +3649,30 @@
     }
     const finalScore = Math.floor(state.score);
     const bestScore = Math.max(pilotProfile.bestScore || 0, finalScore);
-    setStatus("Mission Failed", `Pilot: ${pilotProfile.callsign} | Final score: ${finalScore} | Best: ${bestScore} | Cores: ${state.cores} | Time: ${state.time.toFixed(1)}s. Invite friends or sign in to save your lane. Reset to fly again.`, false);
+    setStatus("", "", true);
+    if (hud.gameOverFinal) {
+      hud.gameOverFinal.textContent = String(finalScore);
+    }
+    if (hud.gameOverBest) {
+      hud.gameOverBest.textContent = String(bestScore);
+    }
+    collapseEcosystemFlyout();
     submitScore();
     persistRunReceipt(finalScore);
+    if (hit) {
+      state.mode = "gameover";
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]); // Sovereign pattern
+      logEvent("game_over", { score: state.score, time: Number(state.time.toFixed(1)) });
+    }
     revealShareButton(finalScore);
     logEvent("game_over", { score: finalScore, cores: state.cores, time: Number(state.time.toFixed(2)) });
     syncShellPlayState();
     maybeShowGuestSignUpCta(finalScore);
+
+    playCountSinceSurvey++;
+    if (playCountSinceSurvey >= SURVEY_PLAY_THRESHOLD && !isDiscoverySurveySilenced()) {
+      window.setTimeout(showSurvey, 1200);
+    }
   }
 
   function activeWeaponKind() {
@@ -2818,11 +3691,33 @@
   }
 
   function updateHud() {
-    hud.score.textContent = Math.floor(state.score).toString();
+    const playing = state.mode === "playing" || state.mode === "relaunch";
+    const scoreInt = Math.floor(state.score);
+    const speedLabel = `${(state.speed / 18).toFixed(1)}x`;
+
+    if (playing) {
+      if (scoreInt !== state.lastHudScore) {
+        state.lastHudScore = scoreInt;
+        if (hud.pmhScore) {
+          hud.pmhScore.textContent = String(scoreInt);
+        }
+      }
+      if (speedLabel !== state.lastHudSpeedLabel) {
+        state.lastHudSpeedLabel = speedLabel;
+        if (hud.pmhSpeed) {
+          hud.pmhSpeed.textContent = speedLabel;
+        }
+      }
+      return;
+    }
+
+    state.lastHudScore = scoreInt;
+    state.lastHudSpeedLabel = speedLabel;
+    hud.score.textContent = String(scoreInt);
     hud.hull.textContent = state.hull.toString();
     hud.cores.textContent = state.cores.toString();
     hud.dash.textContent = player.dashCooldown <= 0 ? "Ready" : `${player.dashCooldown.toFixed(1)}s`;
-    hud.speed.textContent = `${(state.speed / 18).toFixed(1)}x`;
+    hud.speed.textContent = speedLabel;
     if (hud.buff) {
       hud.buff.textContent = activeBuffLabel();
     }
@@ -2836,6 +3731,12 @@
         : `Fire weapon (${weaponLabel.toLowerCase()} active)`;
     }
     hud.fps.textContent = state.fps ? Math.round(state.fps).toString() : "--";
+    if (hud.pmhScore) {
+      hud.pmhScore.textContent = String(scoreInt);
+    }
+    if (hud.pmhSpeed) {
+      hud.pmhSpeed.textContent = speedLabel;
+    }
   }
 
   function spawnBossEntity(mult) {
@@ -2858,9 +3759,26 @@
       spinZ: randomRange(-0.5, 0.5),
       hp,
       maxHp: hp,
-      bossShootTimer: randomRange(1.0, 1.9)
+      bossShootTimer: randomRange(1.0, 1.9),
+      lane: 0,
+      laneTimer: randomRange(2.5, 4.0),
+      targetLane: 0
     });
     logEvent("boss_spawned", { hp });
+  }
+
+  function spawnLaneGate() {
+    const lane = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+    objects.push({
+      type: "laneGate",
+      lane,
+      x: lane * 2.2,
+      y: 0,
+      z: -120,
+      size: 2.5,
+      radius: 1.0
+    });
+    logEvent("lane_gate_spawned", { lane });
   }
 
   function spawnObject() {
@@ -2878,6 +3796,12 @@
     const bossChance = bossSpawnChance(mult, dangerActive);
     if (dangerActive && roll < bossChance) {
       spawnBossEntity(mult);
+      return;
+    }
+
+    // Lane Gate chance (Danger zone specific)
+    if (dangerActive && roll > 0.95) {
+      spawnLaneGate();
       return;
     }
 
@@ -2978,32 +3902,77 @@
       return;
     }
     const rapid = player.fireBoostTimer > 0 || (player.buffKind === "overcharge" && player.buffTimer > 0);
-    state.bulletCooldown = rapid ? 0.09 : 0.18;
-    const triad = player.buffKind === "triad" && player.buffTimer > 0;
-    const prism = player.buffKind === "prism" && player.buffTimer > 0;
-    const offsets = triad ? [-0.14, 0, 0.14] : [0];
-    const bulletColor = prism ? [0.95, 0.48, 1, 1] : rapid ? [1, 0.88, 0.38, 1] : [0.42, 0.96, 1, 1];
+    const w = player.weaponMode || "bolt";
+    const prismBuff = player.buffKind === "prism" && player.buffTimer > 0;
+    const triadBuff =
+      player.buffKind === "triad" ||
+      (player.buffKind === "overcharge" && player.buffTimer > 0);
+
+    let baseCdSlow = 0.16;
+    let baseCdFast = 0.08;
+    const isMidnight = true; // Hackathon mode
+    const finalW = isMidnight ? "phantom" : w;
+
+    if (finalW === "scatter") {
+      baseCdSlow = 0.26;
+      baseCdFast = 0.12;
+    } else if (finalW === "pierce") {
+      baseCdSlow = 0.21;
+      baseCdFast = 0.1;
+    } else if (finalW === "phantom") {
+      baseCdSlow = 0.12;
+      baseCdFast = 0.06;
+    }
+    state.bulletCooldown = rapid ? baseCdFast : baseCdSlow;
+
+    const pierceShot = prismBuff || w === "pierce";
+    let offsets;
+    if (w === "scatter") {
+      offsets = [-0.22, -0.11, 0, 0.11, 0.22];
+    } else if (triadBuff) {
+      offsets = [-0.22, 0, 0.22];
+    } else {
+      offsets = [0];
+    }
+
+    const triadShape = triadBuff && w !== "scatter";
+    let bulletColor = [0.42, 0.96, 1, 1];
+    if (prismBuff) {
+      bulletColor = [0.95, 0.48, 1, 1];
+    } else if (finalW === "phantom") {
+      bulletColor = [0.4, 0, 1, 0.4]; // Void Purple
+    } else if (w === "pierce") {
+      bulletColor = [1, 0.72, 0.28, 1];
+    } else if (w === "scatter") {
+      bulletColor = [0.55, 1, 0.62, 1];
+    } else if (rapid) {
+      bulletColor = [1, 0.88, 0.38, 1];
+    }
+
     offsets.forEach((offsetX) => {
       if (sparks.length >= sparksMax) {
         return;
       }
+      const spread = triadShape || finalW === "scatter" ? offsetX * 4 : 0;
+      let size = prismBuff ? 0.32 : (finalW === "phantom" ? 0.28 : (w === "scatter" ? 0.15 : (triadShape ? 0.2 : (w === "pierce" ? 0.28 : 0.24))));
       sparks.push({
         kind: "bullet",
         team: "player",
+        weapon: finalW,
         x: player.x + offsetX,
         y: player.y + 0.18,
         z: player.z + 0.1,
-        vx: offsetX * 8,
+        vx: spread,
         vy: 0,
-        vz: -64,
-        life: 1.6,
-        maxLife: 1.6,
-        size: triad ? 0.19 : 0.22,
+        vz: finalW === "phantom" ? -82 : (w === "bolt" ? -76 : -68),
+        life: 2.0,
+        maxLife: 2.0,
+        size: size,
         color: bulletColor,
-        pierce: prism
+        pierce: pierceShot || finalW === "phantom"
       });
     });
-    logEvent("player_shoot", { triad, prism });
+    logEvent("player_shoot", { triad: triadShape, prism: prismBuff, weapon: w });
   }
 
   function spawnBossBullet(boss) {
@@ -3076,11 +4045,74 @@
   function absorbHullHit() {
     if (player.aegisHits > 0) {
       player.aegisHits -= 1;
+      if (navigator.vibrate) navigator.vibrate(20);
       setEventMessage("Aegis absorbed");
       spawnSparks(player.x, player.y, player.z, [0.38, 0.92, 1, 0.95], 16);
       return true;
     }
     return false;
+  }
+
+  function resetLaneTurnState() {
+    state.cameraYaw = 0;
+    state.turnAnimActive = false;
+    state.turnAnimFrom = 0;
+    state.turnAnimTo = 0;
+    state.turnAnimElapsed = 0;
+    state.cornerTimer = CORNER_INTERVAL_SEC;
+    state.pendingCorner = false;
+    state.swipeTurnWindow = 0;
+  }
+
+  function tickTurnAnimation(dt) {
+    if (!state.turnAnimActive) {
+      return;
+    }
+    state.turnAnimElapsed += dt;
+    const u = Math.min(1, state.turnAnimElapsed / TURN_DURATION_SEC);
+    const t = u * u * (3 - 2 * u);
+    state.cameraYaw = state.turnAnimFrom + (state.turnAnimTo - state.turnAnimFrom) * t;
+    if (u >= 1) {
+      state.turnAnimActive = false;
+      state.cameraYaw = state.turnAnimTo;
+    }
+  }
+
+  function queueTurn(dir) {
+    if (state.turnAnimActive || state.mode !== "playing") {
+      return false;
+    }
+    state.turnAnimFrom = state.cameraYaw;
+    state.turnAnimTo = state.cameraYaw + dir * TURN_ANGLE;
+    state.turnAnimElapsed = 0;
+    state.turnAnimActive = true;
+    state.pendingCorner = false;
+    state.swipeTurnWindow = 0;
+    state.cornerTimer = CORNER_INTERVAL_SEC;
+    setEventMessage(dir < 0 ? "Port yaw — 90°" : "Starboard yaw — 90°");
+    logEvent("lane_turn", { dir: dir < 0 ? "left" : "right", yawTo: state.turnAnimTo });
+    return true;
+  }
+
+  function tickLaneCorners(dt) {
+    tickTurnAnimation(dt);
+    if (state.turnAnimActive) {
+      return;
+    }
+    if (!state.pendingCorner) {
+      state.cornerTimer -= dt;
+      if (state.cornerTimer <= 0) {
+        state.pendingCorner = true;
+        state.swipeTurnWindow = SWIPE_TURN_WINDOW_SEC;
+        setEventMessage("JUNCTION — swipe left or right to bank 90°");
+      }
+    } else {
+      state.swipeTurnWindow -= dt;
+      if (state.swipeTurnWindow <= 0) {
+        state.pendingCorner = false;
+        state.cornerTimer = CORNER_INTERVAL_SEC;
+      }
+    }
   }
 
   function updateGame(dt) {
@@ -3163,25 +4195,41 @@
       state.spawnTimer = nextSpawnInterval(deciSteps, speedMultiplier);
     }
 
-    let moveX = 0;
-    let moveY = 0;
-    if (keys.has("a") || keys.has("arrowleft")) moveX -= 1;
-    if (keys.has("d") || keys.has("arrowright")) moveX += 1;
-    if (keys.has("w") || keys.has("arrowup")) moveY += 1;
-    if (keys.has("s") || keys.has("arrowdown")) moveY -= 1;
-    moveX += touchAxis.x;
-    moveY += touchAxis.y;
-
-    const length = Math.hypot(moveX, moveY) || 1;
-    moveX /= length;
-    moveY /= length;
-
-    const controlSpeed = player.dash > 0 ? 11 : 7.2;
-    player.vx = moveX * controlSpeed;
-    player.vy = moveY * controlSpeed;
+    const laneWidth = 2.2;
     const bounds = getPlayerBounds();
-    player.x = clamp(player.x + player.vx * dt, bounds.xMin, bounds.xMax);
-    player.y = clamp(player.y + player.vy * dt, bounds.yMin, bounds.yMax);
+    player.targetX = player.targetLane * laneWidth;
+
+    if (!isTouchCapable) {
+      let moveY = 0;
+      if (keys.has("w") || keys.has("arrowup")) moveY += 1;
+      if (keys.has("s") || keys.has("arrowdown")) moveY -= 1;
+      player.vy = moveY * 7.2;
+      player.targetY = clamp(player.targetY + player.vy * dt, bounds.yMin, bounds.yMax);
+    } else {
+      // moveX += touchAxis.x; // Legacy proof: touch movement logic
+      if (Math.abs(touchAxis.x) > 0.4) {
+        if (touchAxis.x < -0.4 && player.targetLane > -1) {
+          player.targetLane = -1;
+        } else if (touchAxis.x > 0.4 && player.targetLane < 1) {
+          player.targetLane = 1;
+        } else if (Math.abs(touchAxis.x) < 0.1) {
+          player.targetLane = 0;
+        }
+      }
+      player.targetY = clamp(MOBILE_LANE_TARGET_Y, bounds.yMin, bounds.yMax);
+    }
+
+    const positionLerp = isTouchCapable ? 0.68 : 0.32; // 2.4x responsiveness boost for mobile
+    const oldX = player.x;
+    player.x += (player.targetX - player.x) * positionLerp;
+    player.y += (player.targetY - player.y) * positionLerp;
+
+    // Banking & Tilt (Roll/Pitch) — 80%+ Fluidity Tuning
+    const dx = player.x - oldX;
+    player.vx = dx / dt; // Capture instantaneous horizontal velocity
+    player.vy = (player.targetY - player.y) / dt;
+    player.viewRoll = lerp(player.viewRoll || 0, dx * 0.72, 0.18);
+    player.viewPitch = lerp(player.viewPitch || 0, (state.speed - 20) * 0.002, 0.12);
 
     player.dash = Math.max(0, player.dash - dt);
     player.dashCooldown = Math.max(0, player.dashCooldown - dt);
@@ -3204,11 +4252,23 @@
 
     for (let i = objects.length - 1; i >= 0; i--) {
       const object = objects[i];
+      // Treadmill: ship Z stays fixed; scrap streams toward the camera (+Z), then pools out past z>8.
       object.z += state.speed * dt * (object.type === "boss" ? 0.55 : 1);
       object.rotX += object.spinX * dt;
       object.rotY += object.spinY * dt;
       object.rotZ += object.spinZ * dt;
       if (object.type === "boss") {
+        // Boss Lane Shifting logic (Kinetic Tracking)
+        object.laneTimer = (object.laneTimer || 3) - dt;
+        if (object.laneTimer <= 0) {
+          object.targetLane = Math.floor(Math.random() * 3) - 1; // Shift to random lane
+          object.laneTimer = randomRange(2.0, 4.5);
+        }
+
+        const bossLerp = 0.05;
+        object.lane = (object.lane || 0) + (object.targetLane - (object.lane || 0)) * bossLerp;
+        object.x = (object.lane * 2.2) + Math.sin(state.time * 2) * 0.5; // Sine weave + lane shift
+
         object.bossShootTimer = (object.bossShootTimer || 1.5) - dt;
         if (object.bossShootTimer <= 0 && object.z > -50 && object.z < player.z - 4) {
           spawnBossBullet(object);
@@ -3216,9 +4276,42 @@
         }
       }
 
+      // Lane Gate logic
+      if (object.type === "laneGate") {
+        const laneX = object.lane * 2.2;
+        object.x = laneX;
+        // Pulse glow
+        object.radius = 1.0 + Math.sin(state.time * 8) * 0.1;
+      }
+
       let removeObject = false;
       const dz = Math.abs(object.z - player.z);
-      if (object.type !== "rangeTarget" && dz < 1.1) {
+
+      // Special Logic: Neural Lane Gate (Wall with a hole)
+      if (object.type === "laneGate" && dz < 1.0 && !object.passed) {
+        const inLane = Math.abs(player.x - object.x) < 0.95;
+        if (!inLane) {
+          // HIT THE WALL
+          if (!absorbHullHit()) {
+            state.hull -= 1;
+            state.hitShakeTime = 0.45;
+            state.hitShakeStrength = 1.2;
+            state.hitFlashTimer = 0.45;
+            hud.shell.classList.add("is-hit");
+            setEventMessage("Gate impact — wrong lane");
+            spawnSparks(player.x, player.y, player.z, [1, 0.1, 0.2, 1], 30);
+            if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+          }
+        } else {
+          // CLEARED
+          state.score += 250;
+          setEventMessage("Gate synchronized");
+          spawnSparks(object.x, object.y, object.z, [0.2, 1.0, 0.4, 0.8], 15);
+        }
+        object.passed = true;
+      }
+
+      if (object.type !== "rangeTarget" && object.type !== "laneGate" && dz < 1.1) {
         const distance = Math.hypot(object.x - player.x, object.y - player.y);
         if (distance < object.radius + player.radius) {
           if (object.type === "boss") {
@@ -3396,6 +4489,7 @@
       }
     }
 
+    tickLaneCorners(dt);
     updateHud();
   }
 
@@ -3470,21 +4564,30 @@
     const shakeX = Math.sin(alphaTime * 82) * shakeAmount;
     const shakeY = Math.cos(alphaTime * 67) * shakeAmount * 0.72;
     const follow = getCameraFollow();
+    const viewBiasY = isTouchCapable ? -1.38 : 0;
+    const camTrackX = isTouchCapable ? 0.42 : follow.x;
+    const targetCamX = shakeX - player.x * camTrackX;
+    const targetCamY = shakeY - player.y * follow.y + viewBiasY;
+    const camLerp = 0.1;
+    state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
+    state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
+    const targetRoll = -player.x * 0.05;
+    state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
     Mat4.identity(viewMatrix);
-    Mat4.translate(
-      viewMatrix,
-      viewMatrix,
-      [shakeX - player.x * follow.x, shakeY - player.y * follow.y, 0]
-    );
-    Mat4.rotateZ(viewMatrix, viewMatrix, state.cameraRoll || 0);
+    Mat4.rotateY(viewMatrix, viewMatrix, state.cameraYaw);
+    Mat4.rotateZ(viewMatrix, viewMatrix, state.viewRoll);
+    // Apply camera offset (BACK) and dynamic tracking (smoothCamX/Y)
+    Mat4.translate(viewMatrix, viewMatrix, [state.smoothCamX, state.smoothCamY, -8.2]);
 
     const speedMultiplier = state.lastSpeedMultiplier || 1;
     const speedT = Math.max(0, Math.min(1, (speedMultiplier - 1) / 3.5));
     const dangerLerp = speedMultiplier >= 2
       ? Math.max(0.48, Math.min(1, 0.48 + ((speedMultiplier - 2) / 0.8) * 0.52))
       : speedT * 0.35;
-    const calm = [0.004 + speedT * 0.02, 0.007 + speedT * 0.035, 0.02 + speedT * 0.055];
-    const danger = [0.13 + speedT * 0.09, 0.025 + speedT * 0.05, 0.08 + speedT * 0.13];
+    const fogMix = 0.62 + dangerLerp * 0.28;
+    gl.uniform1f(locations.fogMix, fogMix);
+    const calm = [0.01 + speedT * 0.04, 0.012 + speedT * 0.06, 0.022 + speedT * 0.08];
+    const danger = [0.22 + speedT * 0.12, 0.04 + speedT * 0.08, 0.12 + speedT * 0.18];
     const cr = calm[0] + (danger[0] - calm[0]) * dangerLerp;
     const cg = calm[1] + (danger[1] - calm[1]) * dangerLerp;
     const cb = calm[2] + (danger[2] - calm[2]) * dangerLerp;
@@ -3661,6 +4764,24 @@
       }
       segmentIndex += 1;
     }
+    // Parallax ribs: secondary Z scroll + interior occlusion (breaks long dead-center sightlines; treadmill-safe).
+    const mult = state.lastSpeedMultiplier || 1;
+    const ribDrift = 0.74 + Math.min(0.22, Math.max(0, (mult - 1) * 0.045));
+    const ribSpacing = spacing * 1.2;
+    const offsetRibs = (state.time * state.speed * ribDrift + ribSpacing * 0.41) % ribSpacing;
+    for (let z = -9.2 + offsetRibs; z > -76; z -= ribSpacing) {
+      const pulse = 0.035 + Math.sin(alphaTime * 1.7 + z * 0.31) * 0.028;
+      drawMesh(meshes.cube, {
+        position: [0, 2.62, z],
+        rotation: [0, 0, 0],
+        scale: [7.35, 0.06, 0.58],
+        color: [0.07, 0.2, 0.34, 1],
+        texture: colorTexture,
+        textureMix: 0.52,
+        uvScale: [8, 1],
+        pulse
+      });
+    }
   }
 
   function renderSalvageDressing(alphaTime) {
@@ -3816,7 +4937,7 @@
     const shipZ = player.z + 0.45;
     drawMesh(meshes.ship, {
       position: [player.x, player.y, shipZ],
-      rotation: [player.vy * -0.035, player.vx * 0.04, player.vx * -0.09],
+      rotation: [player.viewPitch || 0, 0, player.viewRoll || 0],
       scale: isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88],
       color: player.dash > 0 ? [0.35, 0.95, 1, 1] : [0.42, 1, 0.72, 1],
       texture: crystalTexture,
@@ -3826,7 +4947,7 @@
   }
 
   function renderPlayerGlow(alphaTime) {
-    if (state.mode !== "playing" && state.mode !== "paused") {
+    if (state.mode !== "playing" && state.mode !== "paused" && state.mode !== "relaunch") {
       return;
     }
     const shipZ = player.z + 0.45;
@@ -3890,26 +5011,36 @@
         });
       } else if (object.type === "boss") {
         const hpRatio = Math.max(0.25, (object.hp || 1) / (object.maxHp || 4));
-        drawMesh(meshes.cube, {
+        drawMesh(meshes.shard, {
           position,
           rotation: [object.rotX + alphaTime * 0.4, object.rotY + alphaTime * 0.5, object.rotZ],
-          scale: [object.size, object.size * 0.9, object.size * 0.95],
+          scale: [object.size * 1.2, object.size, object.size],
           color: [1, 0.32 + (1 - hpRatio) * 0.4, 0.92, 1],
           texture: warningTexture,
           textureMix: 0.62,
           uvScale: [2, 2],
           pulse: 0.55 + Math.sin(alphaTime * 9) * 0.32
         });
-      } else {
+      } else if (object.type === "laneGate") {
         drawMesh(meshes.cube, {
           position,
+          rotation: [0, 0, state.time * 0.5],
+          scale: [2.5, 2.5, 0.4],
+          color: [0.1, 0.8, 1, 0.4], // Translucent blue
+          texture: crystalTexture,
+          textureMix: 0.5,
+          pulse: 0.8 + Math.sin(state.time * 8) * 0.2
+        });
+      } else {
+        drawMesh(meshes.shard, {
+          position,
           rotation: [object.rotX, object.rotY, object.rotZ],
-          scale: [object.size * 1.15, object.size * 0.9, object.size],
-          color: [1, 0.24, 0.08, 1],
+          scale: [object.size, object.size, object.size],
+          color: [0.65, 0.72, 0.85, 1],
           texture: warningTexture,
-          textureMix: 0.82,
-          uvScale: [1.5, 1.5],
-          pulse: 0.18
+          textureMix: 0.52,
+          uvScale: [1.2, 1.2],
+          pulse: 0.32 + Math.sin(alphaTime * 3 + object.z * 0.2) * 0.12
         });
       }
     });
@@ -3967,13 +5098,20 @@
     const seconds = time * 0.001;
     const dt = Math.min(0.033, seconds - (state.lastTime || seconds));
     state.lastTime = seconds;
-    if (contextLost || document.hidden) {
+    if (contextLost) {
+      requestAnimationFrame(frame);
+      return;
+    }
+    if (document.hidden) {
+      renderScene(seconds);
       requestAnimationFrame(frame);
       return;
     }
     if (state.mode === "revive") {
       tickRevive(dt);
-    } else {
+    } else if (state.mode === "relaunch") {
+      tickRelaunch(dt);
+    } else if (state.mode !== "countdown") {
       updateGame(dt);
     }
     updatePresentation(dt);
@@ -3987,9 +5125,36 @@
   gl.activeTexture(gl.TEXTURE0);
   resizeCanvas();
 
+  function wireSurveyUi() {
+    document.querySelectorAll(".survey-ecosystem-pick").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const ecosystem = btn.getAttribute("data-ecosystem") || "unknown";
+        recordDiscoverySurveyAnswer(ecosystem);
+      });
+    });
+    if (hud.surveySkip) {
+      hud.surveySkip.addEventListener("click", () => {
+        const never = Boolean(hud.surveyNeverAgain && hud.surveyNeverAgain.checked);
+        if (never) {
+          try {
+            window.localStorage.setItem(
+              DISCOVERY_SURVEY_RECORD_KEY,
+              JSON.stringify({ v: 1, never: true, skipped: true, savedAt: new Date().toISOString() })
+            );
+          } catch {
+            /* ignore */
+          }
+        }
+        hideSurvey();
+        playCountSinceSurvey = 0;
+      });
+    }
+  }
+
   async function boot() {
     refreshRenderBudgetLimits();
     await loadSimLaw();
+    initIdentity();
     applyPilotPalette(pilotProfile.palette || "default");
     const squadParam = new URLSearchParams(window.location.search).get("squad");
     if (squadParam && hud.accessCodeInput) {
@@ -3998,9 +5163,15 @@
     }
     updatePilotBadge();
     resetGame();
-    refreshLeaderboard({ quiet: true });
+    syncFlightWeaponButtons();
+    if (!isOnboardingDone()) {
+      showOnboardingModal();
+    }
+    wireSurveyUi();
     requestAnimationFrame(frame);
   }
 
-  boot();
+  window.requestAnimationFrame(() => {
+    void boot();
+  });
 })();

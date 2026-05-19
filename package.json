@@ -17,7 +17,17 @@
     "twa:build": "npm run build --workspace=@starfall/twa",
     "twa:validate": "npm run validate --workspace=@starfall/twa",
     "twa:verify-assetlinks": "npm run verify-assetlinks --workspace=@starfall/twa",
-    "vault:check": "node --input-type=module < src/kopano-vault.js"
+    "vault:check": "node --input-type=module < src/kopano-vault.js",
+    "verify:syntax": "node --check src/game.js && python -m py_compile backend/starfall_server.py",
+    "kc:audit": "python tools/kc_starfall_watch.py --once --skip-backend",
+    "kc:audit:full": "python tools/kc_starfall_watch.py --once",
+    "kc:audit:seed": "python tools/kc_starfall_watch.py --once --skip-backend --seed-kc",
+    "kc:watch": "python tools/kc_starfall_watch.py --interval 60 --skip-backend",
+    "gate": "npm run verify:syntax && python tools/hot_path_audit.py && npm run context:typecheck && npm run kc:audit",
+    "hot-path:audit": "python tools/hot_path_audit.py",
+    "mobile:stress:pw": "node tools/playwright_mobile_audit.js",
+    "context:typecheck": "npm run typecheck --workspace=@kopano/context",
+    "context:smoke": "npm run context:typecheck && node --experimental-strip-types tools/kopano_context_smoke.mjs"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

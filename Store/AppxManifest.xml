@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
+
+  <Identity
+    Name="KopanoLabs.StarfallSalvage"
+    Publisher="CN=KopanoLabs, O=KopanoLabs, L=CapeTown, C=ZA"
+    Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>Starfall Salvage</DisplayName>
+    <PublisherDisplayName>Kopano Labs</PublisherDisplayName>
+    <Logo>StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="x-generate"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+      Executable="Placeholder.exe"
+      EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="Starfall Salvage"
+        Description="High-fidelity sovereign space salvage game. Navigate the 360 Ecosystem, collect energy cores, and survive the danger zone."
+        BackgroundColor="#07080e"
+        Square150x150Logo="Square150x150Logo.png"
+        Square44x44Logo="Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Wide310x150Logo.png" />
+        <uap:SplashScreen Image="SplashScreen.png" />
+      </uap:VisualElements>
+      
+      <uap:ApplicationContentUriRules>
+        <uap:Rule Type="include" WindowsRuntimeAccess="all" Match="https://starfallsalvage.kopanolabs.com/*" />
+      </uap:ApplicationContentUriRules>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>

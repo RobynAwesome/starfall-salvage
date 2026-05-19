@@ -1,0 +1,19 @@
+---
+description: Load machine session state before acting; enforce track isolation (Starfall vs Arena)
+alwaysApply: true
+---
+
+# Session continuity (Kopano)
+
+At the start of every task in this repo:
+
+1. Read `Structure/SESSION_STATE.json` first. Treat it as the canonical handoff — not chat summary prose.
+2. Honor `active_track`. If `STARFALL`, do not implement Five's Arena / fixtures / BlackBox work unless the user explicitly switches track.
+3. Honor `blocked_tracks` and `human_gates` (e.g. TWA SHA-256 when status is `parked`).
+4. After shipping work, remind the user to run:
+   `python tools/session_handoff.py close --track STARFALL --commit <sha> --build <tag> --next-target "<one line>"`
+   and optionally `python tools/kc_main_brain_scan.py --once --seed-kc`.
+
+TierZero MCP is for **production telemetry** (`tierzero_ask`, `tierzero_fetch_context`), not project memory. Do not use it to replace SESSION_STATE or Schematics.
+
+Main Brain (human): OneDrive `Schematics/` vault. Sub-brain (machine): this repo + KC `context_store.json`.

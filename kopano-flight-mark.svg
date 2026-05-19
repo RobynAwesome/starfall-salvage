@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 96" fill="none" role="img" aria-labelledby="kopano-flight-title">
+  <title id="kopano-flight-title">Kopano Labs</title>
+  <defs>
+    <linearGradient id="klNodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a6fb5"/>
+      <stop offset="100%" stop-color="#0d4a7a"/>
+    </linearGradient>
+    <linearGradient id="klLineGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a9d8f"/>
+      <stop offset="50%" stop-color="#1a6fb5"/>
+      <stop offset="100%" stop-color="#264653"/>
+    </linearGradient>
+    <linearGradient id="klArrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a9d8f"/>
+      <stop offset="100%" stop-color="#4ecdc4"/>
+    </linearGradient>
+    <linearGradient id="klLeafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a9d8f"/>
+      <stop offset="100%" stop-color="#6ec6a0"/>
+    </linearGradient>
+    <linearGradient id="klTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2a9d8f"/>
+      <stop offset="100%" stop-color="#4ecdc4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Network Graph - 5 nodes with connecting lines -->
+  <!-- Bottom-left node -->
+  <circle cx="18" cy="72" r="6.5" fill="url(#klNodeGrad)" stroke="#1a6fb5" stroke-width="1.5"/>
+  <!-- Bottom-center node -->
+  <circle cx="46" cy="68" r="5.5" fill="url(#klNodeGrad)" stroke="#1a6fb5" stroke-width="1.5"/>
+  <!-- Bottom-right node -->
+  <circle cx="72" cy="74" r="6" fill="url(#klNodeGrad)" stroke="#1a6fb5" stroke-width="1.5"/>
+  <!-- Mid-left node -->
+  <circle cx="28" cy="44" r="5" fill="url(#klNodeGrad)" stroke="#1a6fb5" stroke-width="1.5"/>
+  <!-- Mid-right node -->
+  <circle cx="62" cy="42" r="5.5" fill="url(#klNodeGrad)" stroke="#1a6fb5" stroke-width="1.5"/>
+
+  <!-- Connecting lines (mesh) -->
+  <line x1="18" y1="72" x2="46" y2="68" stroke="url(#klLineGrad)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="46" y1="68" x2="72" y2="74" stroke="url(#klLineGrad)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="18" y1="72" x2="28" y2="44" stroke="url(#klLineGrad)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="28" y1="44" x2="62" y2="42" stroke="url(#klLineGrad)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="62" y1="42" x2="72" y2="74" stroke="url(#klLineGrad)" stroke-width="2" stroke-linecap="round"/>
+  <line x1="46" y1="68" x2="28" y2="44" stroke="url(#klLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="46" y1="68" x2="62" y2="42" stroke="url(#klLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="18" y1="72" x2="72" y2="74" stroke="url(#klLineGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+
+  <!-- Upward arrow from top-right of network -->
+  <path d="M56 38 L56 12 L48 22 M56 12 L64 22" stroke="url(#klArrowGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Leaf element (bottom-right of network) -->
+  <path d="M68 54 C74 44, 82 42, 84 48 C86 54, 78 58, 68 54Z" fill="url(#klLeafGrad)" opacity="0.85"/>
+  <path d="M70 54 C74 48, 80 46, 82 50" stroke="#2a9d8f" stroke-width="1" fill="none" opacity="0.5"/>
+
+  <!-- KOPANO text -->
+  <text x="100" y="52" fill="url(#klTextGrad)" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="32" font-weight="800" letter-spacing="1">KOPANO</text>
+
+  <!-- LABS text -->
+  <text x="100" y="78" fill="#1a4a6b" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="28" font-weight="700" letter-spacing="2">LABS</text>
+</svg>

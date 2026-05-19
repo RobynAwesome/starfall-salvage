@@ -1,45 +1,20 @@
 {
-  "id": "/",
   "name": "Starfall Salvage",
   "short_name": "Starfall",
-  "description": "Township-built raw WebGL salvage runner from Kopano Labs. Phase-dash debris, harvest cores, offline vault progression.",
-  "start_url": "/",
-  "scope": "/",
+  "description": "High-fidelity sovereign space salvage game. Navigate the 360 Ecosystem, collect energy cores, and survive the danger zone.",
+  "start_url": "./",
   "display": "standalone",
-  "display_override": ["standalone", "browser"],
-  "orientation": "any",
   "background_color": "#07080e",
   "theme_color": "#07080e",
   "lang": "en-ZA",
-  "categories": ["games", "entertainment"],
+  "categories": ["games", "action", "arcade"],
+  "iarc_rating_id": "e7c65f90-1e5b-4c6e-8e7c-b65f901e5b4c",
   "icons": [
     {
-      "src": "/starfall-smoke.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/starfall-smoke.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/starfall-smoke.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Starfall Salvage in flight"
-    },
-    {
-      "src": "/starfall-smoke.png",
-      "sizes": "720x1280",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Mobile salvage run"
+      "src": "kopano-flight-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ]
 }

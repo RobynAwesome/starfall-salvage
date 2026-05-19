@@ -15,23 +15,15 @@
 - Branch: `codex/starfall-mobile-weapon-ecosystem`.
 - Code commit: do not trust stale static hashes here; use `git log -1` on the active clone for branch tip truth.
 - Branch proof docs: this file now records the movement-control proof before final commit/push.
-- Remote branch tip: use `git log -1` / `git ls-remote` for hash truth; production still requires merge to `main`.
+- Remote branch tip: use `git log -1` / `git ls-remote` for hash truth after the merge-resolution commit; production still requires merge or fast-forward to `main`.
 - Manual PR URL: `https://github.com/Kopano-Labs/starfall-salvage/pull/new/codex/starfall-mobile-weapon-ecosystem`.
 - Production redeploy: pending merge to `main`.
 
-## Completed
-
-- Raw WebGL game created with shaders, buffers, indexed meshes, matrix transforms, procedural textures, and gameplay loop.
-- Tactical WebGL upgrade added: diffuse lighting, additive particle pass, FPS HUD, dash FOV, view-matrix shake, delta-time audit.
-- Project moved to `C:\Users\rkhol\Starfall Salvage`.
-- Private GitHub repository created and seeded at `https://github.com/Kopano-Labs/starfall-salvage`.
-- Kopano Labs logo asset added locally.
-- Pilot profile UI added with offline fallback and optional local backend.
-- Local Python backend added for demo sign-in, score storage, leaderboard, and static file serving.
-- KC strict QA lane added.
-- Kopano Labs Upgrade (2026-05-05): native HTML5 Vibration API on hull damage and game over, WhatsApp share button on leaderboard, in-game Kasi-Comm chat lobby with SQLite persistence and 3s polling, Sovereign Tech CONTRIBUTING.md bounty doctrine.
-- Open Graph + Twitter Card meta tags added for WhatsApp/social link previews.
-- Chat backend rate-limited to one transmission per pilot every 1.5s.
+- **Sovereign Identity (2026-05-16):** Implemented biologically-adaptive flight deck (XY/XX theme switching), device-bound cryptographic Sovereign ID generation, and premium 'Neural Scan' onboarding.
+- **Kinetic Gameplay (Turing Standard):** Added 'Temple Run' fluid lane shifting, 90° Yaw transitions, banking animations, and 'Neural Gate' procedural obstacles.
+- **Microsoft Store Readiness:** Generated `AppxManifest.xml` and `msix_package_guide.md` in `Store/` directory. PWA manifest search-optimized and categorized for Arcade/Action.
+- **Visual Rendering Upgrade:** Replaced flat cubes with procedural 'Salvage Debris' shard geometry for increased high-fidelity immersion.
+- **Checklist Codification:** Created `docs/microsoft-readiness.md` as the binary compliance gate for the ecosystem.
 
 ## Production State (2026-05-06)
 
@@ -78,7 +70,7 @@
 
 - Physical Redmi 13 recapture after this branch merges and Vercel redeploys production.
 - Production has not received the movement-control fix until this branch is merged and redeployed.
-- GitHub PR creation from this agent lane is blocked by invalid `gh` token / connector 403; branch push succeeded.
+- GitHub PR creation from this agent lane is blocked by invalid `gh` token / connector 403; branch push can continue.
 - MAIN-BRAIN path drift remains on WATCH: older registry path is `C:\Users\rkhol\Starfall Salvage`; expected current clone was `C:\Users\rkhol\OneDrive\Documents\Kopano Labs\starfall-salvage`; this run recovered `C:\Users\rkhol\.cursor\projects\empty-window\starfall-salvage`.
 - Kasi-Comm chat backend is **not deployed** on production — frontend gracefully shows "Lobby offline." Phase C of 2026-05-06 session adds mailto-based idea capture with bounty incentive.
 - SQLite leaderboard backend not deployed on production — frontend gracefully degrades to local browser scores.
@@ -101,6 +93,9 @@
 - KC student audit passed after Lesson 013 watcher wiring: `python tools\kc_starfall_watch.py --once --seed-kc`, `kc_context_id=kc-39`, 69/69 curriculum proofs.
 - Movement proof passed across keyboard, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json`, failures `[]`.
 - KC student audit passed after Lesson 014 movement wiring: `python tools\kc_starfall_watch.py --once --seed-kc`, `kc_context_id=kc-41`, 75/75 curriculum proofs.
+- `npm run gate` (`node --check` + `kc_starfall_watch.py --once --skip-backend`) passes on dev lane.
+- Merged-with-main browser movement proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`, keyboard/mouse/Redmi/narrow all moved `x=0 -> 2.2`, `targetLane=1`.
+- Merged-with-main KC gate passed: `npm run gate`, 104/104 curriculum proofs across Lessons 001-018.
 - `node --check src\game.js` passed.
 - `python -m py_compile backend\starfall_server.py tools\kc_starfall_watch.py` passed.
 - Backend `/api/health`, `/api/signin`, `/api/score`, and `/api/leaderboard` passed locally against SQLite.

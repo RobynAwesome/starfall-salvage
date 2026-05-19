@@ -26,11 +26,73 @@
   <main class="shell">
     <canvas id="glCanvas" tabindex="0" aria-label="Starfall Salvage WebGL game canvas"></canvas>
 
+    <!-- Protocol 13 — Sovereign menu / pause (360° hub lives here, not on the canvas) -->
+    <div class="sovereign-scrim" id="sovereignScrim" hidden aria-hidden="true">
+      <div class="sovereign-scrim-inner">
+        <p class="sovereign-eyebrow">Kopano Labs · WebGL</p>
+        <h2 class="sovereign-title">STARFALL SALVAGE</h2>
+        <p class="sovereign-sub" id="sovereignSubline">Tap to fly</p>
+        <button type="button" class="sovereign-cta" id="sovereignPrimaryCta">Fly</button>
+        <nav class="sovereign-eco" aria-label="Kopano ecosystem quick links">
+          <a href="https://kopanolabs.com/" target="_blank" rel="noopener">Hub</a>
+          <a href="https://bookit5s.kopanolabs.com/" target="_blank" rel="noopener">Bookit 5s</a>
+          <a href="https://blog.kopanolabs.com/" target="_blank" rel="noopener">5s Blog</a>
+          <a href="https://kasilink.online/" target="_blank" rel="noopener">KasiLink</a>
+          <a href="https://fivesarena.com/" target="_blank" rel="noopener">Five&rsquo;s Arena</a>
+          <a href="https://github.com/Kopano-Labs" target="_blank" rel="noopener">GitHub</a>
+        </nav>
+      </div>
+    </div>
+
+    <header class="playing-minimal-hud" id="playingMinimalHud" hidden aria-hidden="true">
+      <div class="pmh-score"><span class="pmh-label">Score</span><strong id="pmhScore">0</strong></div>
+      <div class="pmh-controls">
+      <button type="button" class="pmh-pause" id="pauseMinimalButton" aria-label="Pause or resume">||</button>
+      <div class="flight-menu-wrap">
+        <button
+          type="button"
+          class="flight-menu-toggle"
+          id="flightMenuToggle"
+          aria-expanded="false"
+          aria-haspopup="true"
+          aria-controls="flightMenuPanel"
+          aria-label="Flight menu — multitask, weapons"
+        >
+          <span class="flight-menu-glyph" aria-hidden="true">☰</span>
+          <span class="flight-menu-label">Menu</span>
+        </button>
+        <div class="flight-menu-panel is-hidden" id="flightMenuPanel" role="menu" aria-label="Flight menu">
+          <button type="button" class="flight-menu-item" id="flightResumeItem" role="menuitem">Drop in — resume</button>
+          <button type="button" class="flight-menu-item" id="flightStepOutItem" role="menuitem">Step out — hub pause</button>
+          <p class="flight-menu-heading" role="presentation">Weapon calibre</p>
+          <button type="button" class="flight-menu-item flight-weapon" data-weapon="bolt" role="menuitem" aria-pressed="true">Bolt lane</button>
+          <button type="button" class="flight-menu-item flight-weapon" data-weapon="scatter" role="menuitem" aria-pressed="false">Scatter burst</button>
+          <button type="button" class="flight-menu-item flight-weapon" data-weapon="pierce" role="menuitem" aria-pressed="false">Pierce core</button>
+        </div>
+      </div>
+      <div class="pmh-speed"><strong id="pmhSpeed">1.0x</strong></div>
+      </div>
+    </header>
+
+    <section class="game-over-sovereign" id="gameOverSovereign" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+      <div class="game-over-sovereign-inner">
+        <h2 id="gameOverTitle">Mission Failed</h2>
+        <p class="game-over-scores">Run <strong id="gameOverFinal">0</strong> · Best <strong id="gameOverBest">0</strong></p>
+        <div class="game-over-actions">
+          <button type="button" id="gameOverFlyAgain" class="is-primary">Fly Again</button>
+          <button type="button" id="gameOverLeaderboard" class="is-secondary">Leaderboard</button>
+          <button type="button" id="gameOverHub" class="is-tertiary">Kopano Hub</button>
+        </div>
+      </div>
+    </section>
+
     <section class="hud" aria-live="polite">
       <a class="brand brand-anchor" href="https://kopanolabs.com/" target="_blank" rel="noopener" aria-label="Kopano Labs — open kopanolabs.com">
-        <div class="brand-logo" role="img" aria-label="Kopano Labs logo"></div>
+        <div class="brand-logo" role="img" aria-label="Kopano Labs logo">
+          <img class="brand-logo-img" src="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20420%2096%22%20fill%3D%22none%22%20role%3D%22img%22%20aria-labelledby%3D%22kopano-flight-title%22%3E%0A%20%20%3Ctitle%20id%3D%22kopano-flight-title%22%3EKopano%20Labs%3C%2Ftitle%3E%0A%20%20%3Cdefs%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22klNodeGrad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%231a6fb5%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%230d4a7a%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22klLineGrad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%22100%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%232a9d8f%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%2250%25%22%20stop-color%3D%22%231a6fb5%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%23264653%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22klArrowGrad%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%232a9d8f%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234ecdc4%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22klLeafGrad%22%20x1%3D%220%25%22%20y1%3D%22100%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%232a9d8f%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%236ec6a0%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%3ClinearGradient%20id%3D%22klTextGrad%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%22100%25%22%20y2%3D%220%25%22%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%232a9d8f%22%2F%3E%0A%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22%234ecdc4%22%2F%3E%0A%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%3C%2Fdefs%3E%0A%0A%20%20%3C!--%20Network%20Graph%20-%205%20nodes%20with%20connecting%20lines%20--%3E%0A%20%20%3C!--%20Bottom-left%20node%20--%3E%0A%20%20%3Ccircle%20cx%3D%2218%22%20cy%3D%2272%22%20r%3D%226.5%22%20fill%3D%22url(%23klNodeGrad)%22%20stroke%3D%22%231a6fb5%22%20stroke-width%3D%221.5%22%2F%3E%0A%20%20%3C!--%20Bottom-center%20node%20--%3E%0A%20%20%3Ccircle%20cx%3D%2246%22%20cy%3D%2268%22%20r%3D%225.5%22%20fill%3D%22url(%23klNodeGrad)%22%20stroke%3D%22%231a6fb5%22%20stroke-width%3D%221.5%22%2F%3E%0A%20%20%3C!--%20Bottom-right%20node%20--%3E%0A%20%20%3Ccircle%20cx%3D%2272%22%20cy%3D%2274%22%20r%3D%226%22%20fill%3D%22url(%23klNodeGrad)%22%20stroke%3D%22%231a6fb5%22%20stroke-width%3D%221.5%22%2F%3E%0A%20%20%3C!--%20Mid-left%20node%20--%3E%0A%20%20%3Ccircle%20cx%3D%2228%22%20cy%3D%2244%22%20r%3D%225%22%20fill%3D%22url(%23klNodeGrad)%22%20stroke%3D%22%231a6fb5%22%20stroke-width%3D%221.5%22%2F%3E%0A%20%20%3C!--%20Mid-right%20node%20--%3E%0A%20%20%3Ccircle%20cx%3D%2262%22%20cy%3D%2242%22%20r%3D%225.5%22%20fill%3D%22url(%23klNodeGrad)%22%20stroke%3D%22%231a6fb5%22%20stroke-width%3D%221.5%22%2F%3E%0A%0A%20%20%3C!--%20Connecting%20lines%20(mesh)%20--%3E%0A%20%20%3Cline%20x1%3D%2218%22%20y1%3D%2272%22%20x2%3D%2246%22%20y2%3D%2268%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%0A%20%20%3Cline%20x1%3D%2246%22%20y1%3D%2268%22%20x2%3D%2272%22%20y2%3D%2274%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%0A%20%20%3Cline%20x1%3D%2218%22%20y1%3D%2272%22%20x2%3D%2228%22%20y2%3D%2244%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%0A%20%20%3Cline%20x1%3D%2228%22%20y1%3D%2244%22%20x2%3D%2262%22%20y2%3D%2242%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%0A%20%20%3Cline%20x1%3D%2262%22%20y1%3D%2242%22%20x2%3D%2272%22%20y2%3D%2274%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%2F%3E%0A%20%20%3Cline%20x1%3D%2246%22%20y1%3D%2268%22%20x2%3D%2228%22%20y2%3D%2244%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.6%22%2F%3E%0A%20%20%3Cline%20x1%3D%2246%22%20y1%3D%2268%22%20x2%3D%2262%22%20y2%3D%2242%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.6%22%2F%3E%0A%20%20%3Cline%20x1%3D%2218%22%20y1%3D%2272%22%20x2%3D%2272%22%20y2%3D%2274%22%20stroke%3D%22url(%23klLineGrad)%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20opacity%3D%220.4%22%2F%3E%0A%0A%20%20%3C!--%20Upward%20arrow%20from%20top-right%20of%20network%20--%3E%0A%20%20%3Cpath%20d%3D%22M56%2038%20L56%2012%20L48%2022%20M56%2012%20L64%2022%22%20stroke%3D%22url(%23klArrowGrad)%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%2F%3E%0A%0A%20%20%3C!--%20Leaf%20element%20(bottom-right%20of%20network)%20--%3E%0A%20%20%3Cpath%20d%3D%22M68%2054%20C74%2044%2C%2082%2042%2C%2084%2048%20C86%2054%2C%2078%2058%2C%2068%2054Z%22%20fill%3D%22url(%23klLeafGrad)%22%20opacity%3D%220.85%22%2F%3E%0A%20%20%3Cpath%20d%3D%22M70%2054%20C74%2048%2C%2080%2046%2C%2082%2050%22%20stroke%3D%22%232a9d8f%22%20stroke-width%3D%221%22%20fill%3D%22none%22%20opacity%3D%220.5%22%2F%3E%0A%0A%20%20%3C!--%20KOPANO%20text%20--%3E%0A%20%20%3Ctext%20x%3D%22100%22%20y%3D%2252%22%20fill%3D%22url(%23klTextGrad)%22%20font-family%3D%22system-ui%2C%20-apple-system%2C%20'Segoe%20UI'%2C%20sans-serif%22%20font-size%3D%2232%22%20font-weight%3D%22800%22%20letter-spacing%3D%221%22%3EKOPANO%3C%2Ftext%3E%0A%0A%20%20%3C!--%20LABS%20text%20--%3E%0A%20%20%3Ctext%20x%3D%22100%22%20y%3D%2278%22%20fill%3D%22%231a4a6b%22%20font-family%3D%22system-ui%2C%20-apple-system%2C%20'Segoe%20UI'%2C%20sans-serif%22%20font-size%3D%2228%22%20font-weight%3D%22700%22%20letter-spacing%3D%222%22%3ELABS%3C%2Ftext%3E%0A%3C%2Fsvg%3E%0A" alt="" width="148" height="48" decoding="async" />
+        </div>
         <div>
-          <p class="eyebrow">WebGL Edition</p>
+          <p class="eyebrow">WebGL Edition · KC flight deck</p>
           <h1>Starfall Salvage</h1>
         </div>
       </a>
@@ -47,6 +109,7 @@
 
       <div class="hud-actions ui-chrome">
         <span class="pilot-badge" id="pilotBadge">Guest Pilot</span>
+        <div id="eventTicker" class="event-ticker is-hidden" aria-live="polite"></div>
         <button id="inviteFriendsButton" type="button">Invite</button>
         <button id="signInButton" type="button">Sign in</button>
         <button id="opsConsoleButton" type="button" class="ops-console-trigger is-hidden" aria-label="Open flight ops monitor">OPS</button>
@@ -59,22 +122,42 @@
     <section class="status-panel ui-chrome" id="statusPanel">
       <p class="eyebrow">Mission</p>
       <h2 id="statusTitle">Ready</h2>
-      <p id="statusText">Collect blue energy cores and avoid red debris inside the moving salvage lane.</p>
-      <p class="control-line">One flight deck on every device: WASD or drag to move, Space or tap to dash, F / click / hold FIRE to shoot. Collect prism buffs for spread, pierce, aegis, and overcharge.</p>
-      <p class="desktop-fire-hint ui-chrome" id="desktopFireHint">Desktop: click canvas or hold F to fire</p>
+      <p id="statusText">Collect cores. Dodge debris. Dash through danger.</p>
+      <p class="desktop-fire-hint ui-chrome" id="desktopFireHint">Click canvas or hold F to fire</p>
     </section>
 
-    <section class="kopano-ecosystem ui-chrome" aria-label="Kopano Labs ecosystem">
-      <p class="eyebrow">Kopano Labs</p>
-      <h2 class="kopano-ecosystem-title">Township tech lane</h2>
-      <p class="kopano-ecosystem-copy">One Starfall ruleset now runs across PC, Android, Xiaomi, and Apple browsers: move, dash, fire, collect cores, and chain prism buffs without device-specific gameplay forks.</p>
-      <ul class="kopano-ecosystem-links">
-        <li><a href="https://fivesarena.com/" target="_blank" rel="noopener">Five&rsquo;s Arena</a> &mdash; gents football &amp; bookings</li>
-        <li><a href="https://news.fivesarena.com/" target="_blank" rel="noopener">Five&rsquo;s Arena News</a> &mdash; soccer bruus &amp; match intel</li>
-        <li><a href="https://kopanolabs.com/" target="_blank" rel="noopener">Kopano Labs</a> &mdash; township tech cloud</li>
-        <li><a href="https://github.com/Kopano-Labs" target="_blank" rel="noopener">Kopano-Labs on GitHub</a> &mdash; repos and CONTRIBUTING</li>
-        <li><a href="https://starfallsalvage.kopanolabs.com/" target="_blank" rel="noopener">Starfall Salvage (production)</a> &mdash; overcharge, triad, aegis, prism</li>
-      </ul>
+    <!-- 3-second countdown overlay -->
+    <div class="countdown-overlay is-hidden" id="countdownOverlay" aria-live="assertive">
+      <span class="countdown-number" id="countdownNumber">3</span>
+    </div>
+
+    <section class="kopano-ecosystem ui-chrome ecosystem-360 is-collapsed" id="ecosystemPanel" aria-label="Kopano Labs ecosystem">
+      <button class="ecosystem-360-toggle" id="ecosystemToggle" type="button" aria-expanded="false" aria-controls="ecosystemBody">
+        <span class="ecosystem-360-toggle-label">Kopano Ecosystem</span>
+        <span class="ecosystem-360-toggle-count">11 products</span>
+        <span class="ecosystem-360-toggle-arrow" aria-hidden="true">&#x25BC;</span>
+      </button>
+      <div class="ecosystem-360-body" id="ecosystemBody">
+        <div class="ecosystem-360-head">
+          <p class="ecosystem-360-head-label">360&deg; ring</p>
+          <button id="ecosystemClose" type="button" class="ecosystem-360-close" data-testid="modal-back" aria-label="Close ecosystem menu">Back</button>
+        </div>
+        <ul class="ecos-360-grid" role="list">
+          <li><a class="ecos-card is-core" href="https://kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Core</span><span class="ecos-card-title">Kopano Labs</span></a></li>
+          <li><a class="ecos-card" href="https://bookit5s.kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Bookings</span><span class="ecos-card-title">Bookit 5s Arena</span></a></li>
+          <li><a class="ecos-card" href="https://blog.kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Editorial</span><span class="ecos-card-title">The 5s Blog</span></a></li>
+          <li><a class="ecos-card" href="https://kasilink.online/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Community</span><span class="ecos-card-title">KasiLink</span></a></li>
+          <li><a class="ecos-card is-craft" href="https://krrababalela.com/projects" target="_blank" rel="noopener"><span class="ecos-card-kicker">Architect</span><span class="ecos-card-title">Chief portfolio</span></a></li>
+          <li><a class="ecos-card" href="https://fivesarena.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Five&rsquo;s</span><span class="ecos-card-title">Five&rsquo;s Arena</span></a></li>
+          <li><a class="ecos-card" href="https://news.fivesarena.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Signals</span><span class="ecos-card-title">Arena News</span></a></li>
+          <li><a class="ecos-card is-game" href="https://starfallsalvage.kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Game</span><span class="ecos-card-title">Starfall Salvage</span></a></li>
+          <li><a class="ecos-card" href="https://capecampass.kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Navigate</span><span class="ecos-card-title">Cape Compass</span></a></li>
+          <li><a class="ecos-card" href="https://amaphu.kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Entertainment</span><span class="ecos-card-title">AMA-PHU</span></a></li>
+          <li><a class="ecos-card" href="https://github.com/Kopano-Labs" target="_blank" rel="noopener"><span class="ecos-card-kicker">Open craft</span><span class="ecos-card-title">GitHub org</span></a></li>
+          <li><a class="ecos-card is-discovery" href="https://discovery.kopanolabs.com/" target="_blank" rel="noopener"><span class="ecos-card-kicker">Discovery</span><span class="ecos-card-title">Sovereign Portal</span></a></li>
+        </ul>
+        <p class="ecos-investor-foot">Every link = <strong>live</strong> property. 11 sovereign products. Zero dependencies. <em>James&nbsp;2:26</em></p>
+      </div>
     </section>
 
     <section class="leaderboard-panel ui-chrome" id="leaderboardPanel" aria-live="polite">
@@ -84,6 +167,7 @@
           <h2>Top Runs</h2>
         </div>
         <div class="leaderboard-actions">
+          <button id="leaderboardSheetClose" type="button" class="is-secondary" aria-label="Close leaderboard">Back</button>
           <button id="shareWhatsappButton" type="button" class="is-hidden" aria-label="Share score on WhatsApp">Share</button>
           <button id="refreshLeaderboardButton" type="button">Refresh</button>
         </div>
@@ -114,7 +198,7 @@
         <p><strong>What works now:</strong> Open this URL on a laptop or desktop &mdash; full game with onboarding, danger zone, shooting, and bosses.</p>
         <p><strong>Mobile is being rebuilt</strong> against the Asymmetric Edge Reality test (low-end Android, township infrastructure, zero-budget hardware). Re-open this page after the next deploy.</p>
         <p><strong>Got a mobile-perf fix or upgrade idea?</strong> Email <a href="mailto:rkholofelo@kopanolabs.com">rkholofelo@kopanolabs.com</a> &mdash; Sovereign Tech bounty applies (Tier 2, R500&ndash;R1500 ZAR via Yoco / PayFast / EFT).</p>
-        <p class="mobile-lockdown-meta">Build: 20260519-movement-control &middot; Audit started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
+        <p class="mobile-lockdown-meta">Build: 20260519-movement-control &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
       </div>
     </section>
 
@@ -162,6 +246,23 @@
       <div class="onboarding-card" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
         <p class="eyebrow">Mission Briefing</p>
         <h2 id="onboardingTitle">How to Pilot Starfall Salvage</h2>
+        <div class="onboarding-icon-strip" aria-hidden="true">
+          <div class="onboarding-picto" title="Glide to steer">
+            <svg viewBox="0 0 48 48" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="24" cy="24" r="20" stroke="rgba(59,227,255,0.55)" stroke-width="1.5"/>
+              <path d="M14 24h20M24 14v20" stroke="rgba(255,255,255,0.85)" stroke-width="1.5" stroke-linecap="round"/>
+              <path d="M30 18l6-4M30 30l6 4" stroke="rgba(59,227,255,0.9)" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span>Glide</span>
+          </div>
+          <div class="onboarding-picto" title="Tap / F to fire">
+            <svg viewBox="0 0 48 48" width="40" height="40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="10" y="10" width="28" height="28" rx="6" stroke="rgba(255,99,132,0.65)" stroke-width="1.5"/>
+              <circle cx="24" cy="24" r="5" fill="rgba(255,99,132,0.9)"/>
+            </svg>
+            <span>Fire</span>
+          </div>
+        </div>
         <ul class="onboarding-controls">
           <li><strong>Desktop:</strong> WASD or Arrow Keys to fly. Space to phase-dash through danger.</li>
           <li><strong>Mobile:</strong> Drag the flight deck to fly; tap to start; tap mid-flight to phase-dash.</li>
@@ -171,20 +272,75 @@
           <li><strong>Orange plates:</strong> Range targets take two hits; clear them for a score burst.</li>
           <li><strong>Gold orbs:</strong> Fly through them for a rapid-fire boost.</li>
         </ul>
+        <div class="onboarding-deck-tone">
+          <p class="eyebrow">Pilot Identity (XY &bull; XX)</p>
+          <p class="onboarding-deck-hint">Select your biological identity to accommodate the interface. This sets your sovereign flight deck variables.</p>
+          <div class="deck-tone-options gender-options">
+            <label class="gender-option is-selected" id="genderMaleLabel">
+              <input type="radio" name="pilotGender" value="male" id="genderMale" checked>
+              <span class="gender-symbol">XY</span>
+              <span class="gender-label">MALE</span>
+            </label>
+            <label class="gender-option" id="genderFemaleLabel">
+              <input type="radio" name="pilotGender" value="female" id="genderFemale">
+              <span class="gender-symbol">XX</span>
+              <span class="gender-label">FEMALE</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="onboarding-auth-portal">
+          <p class="eyebrow">Sovereign Portal</p>
+          <div class="auth-cta-grid">
+            <div class="auth-status-chip">
+              <span class="status-indicator"></span>
+              <span id="authStatusText">Guest Pilot</span>
+            </div>
+            <button type="button" class="is-tertiary" id="authLoginBtn">Sign In / Register</button>
+          </div>
+          <p class="onboarding-deck-hint">Data is used for product discovery, not extraction. One identity for the Kopano Labs 360 ecosystem.</p>
+        </div>
         <label class="onboarding-acknowledge">
           <input id="onboardingAck" type="checkbox">
           <span>I understand the controls and the 2.0x danger threshold.</span>
         </label>
+        <label class="onboarding-persist">
+          <input id="onboardingNeverAgain" type="checkbox" checked>
+          <span>Don&rsquo;t show this briefing again on this browser (uncheck to see it again next visit).</span>
+        </label>
         <div class="onboarding-actions">
-          <button id="onboardingContinueButton" type="button" disabled>Continue</button>
+          <button id="onboardingSkipButton" type="button" class="is-secondary" data-testid="modal-back" aria-label="Go back — defer briefing">Back</button>
+          <button id="onboardingContinueButton" type="button" disabled>I understand — Continue</button>
         </div>
-        <p class="onboarding-footnote">This briefing only shows once. Got an upgrade idea? Email <a href="mailto:rkholofelo@kopanolabs.com">rkholofelo@kopanolabs.com</a> &mdash; strong ideas earn a Sovereign Tech bounty.</p>
+        <p class="onboarding-footnote">You can reopen this briefing anytime from <strong>Pilot Access</strong> &rarr; &ldquo;Review briefing&rdquo;. Got an upgrade idea? Email <a href="mailto:rkholofelo@kopanolabs.com">rkholofelo@kopanolabs.com</a> &mdash; strong ideas earn a Sovereign Tech bounty.</p>
+      </div>
+    </section>
+
+    <!-- One-question discovery survey (ecosystem preference — local only until sovereign auth ships) -->
+    <section class="survey-modal is-hidden" id="surveyModal" aria-label="Product discovery">
+      <div class="survey-card ui-chrome">
+        <p class="eyebrow">Product Discovery</p>
+        <h3 id="surveyQuestion">What is your primary ecosystem?</h3>
+        <div class="survey-options" id="surveyOptions">
+          <button type="button" class="survey-ecosystem-pick" data-ecosystem="tech">Tech</button>
+          <button type="button" class="survey-ecosystem-pick" data-ecosystem="commerce">Commerce</button>
+          <button type="button" class="survey-ecosystem-pick" data-ecosystem="sports">Sports</button>
+        </div>
+        <label class="survey-never">
+          <input type="checkbox" id="surveyNeverAgain" />
+          <span>Don&rsquo;t ask again on this device</span>
+        </label>
+        <div class="survey-actions">
+          <button type="button" class="is-secondary" id="surveySkip">Skip</button>
+        </div>
       </div>
     </section>
 
     <section class="account-modal is-hidden" id="accountModal" aria-label="Pilot sign in">
       <div class="account-card">
-        <div class="account-logo" role="img" aria-label="Kopano Labs"></div>
+        <div class="account-logo" role="img" aria-label="Kopano Labs">
+          <img class="account-logo-img" src="kopano-flight-mark.svg" alt="" width="208" height="72" decoding="async" />
+        </div>
         <p class="eyebrow">Pilot Access</p>
         <h2>Kopano Labs Flight Deck</h2>
         <p class="account-copy">Create a local pilot profile for best scores and leaderboard practice. It works offline and upgrades to the local backend when the optional server is running.</p>
@@ -207,9 +363,10 @@
         <div class="account-actions">
           <button id="savePilotButton" type="button">Save Pilot</button>
           <button id="guestPilotButton" type="button">Guest</button>
-          <button id="closeAccountButton" type="button">Close</button>
+          <button id="closeAccountButton" type="button" data-testid="modal-back" aria-label="Go back">Close</button>
         </div>
         <div class="account-secondary-actions">
+          <button id="reviewBriefingButton" type="button" class="is-secondary">Review briefing</button>
           <button id="resetPilotButton" type="button">Reset Pilot</button>
         </div>
         <p class="account-status" id="accountStatus">No network account required.</p>
@@ -224,21 +381,29 @@
         <p class="guest-cta-score">Last run <strong id="guestCtaScore">0</strong></p>
         <div class="guest-cta-actions">
           <button id="guestCtaSaveButton" type="button">Save pilot stats / Squad up</button>
-          <button id="guestCtaDismissButton" type="button" class="is-secondary">Not now</button>
+          <button id="guestCtaDismissButton" type="button" class="is-secondary" data-testid="modal-back" aria-label="Go back — not now">Not now</button>
         </div>
+      </div>
+    </section>
+
+    <section class="relaunch-hud is-hidden" id="relaunchHud" aria-live="assertive" aria-atomic="true">
+      <div class="relaunch-hud-inner">
+        <p class="eyebrow">Relaunch gate</p>
+        <p class="relaunch-hud-label" id="relaunchHudLabel">Back in the lane</p>
+        <p class="relaunch-hud-count" id="relaunchCountdownValue">3</p>
       </div>
     </section>
 
     <section class="revive-modal is-hidden" id="reviveModal" role="dialog" aria-modal="true" aria-labelledby="reviveTitle">
       <div class="revive-card">
         <p class="eyebrow">Mini salvage</p>
-        <h2 id="reviveTitle">Core Salvage — earn one hull back</h2>
-        <p class="revive-copy">Tap the glowing cores before the lane collapses. Catch three to relaunch with 1 hull. One rescue per run.</p>
-        <p class="revive-timer">Time <strong id="reviveTimer">8.0</strong>s</p>
-        <p class="revive-progress">Caught <strong id="reviveProgress">0 / 3</strong></p>
-        <div class="revive-arena" id="reviveArena" aria-label="Tap salvage cores"></div>
+        <h2 id="reviveTitle">SYSTEM FAILURE — TAP TO REBOOT</h2>
+        <p class="revive-copy">Rapid-tap anywhere on this panel five times before the lane collapses to relaunch with 1 hull. One rescue per run.</p>
+        <p class="revive-timer">Time <strong id="reviveTimer">3.0</strong>s</p>
+        <p class="revive-progress">Taps <strong id="reviveProgress">0 / 5</strong></p>
+        <div class="revive-arena" id="reviveArena" aria-label="Tap to reboot systems"></div>
         <div class="revive-actions">
-          <button id="reviveSkipButton" type="button">Skip rescue</button>
+          <button id="reviveSkipButton" type="button" data-testid="modal-back" aria-label="Go back — skip rescue">Skip rescue</button>
         </div>
       </div>
     </section>
@@ -251,7 +416,7 @@
             <p class="eyebrow">Local monitor</p>
             <h2 id="opsConsoleTitle">Flight ops</h2>
           </div>
-          <button id="opsConsoleClose" type="button" class="ops-console-close">Close</button>
+          <button id="opsConsoleClose" type="button" class="ops-console-close" data-testid="modal-back" aria-label="Go back">Close</button>
         </header>
         <p class="ops-console-hint">JSON export of recent client events (callsign, score, mode). Live &ldquo;who logged in&rdquo; across phones needs an authenticated API &mdash; see repo <code>Structure/Blockers.md</code>.</p>
         <pre id="opsLog" class="ops-console-log" tabindex="0"></pre>

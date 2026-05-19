@@ -64,3 +64,4 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - Orbital wreck lane browser proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260518-orbital-wreck-r3\report.json` with failures `[]`.
 - `Structure/2026-05-19 - Movement Control Fix Case Study.md` - field-report proof for static/no-movement control failure.
 - Movement proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-movement-r3\report.json` with failures `[]`.
+- Merged-with-main movement proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json` with failures `[]`.
