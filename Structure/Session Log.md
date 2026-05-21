@@ -71,3 +71,5 @@
 - Main Brain audit passed and seeded `kc-43`: 4 checks, 0 failures, 143 markdown files across 8 sections.
 - Clean Redmi proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-local-r3\report.json`, failures `[]`; build `20260521-start-fly-gate`, visible `Tap to fly`, Continue, playing mode, onboarding persistence, and touch drag all passed.
 - Starfall KC audit seeded `kc-47` with `teacher_review: Save — bounded file evidence; no external claim beyond repo.`
+- Branch and `main` were pushed to `b253afc`; production served build `20260521-start-fly-gate`.
+- Production clean Redmi proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-production-r1\report.json`, failures `[]`; visible `Tap to fly`, Continue, playing mode, onboarding persistence, and touch drag all passed.
