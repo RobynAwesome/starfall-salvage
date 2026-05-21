@@ -113,15 +113,16 @@ When KC refuses, it cites the rule and the specific file/line, then logs to both
 
 ## Lesson 004: How KC Talks Back to the Teacher
 
-KC's `teacher_review` field in the Main Brain record is the channel for the student to push back. Format:
+KC's `teacher_review` field in the Main Brain record is the channel for the student to push back. KC does not chat in the interface; the steward writes KC's opinion into each record as `Save` or `Watch`.
 
 ```
-- <proof_key>: <retry_instruction>. Actual: <observed_value>
+Save — bounded file evidence; no external claim beyond repo.
+Watch — <proof_key>: <retry_instruction>. Actual: <observed_value>
 ```
 
 Example failure message KC would write:
 ```
-- chat_rate_limit: patch backend handle_chat with the 1.5s window and the "Slow down, pilot" string. Actual: rate-limit branch missing.
+Watch — chat_rate_limit: patch backend handle_chat with the 1.5s window and the "Slow down, pilot" string. Actual: rate-limit branch missing.
 ```
 
 The teacher reads this, fixes the source, and triggers the next pass. No back-and-forth in chat — the audit log IS the handshake.
@@ -218,9 +219,9 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 ## Lesson 008: Onboarding Pop-up (2026-05-06)
 
-**Why:** Players were dropped into the salvage lane with no instructions on screen. Master directed: instructions to the middle of the screen as a pop-up, tick-to-continue, persisted so it only shows once.
+**Why:** Players need instructions without getting trapped before flight. The briefing must explain controls, persist when accepted, and never block the Start/Fly path on mobile.
 
-**Spec:** Center-screen modal lists desktop + mobile + scoring + danger-zone + shoot rules. Continue button stays disabled until the "I understand" checkbox is ticked. Persisted to localStorage so returning visitors are not interrupted.
+**Spec:** Center-screen modal lists desktop + mobile + scoring + danger-zone + shoot rules. Fly must remain reachable on a clean browser; if the briefing opens from Fly, Continue starts the run. Persisted to localStorage so returning visitors are not interrupted.
 
 **Files in scope:** `index.html`, `styles.css`, `src/game.js`.
 
@@ -230,7 +231,7 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 |---|-----------|------|---------------|
 | 41 | `onboarding_modal_markup` | `index.html` | `id="onboardingModal"` AND `id="onboardingAck"` AND `id="onboardingContinueButton"` |
 | 42 | `onboarding_storage_key` | `src/game.js` | `ONBOARDING_STORAGE_KEY` |
-| 43 | `onboarding_acknowledge_required` | `src/game.js` | `isOnboardingDone` AND `markOnboardingDone` |
+| 43 | `onboarding_fly_gate_clearable` | `src/game.js` | `onboardingPendingStart` AND `onboardingSessionCleared` |
 | 44 | `onboarding_css_modal` | `styles.css` | `.onboarding-modal` AND `.onboarding-card` |
 
 ---
@@ -451,7 +452,7 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 | # | Proof Key | File | Search String |
 |---|-----------|------|---------------|
-| 99 | `movement_build_marker` | `src/game.js` | `20260519-movement-control` |
+| 99 | `movement_build_marker` | `src/game.js` | `20260521-start-fly-gate` |
 | 100 | `pointer_steer_support` | `src/game.js` | `supportsPointerEvents` AND `hud.shell.addEventListener("pointerdown"` |
 | 101 | `flight_deck_drag_copy` | `src/game.js`, `index.html` | `Drag anywhere on the flight deck` AND `Drag the flight deck` |
 | 102 | `debug_movement_probe` | `src/game.js` | `__starfallDebug` |

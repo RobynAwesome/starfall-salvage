@@ -3288,3 +3288,94 @@ select:focus {
   0%, 100% { opacity: 0.8; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.02); }
 }
+
+@media (max-width: 520px), (hover: none) and (pointer: coarse) {
+  .onboarding-modal {
+    padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
+    place-items: center;
+  }
+
+  .onboarding-card {
+    width: min(100%, 420px);
+    max-height: calc(100dvh - 16px);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    padding: 12px;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .onboarding-card h2 {
+    margin-bottom: 4px;
+    font-size: 1.04rem;
+    line-height: 1.12;
+  }
+
+  .onboarding-icon-strip,
+  .onboarding-auth-portal,
+  .onboarding-footnote {
+    display: none;
+  }
+
+  .onboarding-controls {
+    margin: 0;
+    gap: 6px;
+  }
+
+  .onboarding-controls li {
+    padding: 6px 8px;
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  .onboarding-deck-tone {
+    margin: 0;
+    padding: 8px;
+  }
+
+  .onboarding-deck-hint {
+    display: none;
+  }
+
+  .deck-tone-options {
+    gap: 8px;
+  }
+
+  .onboarding-acknowledge,
+  .onboarding-persist {
+    margin: 0;
+    padding: 8px;
+    gap: 8px;
+    font-size: 0.74rem;
+    line-height: 1.25;
+  }
+
+  .onboarding-actions {
+    order: -1;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: minmax(72px, 0.62fr) minmax(0, 1fr);
+    gap: 8px;
+    margin: -4px -4px 2px;
+    padding: 4px;
+    background: rgba(10, 15, 25, 0.96);
+  }
+
+  .onboarding-actions #onboardingContinueButton {
+    margin-left: 0;
+    min-width: 0;
+  }
+
+  .onboarding-actions button,
+  .onboarding-actions button.is-secondary {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: 0.78rem;
+    line-height: 1.05;
+  }
+}

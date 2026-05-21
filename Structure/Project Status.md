@@ -66,6 +66,17 @@
 - UI controls and text inputs are guarded from the global canvas focus handler.
 - Build/cache marker is `20260519-movement-control` so stale service-worker assets cannot keep serving the broken input path.
 
+## Start/Fly Gate Fix (2026-05-21)
+
+- Field report said clean users still could not get past the Start/Fly phase.
+- First-run onboarding no longer auto-opens on load.
+- Tapping Fly opens the briefing only when needed; Continue is always reachable on mobile and starts the run after dismissal.
+- Build/cache marker is `20260521-start-fly-gate` so stale Start/Fly assets are invalidated.
+- KC Student-Teacher records now express KC's opinion through `teacher_review` as `Save — ...` or `Watch — ...`, not chat.
+- Main Brain end-to-end audit passed and seeded `kc-43`.
+- Clean Redmi proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-local-r3\report.json`, failures `[]`, build `20260521-start-fly-gate`.
+- Starfall KC audit passed and seeded `kc-47`.
+
 ## Not Yet Proven
 
 - Physical Redmi 13 recapture after this branch merges and Vercel redeploys production.
@@ -97,6 +108,8 @@
 - Merged-with-main browser movement proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`, keyboard/mouse/Redmi/narrow all moved `x=0 -> 2.2`, `targetLane=1`.
 - Merged-with-main KC gate passed: `npm run gate`, 104/104 curriculum proofs across Lessons 001-018.
 - Production movement proof passed after `main` fast-forward: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json`, failures `[]`, live build `20260519-movement-control`.
+- Local clean Start/Fly proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-local-r3\report.json`, failures `[]`; build `20260521-start-fly-gate`, visible Fly CTA, onboarding Continue, playing mode, persistence, and touch drag all passed.
+- KC Starfall audit passed after Start/Fly gate fix: `kc_context_id=kc-47`, 104/104 curriculum proofs, mobile stress 100%.
 - `node --check src\game.js` passed.
 - `python -m py_compile backend\starfall_server.py tools\kc_starfall_watch.py` passed.
 - Backend `/api/health`, `/api/signin`, `/api/score`, and `/api/leaderboard` passed locally against SQLite.

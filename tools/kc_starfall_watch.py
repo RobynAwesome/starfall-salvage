@@ -197,7 +197,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260519-movement-control"
+    current_build = "20260521-start-fly-gate"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
 
     proofs = {
@@ -265,8 +265,8 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         and 'id="onboardingAck"' in index_html
         and 'id="onboardingContinueButton"' in index_html,
         "onboarding_storage_key": "ONBOARDING_STORAGE_KEY" in game_js,
-        "onboarding_acknowledge_required": "isOnboardingDone" in game_js
-        and "markOnboardingDone" in game_js,
+        "onboarding_fly_gate_clearable": "onboardingPendingStart" in game_js
+        and "onboardingSessionCleared" in game_js,
         "onboarding_css_modal": ".onboarding-modal" in _read_text("styles.css")
         and ".onboarding-card" in _read_text("styles.css"),
         # Lesson 009 — Speed-Triggered Background Shift
@@ -483,27 +483,33 @@ def load_kc_module(kc_impl: Path):
     return module
 
 
+def teacher_review_lines(failed_checks: list[dict[str, Any]]) -> list[str]:
+    if not failed_checks:
+        return ["Save — bounded file evidence; no external claim beyond repo."]
+    return [
+        f"Watch — {check['name']}: {check['retry']} Actual: {check['actual']}"
+        for check in failed_checks
+    ]
+
+
 def seed_kc_context(report: dict[str, Any], kc_impl: Path, kc_store_path: Path) -> str:
     module = load_kc_module(kc_impl)
     store = module.KcStore(kc_store_path)
     failed_checks = [check for check in report["checks"] if not check.get("ok")]
-    retry_lines = [
-        f"- {check['name']}: {check['retry']} Actual: {check['actual']}"
-        for check in failed_checks
-    ] or ["- No failures in this pass. Keep rerunning after every code change."]
+    review_lines = teacher_review_lines(failed_checks)
     record = store.create({
         "title": f"Starfall Salvage KC hard QA pass - {report['timestamp']}",
         "teacher_context": (
             "KC is the strict dev QA student. Teacher (Claude / Master Robyn) ships features. "
             "KC reads Structure/KC Student-Teacher Curriculum.md, audits the codebase against it, "
-            "and refuses to mark work complete unless every proof is present. "
-            "Expected behavior: fail incomplete work, state what broke, issue retry instructions, and log proof."
+            "and refuses to mark work complete unless every proof is present. KC does not chat; "
+            "its opinion is the teacher_review ledger field, written as Save or Watch with bounded proof."
         ),
         "student_response": json.dumps(report["summary"], sort_keys=True),
     })
     store.update({
         "id": record.id,
-        "teacher_review": "\n".join(retry_lines),
+        "teacher_review": "\n".join(review_lines),
         "status": "reviewed",
     })
     return record.id

@@ -60,3 +60,14 @@
 - Current `origin/main` was merged into `codex/starfall-mobile-weapon-ecosystem` without reverting the movement fix. Merge proof passed `npm run vault:check`, `npm run gate`, `git diff --check`, and Chrome CDP movement proof.
 - Merged proof report: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-merge-movement-r4\report.json`, failures `[]`; keyboard, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag all moved `x=0 -> 2.2`, `targetLane=1`.
 - Branch and `main` were pushed to `eac68f9`; production proof passed on `https://starfallsalvage.kopanolabs.com` with live build `20260519-movement-control`: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json`, failures `[]`.
+
+## 2026-05-21
+
+- Field report: "THE GAME STILL NOT ALLOWING PEOPLE TO GET PASSED THE START FLY PHASE."
+- Root cause reproduced on production: clean Redmi-sized first-run opened onboarding before play, while clearance controls could sit below the visible mobile viewport.
+- Start/Fly gate fix applied: onboarding no longer auto-opens on load; Fly opens the briefing only if needed; Continue is always reachable and starts the run after dismissal.
+- Cache/build markers bumped to `20260521-start-fly-gate` to prevent phones from reusing stale Start/Fly assets.
+- KC Student-Teacher lane tightened: KC does not chat; steward-written `teacher_review` records now use `Save — ...` or `Watch — ...`.
+- Main Brain audit passed and seeded `kc-43`: 4 checks, 0 failures, 143 markdown files across 8 sections.
+- Clean Redmi proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-local-r3\report.json`, failures `[]`; build `20260521-start-fly-gate`, visible `Tap to fly`, Continue, playing mode, onboarding persistence, and touch drag all passed.
+- Starfall KC audit seeded `kc-47` with `teacher_review: Save — bounded file evidence; no external claim beyond repo.`

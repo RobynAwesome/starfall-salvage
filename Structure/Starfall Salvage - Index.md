@@ -31,7 +31,7 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - The game is live on the public Kopano Labs GitHub repo (public 2026-05-06 per Sovereign Tech / CONTRIBUTING.md doctrine).
 - The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; branch `codex/starfall-mobile-weapon-ecosystem` is pushed for review before production redeploy.
 - The older mobile-lockdown notes are historical context, not the current branch truth. Current work unifies PC, Android, Xiaomi, and Apple browser gameplay under one ruleset and adapts only presentation density, safe-area, and touch affordances.
-- Build `20260519-movement-control` is the current branch truth. It preserves the orbital wreck lane visual slice and fixes the control path so keyboard, desktop mouse drag, Redmi touch drag, and narrow mobile touch drag move the player under one ruleset.
+- Build `20260521-start-fly-gate` is the current branch truth. It preserves the orbital wreck lane visual slice, keeps movement restored, and clears the clean mobile Start/Fly onboarding gate under one ruleset.
 - Root node alignment: 5 Pillars, 15 Commandments, CRUD-only mandate, 80% Optimal Threshold, Asymmetric Edge Reality, Testimony Delta.
 - Thesis alignment: Starfall demonstrates Pillar 5 (Expansion) — raw WebGL under township constraints proves Commandment 9 (Offline-First Mandate) and the AER test.
 - KC is wired as a strict local QA/dev lane through documentation, context-store entries, `tools/kc_starfall_watch.py` (sub-brain proofs), and `tools/kc_main_brain_scan.py` (main-brain alignment).

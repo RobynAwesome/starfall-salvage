@@ -239,21 +239,27 @@ def load_kc_module(kc_impl: Path):
     return module
 
 
+def teacher_review_lines(failed_checks: list[dict[str, Any]]) -> list[str]:
+    if not failed_checks:
+        return ["Save — bounded file evidence; no external claim beyond repo."]
+    return [
+        f"Watch — {check['name']}: {check['retry']} Actual: {check['actual']}"
+        for check in failed_checks
+    ]
+
+
 def seed_kc(report: dict[str, Any], kc_impl: Path, kc_store: Path) -> str:
     module = load_kc_module(kc_impl)
     store = module.KcStore(kc_store)
     failed = [c for c in report["checks"] if not c.get("ok")]
-    review_lines = [
-        f"- {c['name']}: {c['retry']} Actual: {c['actual']}"
-        for c in failed
-    ] or ["- Main Brain end-to-end scan clean. Sub-brain and Main Brain are aligned."]
+    review_lines = teacher_review_lines(failed)
     record = store.create({
         "title": f"KC Main Brain end-to-end scan - {report['timestamp']}",
         "teacher_context": (
             "KC reads Schematics/ end-to-end and confirms sub-brain (Starfall Salvage) "
             "and main brain (Schematics) agree on doctrine, comms-log entries, and the "
-            "Starfall production URL. This pass complements the per-feature curriculum "
-            "audited by tools/kc_starfall_watch.py."
+            "Starfall production URL. KC does not chat; its opinion is the teacher_review "
+            "ledger field, written as Save or Watch with bounded proof."
         ),
         "student_response": json.dumps(report["summary"], sort_keys=True),
     })

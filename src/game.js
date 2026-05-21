@@ -497,7 +497,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260519-movement-control";
+  const GAME_BUILD = "20260521-start-fly-gate";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -1406,6 +1406,9 @@
     }
   }
 
+  let onboardingPendingStart = false;
+  let onboardingSessionCleared = false;
+
   function hideOnboardingModal() {
     if (!hud.onboardingModal) {
       return;
@@ -1528,7 +1531,7 @@
       hud.onboardingNeverAgain.checked = true;
     }
     if (hud.onboardingContinueButton) {
-      hud.onboardingContinueButton.disabled = true;
+      hud.onboardingContinueButton.disabled = false;
     }
     attachModalBackTrap(MODAL_TRAP.onboarding, hideOnboardingModal);
     logEvent("onboarding_open", {});
@@ -1542,6 +1545,8 @@
   }
 
   function deferOnboardingBriefing() {
+    onboardingPendingStart = false;
+    onboardingSessionCleared = true;
     detachModalBackTrap(MODAL_TRAP.onboarding, false);
     hideOnboardingModal();
     logEvent("onboarding_deferred", {});
@@ -1587,9 +1592,9 @@
   }
 
   function dismissOnboarding() {
-    if (hud.onboardingAck && !hud.onboardingAck.checked) {
-      return;
-    }
+    const shouldStartAfterBriefing = onboardingPendingStart;
+    onboardingPendingStart = false;
+    onboardingSessionCleared = true;
     try {
       if (hud.onboardingNeverAgain && hud.onboardingNeverAgain.checked) {
         markOnboardingDone();
@@ -1610,6 +1615,9 @@
       window.setTimeout(() => {
         setEventMessage("Sign in to save scores and squad up with friends");
       }, 700);
+    }
+    if (shouldStartAfterBriefing) {
+      window.setTimeout(startGame, 0);
     }
   }
 
@@ -1646,7 +1654,7 @@
   if (hud.onboardingAck) {
     hud.onboardingAck.addEventListener("change", () => {
       if (hud.onboardingContinueButton) {
-        hud.onboardingContinueButton.disabled = !hud.onboardingAck.checked;
+        hud.onboardingContinueButton.disabled = false;
       }
     });
   }
@@ -1658,9 +1666,6 @@
   }
   if (hud.reviewBriefingButton) {
     hud.reviewBriefingButton.addEventListener("click", reopenPilotBriefing);
-  }
-  if (!isOnboardingDone()) {
-    showOnboardingModal();
   }
 
   const mobileLockdownActive = MOBILE_LOCKDOWN && isTouchCapable;
@@ -2635,6 +2640,11 @@
     }
     closeLeaderboardOverlay();
     collapseEcosystemFlyout();
+    if (!onboardingSessionCleared && !isOnboardingDone()) {
+      onboardingPendingStart = true;
+      showOnboardingModal();
+      return;
+    }
 
     runCountdown(() => {
       resetLaneTurnState();
@@ -5164,9 +5174,6 @@
     updatePilotBadge();
     resetGame();
     syncFlightWeaponButtons();
-    if (!isOnboardingDone()) {
-      showOnboardingModal();
-    }
     wireSurveyUi();
     requestAnimationFrame(frame);
   }
