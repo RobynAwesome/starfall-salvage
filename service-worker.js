@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20260521-start-fly-gate";
+const CACHE_NAME = "starfall-salvage-v20260521-curve-anticipation";
 
 const ASSETS = [
   "./",

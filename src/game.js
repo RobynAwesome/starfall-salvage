@@ -497,7 +497,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260521-start-fly-gate";
+  const GAME_BUILD = "20260521-curve-anticipation";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -507,6 +507,9 @@
   const CORNER_INTERVAL_SEC = 16;
   const SWIPE_TURN_WINDOW_SEC = 0.55;
   const SWIPE_TURN_MIN_PX = 42;
+  const CORRIDOR_LOOKAHEAD_Z = -34;
+  const CORRIDOR_HEADING_SAMPLE = 8.4;
+  const CORRIDOR_VIEW_YAW_MAX = 0.24;
   const SURVEY_PLAY_THRESHOLD = 5; // Show survey every N completed runs (non-extractive discovery)
 
   let playCountSinceSurvey = 0;
@@ -809,6 +812,7 @@
     smoothCamX: 0,
     smoothCamY: 0,
     viewRoll: 0,
+    viewYaw: 0,
     cameraYaw: 0,
     turnAnimActive: false,
     turnAnimFrom: 0,
@@ -2197,6 +2201,7 @@
         roll: Number(state.cameraRoll.toFixed(4)),
         swayX: Number(state.cameraSwayX.toFixed(4)),
         swayY: Number(state.cameraSwayY.toFixed(4)),
+        viewYaw: Number(state.viewYaw.toFixed(4)),
         follow: getCameraFollow()
       },
       bounds,
@@ -2341,6 +2346,15 @@
       pose.y + localX * s + localY * c,
       z
     ];
+  }
+
+  function corridorHeading(z, alphaTime, sample = CORRIDOR_HEADING_SAMPLE) {
+    const here = corridorPose(z, alphaTime);
+    const ahead = corridorPose(z - sample, alphaTime);
+    const horizon = corridorPose(z - sample * 3.8, alphaTime);
+    const localSlope = Math.atan2(ahead.x - here.x, sample);
+    const horizonLead = horizon.x - here.x;
+    return localSlope + horizonLead * 0.24;
   }
 
   function drawCorridorMesh(mesh, localX, localY, z, alphaTime, options) {
@@ -2566,6 +2580,7 @@
     state.smoothCamX = 0;
     state.smoothCamY = 0;
     state.viewRoll = 0;
+    state.viewYaw = 0;
     state.lastHudScore = -1;
     state.lastHudSpeedLabel = "";
     player.x = 0;
@@ -4065,6 +4080,7 @@
 
   function resetLaneTurnState() {
     state.cameraYaw = 0;
+    state.viewYaw = 0;
     state.turnAnimActive = false;
     state.turnAnimFrom = 0;
     state.turnAnimTo = 0;
@@ -4576,15 +4592,25 @@
     const follow = getCameraFollow();
     const viewBiasY = isTouchCapable ? -1.38 : 0;
     const camTrackX = isTouchCapable ? 0.42 : follow.x;
-    const targetCamX = shakeX - player.x * camTrackX;
+    const bendHeading = state.mode === "playing"
+      ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, alphaTime)
+      : 0;
+    const targetViewYaw = clamp(
+      bendHeading * (isTouchCapable ? 3.5 : 3.1),
+      -CORRIDOR_VIEW_YAW_MAX,
+      CORRIDOR_VIEW_YAW_MAX
+    );
+    const targetCamX = shakeX - player.x * camTrackX - targetViewYaw * 0.82;
     const targetCamY = shakeY - player.y * follow.y + viewBiasY;
     const camLerp = 0.1;
     state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
     state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
-    const targetRoll = -player.x * 0.05;
+    state.viewYaw += (targetViewYaw - state.viewYaw) * Math.min(1, camLerp * 1.15);
+    const appliedViewYaw = state.viewYaw * 0.46;
+    const targetRoll = (-player.x * 0.065) - state.viewYaw * 0.78;
     state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
     Mat4.identity(viewMatrix);
-    Mat4.rotateY(viewMatrix, viewMatrix, state.cameraYaw);
+    Mat4.rotateY(viewMatrix, viewMatrix, state.cameraYaw + appliedViewYaw);
     Mat4.rotateZ(viewMatrix, viewMatrix, state.viewRoll);
     // Apply camera offset (BACK) and dynamic tracking (smoothCamX/Y)
     Mat4.translate(viewMatrix, viewMatrix, [state.smoothCamX, state.smoothCamY, -8.2]);
@@ -4616,6 +4642,7 @@
     renderBackdrop(alphaTime);
     renderStars(alphaTime);
     renderTunnel(alphaTime);
+    renderLaneSignals(alphaTime);
     renderSalvageDressing(alphaTime);
     renderObjects(alphaTime);
     renderPlayer(alphaTime);
@@ -4792,6 +4819,65 @@
         pulse
       });
     }
+  }
+
+  function renderLaneSignals(alphaTime) {
+    const speedT = speedProgress();
+    const pendingBoost = state.pendingCorner ? 0.44 : 0;
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    gl.depthMask(false);
+    let markerIndex = 0;
+    for (let z = -16; z > -78; z -= 8.6) {
+      const heading = corridorHeading(z - 2.2, alphaTime, 7.6);
+      const anticipation = clamp(Math.abs(heading) * 17 + pendingBoost, 0, 1);
+      if (anticipation < 0.08) {
+        markerIndex += 1;
+        continue;
+      }
+      const bendSide = heading >= 0 ? 1 : -1;
+      const pulse = 0.09
+        + Math.sin(alphaTime * 2.4 + z * 0.18 + markerIndex * 0.6) * 0.04
+        + anticipation * (0.18 + speedT * 0.16);
+      const cueColor = [
+        0.28 + anticipation * 0.72,
+        0.88 - anticipation * 0.36,
+        1 - anticipation * 0.74,
+        0.48 + anticipation * 0.34
+      ];
+      const outerX = bendSide * (2.55 + anticipation * 0.55);
+      drawCorridorMesh(meshes.cube, outerX, -1.12, z, alphaTime, {
+        rotation: [0, bendSide * 0.08, bendSide * 0.14],
+        scale: [0.11, 1.35 + anticipation * 0.58, 0.2],
+        color: cueColor,
+        texture: starTexture,
+        textureMix: 1,
+        pulse
+      });
+      drawCorridorMesh(meshes.cube, bendSide * 1.36, -2.94, z - 0.08, alphaTime, {
+        rotation: [0, 0, bendSide * 0.18],
+        scale: [0.28, 0.05, 1.42],
+        color: [cueColor[0], cueColor[1], cueColor[2], 0.42 + anticipation * 0.3],
+        texture: warningTexture,
+        textureMix: 0.86,
+        uvScale: [3, 1],
+        pulse: pulse + 0.16
+      });
+      if (anticipation > 0.42 || (state.pendingCorner && markerIndex < 3)) {
+        drawCorridorMesh(meshes.cube, 0, 2.16, z - 0.22, alphaTime, {
+          rotation: [0, 0, 0],
+          scale: [4.3, 0.08, 0.28],
+          color: [cueColor[0], cueColor[1] * 0.82, cueColor[2] * 0.72, 0.34 + anticipation * 0.26],
+          texture: warningTexture,
+          textureMix: 0.7,
+          uvScale: [4.5, 1],
+          pulse: pulse * 0.55
+        });
+      }
+      markerIndex += 1;
+    }
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
   }
 
   function renderSalvageDressing(alphaTime) {

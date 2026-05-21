@@ -79,6 +79,23 @@
 - Production is pushed at `b253afc`; live build marker `20260521-start-fly-gate` is confirmed.
 - Production clean Redmi proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-production-r1\report.json`, failures `[]`.
 
+## Curve Anticipation Pass (2026-05-21)
+
+- Visual task moved from access gating back to game feel: the corridor needed visible bend anticipation and banking, not more HUD work.
+- `src/game.js` now derives camera bend from a horizon-led corridor signal instead of a near-zero local slope.
+- The applied yaw is moderated so the corridor stays framed while roll and lateral drift carry more of the turn sensation.
+- Added lane-signal geometry: side beacons, floor cues, and overhead warning bars.
+- Build/cache marker is now `20260521-curve-anticipation`.
+- Local curve proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\report.json`, failures `[]`.
+- Proof sampled max `viewYaw`: Redmi `0.0837`, narrow `0.0503`, desktop `0.0434`.
+- KC Starfall audit passed and seeded `kc-51`.
+- Main Brain audit passed and seeded `kc-52`.
+- Screenshot proof paths:
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\redmi-393x873-playing.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\narrow-360x800-playing.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\desktop-1280x720-playing.png`
+- Movement regression remained clean inside the same proof run: all three viewports still moved `x=0 -> 2.2`, `targetLane=1`.
+
 ## Not Yet Proven
 
 - Physical Redmi 13 recapture after this branch merges and Vercel redeploys production.
@@ -112,6 +129,7 @@
 - Production movement proof passed after `main` fast-forward: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json`, failures `[]`, live build `20260519-movement-control`.
 - Local clean Start/Fly proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-local-r3\report.json`, failures `[]`; build `20260521-start-fly-gate`, visible Fly CTA, onboarding Continue, playing mode, persistence, and touch drag all passed.
 - Production clean Start/Fly proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-production-r1\report.json`, failures `[]`; live build `20260521-start-fly-gate`, visible Fly CTA, onboarding Continue, playing mode, persistence, and touch drag all passed.
+- Local curve-anticipation proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\report.json`, failures `[]`; build `20260521-curve-anticipation`, max `viewYaw` sampled Redmi `0.0837`, narrow `0.0503`, desktop `0.0434`.
 - KC Starfall audit passed after Start/Fly gate fix: `kc_context_id=kc-47`, 104/104 curriculum proofs, mobile stress 100%.
 - `node --check src\game.js` passed.
 - `python -m py_compile backend\starfall_server.py tools\kc_starfall_watch.py` passed.

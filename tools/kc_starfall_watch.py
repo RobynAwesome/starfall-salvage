@@ -197,7 +197,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260521-start-fly-gate"
+    current_build = "20260521-curve-anticipation"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
 
     proofs = {

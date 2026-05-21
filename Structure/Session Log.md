@@ -73,3 +73,10 @@
 - Starfall KC audit seeded `kc-47` with `teacher_review: Save — bounded file evidence; no external claim beyond repo.`
 - Branch and `main` were pushed to `b253afc`; production served build `20260521-start-fly-gate`.
 - Production clean Redmi proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-production-r1\report.json`, failures `[]`; visible `Tap to fly`, Continue, playing mode, onboarding persistence, and touch drag all passed.
+- Visual follow-up resumed after the gate fix: camera bend now uses a horizon-led corridor signal, not a decorative near-zero slope.
+- Added lane-signal geometry for turn anticipation: outer beacons, floor cues, and overhead warning bars.
+- Cache/build markers bumped again to `20260521-curve-anticipation` so the new render slice cannot hide behind Start/Fly assets.
+- Local curve proof passed across Redmi 393x873, narrow 360x800, and desktop 1280x720: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\report.json`, failures `[]`.
+- Runtime bend signal sampled in the proof: Redmi max `viewYaw=0.0837`, narrow `0.0503`, desktop `0.0434`.
+- Movement remained intact inside the same proof run: each viewport still moved `x=0 -> 2.2`, `targetLane=1` after screenshot capture.
+- KC Starfall audit seeded `kc-51`; Main Brain audit seeded `kc-52`; both remained `Save — bounded file evidence; no external claim beyond repo.`

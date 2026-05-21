@@ -452,7 +452,7 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 | # | Proof Key | File | Search String |
 |---|-----------|------|---------------|
-| 99 | `movement_build_marker` | `src/game.js` | `20260521-start-fly-gate` |
+| 99 | `movement_build_marker` | `src/game.js` | `20260521-curve-anticipation` |
 | 100 | `pointer_steer_support` | `src/game.js` | `supportsPointerEvents` AND `hud.shell.addEventListener("pointerdown"` |
 | 101 | `flight_deck_drag_copy` | `src/game.js`, `index.html` | `Drag anywhere on the flight deck` AND `Drag the flight deck` |
 | 102 | `debug_movement_probe` | `src/game.js` | `__starfallDebug` |

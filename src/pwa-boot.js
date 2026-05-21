@@ -1,6 +1,6 @@
 import { KopanoVault } from "./kopano-vault.js";
 
-const BUILD = "20260521-start-fly-gate";
+const BUILD = "20260521-curve-anticipation";
 
 window.__kopanoVault = null;
 window.__kopanoVaultReady = KopanoVault.open()
