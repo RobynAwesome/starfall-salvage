@@ -1,5 +1,14 @@
 # Session Log
 
+## 2026-05-23
+
+- MAIN-BRAIN apprenticeship and Cassy protection doctrine were re-read from `Schematics/18-PROTOCOLS` before editing the Starfall sub-brain.
+- Added `Structure/06-Reference/Starfall Agent Mesh.md` as the grounded lane map for active repo roles, planned slots, and protocol gates.
+- Added `Structure/05-Training/Cassy Apprenticeship Register.md` so Cassy remains visibly on the student-teacher lane with supervised audit participation.
+- Updated the front-door indexes and scope docs so KC, Cassy, AG, Black Mask, and Black Mass are visible without breaking KC's legacy hardcoded paths.
+- Promoted the former local realism-frame experiment as the `20260523-screen-fill-frame` build after tightening camera pitch, reducing dead vertical bias, and bringing canopy structure closer into frame.
+- Local proof passed across Redmi 393x873, narrow 360x800, and desktop 1280x720: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\report.json`, failures `[]`.
+
 ## 2026-05-16
 
 - **Kinetic:** Danger-scaled `uFogMix` fog; tunnel **parallax rib** pass (secondary Z drift vs primary shell) for Temple-style sightline breakup; treadmill contract unchanged (scrap still streams +Z).
@@ -80,3 +89,9 @@
 - Runtime bend signal sampled in the proof: Redmi max `viewYaw=0.0837`, narrow `0.0503`, desktop `0.0434`.
 - Movement remained intact inside the same proof run: each viewport still moved `x=0 -> 2.2`, `targetLane=1` after screenshot capture.
 - KC Starfall audit seeded `kc-51`; Main Brain audit seeded `kc-52`; both remained `Save — bounded file evidence; no external claim beyond repo.`
+- Sub-brain protocol reset seeded a non-breaking front door: `00-Home`, `04-Updates`, `05-Training`, `06-Reference`, `07-Sessions By Day`.
+- Source law imported from `Schematics/18-PROTOCOLS`: Blackbox Mask, Black Mass, Sub-Brain Build And Sync, AI Drift And Claim Discipline, MAIN-BRAIN Audit, and folder naming.
+- New compact handoff lane: `Structure/04-Updates/comms-log.md`.
+- Local realism-frame proof also ran at `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-realism-frame-local-r5\report.json`, failures `[]`, but it stays on WATCH because code, build marker, docs, and commit are not aligned yet.
+- Post-reset verification passed: `node --check src/game.js`, `npm run vault:check`, and `git diff --check`.
+- KC sub-brain audit seeded `kc-53`; KC main-brain audit seeded `kc-54`.

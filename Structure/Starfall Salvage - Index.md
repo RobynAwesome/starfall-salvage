@@ -14,6 +14,17 @@ Before any local Starfall instruction, read MAIN-BRAIN root node:
 
 Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignment and Kopano Labs portfolio track.
 
+## Structured Front Door (2026-05-21)
+
+- `Structure/00-Home/00-Home - Index.md` - sub-brain entry point
+- `Structure/04-Updates/comms-log.md` - compact repo-local handoff lane
+- `Structure/06-Reference/Starfall Agent Mesh.md` - grounded logical lane map for agents and governance
+- `Structure/05-Training/Cassy Apprenticeship Register.md` - Cassy's active student-teacher record
+- `Structure/06-Reference/Protocol Seed - Governance.md` - imported protocol law from `Schematics/18-PROTOCOLS`
+- `Structure/07-Sessions By Day/07-Sessions By Day - Index.md` - chronological proof map
+
+Compatibility rule: these folders organize access without moving the legacy root notes that KC tooling still reads directly.
+
 ## Active Paths
 
 - Active execution clone: `C:\Users\rkhol\.cursor\projects\empty-window\starfall-salvage` (recovered tracking clone for this 2026-05-18 execution)
@@ -31,11 +42,12 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - The game is live on the public Kopano Labs GitHub repo (public 2026-05-06 per Sovereign Tech / CONTRIBUTING.md doctrine).
 - The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; branch `codex/starfall-mobile-weapon-ecosystem` is pushed for review before production redeploy.
 - The older mobile-lockdown notes are historical context, not the current branch truth. Current work unifies PC, Android, Xiaomi, and Apple browser gameplay under one ruleset and adapts only presentation density, safe-area, and touch affordances.
-- Build `20260521-curve-anticipation` is the current branch truth. It preserves the Start/Fly gate fix, keeps movement restored, and adds measurable corridor-bank anticipation under one ruleset.
+- Build `20260523-screen-fill-frame` is the current branch truth. It preserves the Start/Fly gate fix, keeps movement restored, and promotes the screen-fill frame pass for mobile and desktop.
 - Root node alignment: 5 Pillars, 15 Commandments, CRUD-only mandate, 80% Optimal Threshold, Asymmetric Edge Reality, Testimony Delta.
 - Thesis alignment: Starfall demonstrates Pillar 5 (Expansion) — raw WebGL under township constraints proves Commandment 9 (Offline-First Mandate) and the AER test.
 - KC is wired as a strict local QA/dev lane through documentation, context-store entries, `tools/kc_starfall_watch.py` (sub-brain proofs), and `tools/kc_main_brain_scan.py` (main-brain alignment).
 - KC operates under the CRUD-only mandate inherited from the root node — agents, skills, tools, and model abilities are adapters only.
+- Cassy is explicitly active in the student-teacher apprenticeship lane through `Structure/05-Training/Cassy Apprenticeship Register.md`; she is not downgraded to a decorative or silent placeholder.
 - KC is not yet a separate autonomous AI runtime; it is durable memory + ledger.
 
 ## 3D pipeline (Blender)
@@ -68,3 +80,5 @@ Starfall Salvage is a raw-WebGL arcade runner built for the OpenGL/WebGL assignm
 - Production movement proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260519-production-movement-r1\report.json` with failures `[]`.
 - `Structure/2026-05-21 - Curve Anticipation Pass Case Study.md` - horizon-led camera banking and lane-signal proof for stronger turn anticipation.
 - Curve anticipation proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\report.json` with failures `[]`.
+- `Structure/2026-05-23 - Screen Fill Frame Pass Case Study.md` - promoted frame pass for closer canopy mass and fuller-screen world occupancy.
+- Screen-fill frame proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\report.json` with failures `[]`.

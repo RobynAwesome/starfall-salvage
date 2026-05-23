@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20260521-curve-anticipation";
+const CACHE_NAME = "starfall-salvage-v20260523-screen-fill-frame";
 
 const ASSETS = [
   "./",

@@ -229,10 +229,10 @@
     scrim.setAttribute("aria-hidden", "false");
     scrim.classList.remove("sovereign-scrim--backdrop-only");
     if (hud.sovereignSubline) {
-      hud.sovereignSubline.textContent = "Tap to fly — sovereign lane";
+      hud.sovereignSubline.textContent = "Start Flying — orbital salvage lane";
     }
     if (hud.sovereignPrimaryCta) {
-      hud.sovereignPrimaryCta.textContent = "Tap to fly";
+      hud.sovereignPrimaryCta.textContent = "Start Flying";
     }
     syncEventTicker();
   }
@@ -497,7 +497,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260521-curve-anticipation";
+  const GAME_BUILD = "20260523-screen-fill-frame";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -812,6 +812,7 @@
     smoothCamX: 0,
     smoothCamY: 0,
     viewRoll: 0,
+    viewPitch: 0,
     viewYaw: 0,
     cameraYaw: 0,
     turnAnimActive: false,
@@ -2165,9 +2166,9 @@
   const sparks = [];
   const trailParticles = [];
   const starLayers = [
-    createStarLayer(isTouchCapable ? 72 : 110, 20, 100, 0.18, 0.024, 0.075, 0.52),
-    createStarLayer(isTouchCapable ? 48 : 74, 12, 76, 0.58, 0.04, 0.13, 0.82),
-    createStarLayer(isTouchCapable ? 18 : 32, 8, 58, 0.92, 0.075, 0.19, 0.95)
+    createStarLayer(isTouchCapable ? 88 : 134, 20, 100, 0.18, 0.024, 0.075, 0.62),
+    createStarLayer(isTouchCapable ? 58 : 96, 12, 76, 0.58, 0.04, 0.13, 0.9),
+    createStarLayer(isTouchCapable ? 24 : 40, 8, 58, 0.92, 0.075, 0.19, 1)
   ];
   const salvageDressing = Array.from({ length: isTouchCapable ? 18 : 28 }, (_, index) => createSalvageDressing(index));
 
@@ -2580,6 +2581,7 @@
     state.smoothCamX = 0;
     state.smoothCamY = 0;
     state.viewRoll = 0;
+    state.viewPitch = 0;
     state.viewYaw = 0;
     state.lastHudScore = -1;
     state.lastHudSpeedLabel = "";
@@ -4080,6 +4082,7 @@
 
   function resetLaneTurnState() {
     state.cameraYaw = 0;
+    state.viewPitch = 0;
     state.viewYaw = 0;
     state.turnAnimActive = false;
     state.turnAnimFrom = 0;
@@ -4581,7 +4584,9 @@
     const aspect = canvas.width / Math.max(1, canvas.height);
     let renderFov = state.currentFov;
     if (isTouchCapable && aspect < 0.92) {
-      renderFov *= 1.22;
+      renderFov *= 0.82;
+    } else if (aspect > 1.35) {
+      renderFov *= 0.84;
     }
     Mat4.perspective(projectionMatrix, renderFov, aspect, 0.1, 120);
 
@@ -4590,8 +4595,9 @@
     const shakeX = Math.sin(alphaTime * 82) * shakeAmount;
     const shakeY = Math.cos(alphaTime * 67) * shakeAmount * 0.72;
     const follow = getCameraFollow();
-    const viewBiasY = isTouchCapable ? -1.38 : 0;
-    const camTrackX = isTouchCapable ? 0.42 : follow.x;
+    const viewBiasY = isTouchCapable ? -0.08 : 0.34;
+    const cameraDepth = isTouchCapable ? -4.35 : -4.2;
+    const camTrackX = isTouchCapable ? 0.36 : Math.max(follow.x, 0.08);
     const bendHeading = state.mode === "playing"
       ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, alphaTime)
       : 0;
@@ -4600,20 +4606,27 @@
       -CORRIDOR_VIEW_YAW_MAX,
       CORRIDOR_VIEW_YAW_MAX
     );
-    const targetCamX = shakeX - player.x * camTrackX - targetViewYaw * 0.82;
-    const targetCamY = shakeY - player.y * follow.y + viewBiasY;
+    const targetCamX = shakeX - player.x * camTrackX - targetViewYaw * 0.68;
+    const targetCamY = shakeY - player.y * follow.y + viewBiasY + Math.abs(targetViewYaw) * 0.12;
+    const targetViewPitch = (
+      state.mode === "ready"
+        ? (isTouchCapable ? 0.48 : 0.34)
+        : (isTouchCapable ? 0.38 : 0.28)
+    ) + Math.abs(targetViewYaw) * 0.22;
     const camLerp = 0.1;
     state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
     state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
+    state.viewPitch += (targetViewPitch - state.viewPitch) * camLerp;
     state.viewYaw += (targetViewYaw - state.viewYaw) * Math.min(1, camLerp * 1.15);
     const appliedViewYaw = state.viewYaw * 0.46;
     const targetRoll = (-player.x * 0.065) - state.viewYaw * 0.78;
     state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
     Mat4.identity(viewMatrix);
     Mat4.rotateY(viewMatrix, viewMatrix, state.cameraYaw + appliedViewYaw);
+    Mat4.rotateX(viewMatrix, viewMatrix, -state.viewPitch);
     Mat4.rotateZ(viewMatrix, viewMatrix, state.viewRoll);
     // Apply camera offset (BACK) and dynamic tracking (smoothCamX/Y)
-    Mat4.translate(viewMatrix, viewMatrix, [state.smoothCamX, state.smoothCamY, -8.2]);
+    Mat4.translate(viewMatrix, viewMatrix, [state.smoothCamX, state.smoothCamY, cameraDepth]);
 
     const speedMultiplier = state.lastSpeedMultiplier || 1;
     const speedT = Math.max(0, Math.min(1, (speedMultiplier - 1) / 3.5));
@@ -4669,28 +4682,37 @@
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     drawMesh(meshes.disc, {
-      position: [-4.2 + drift, 2.1 + state.cameraSwayY * 0.55, -96],
+      position: [0.4 + drift * 0.12, 2.8 + state.cameraSwayY * 0.12, -66],
+      rotation: [0, 0, 0.05],
+      scale: [27, 13.5, 1],
+      color: [0.08 + speedT * 0.04, 0.16 + speedT * 0.05, 0.3 + speedT * 0.08, 0.24],
+      texture: nebulaTexture,
+      textureMix: 1,
+      pulse: 0.03 + speedT * 0.05
+    });
+    drawMesh(meshes.disc, {
+      position: [-4.8 + drift, 0.95 + state.cameraSwayY * 0.42, -84],
       rotation: [0, 0, -0.22 + Math.sin(alphaTime * 0.03) * 0.04],
-      scale: [12.5, 7.2, 1],
-      color: [0.18 + speedT * 0.08, 0.38 + speedT * 0.08, 0.72 + speedT * 0.16, 0.36],
+      scale: [16.5, 9.8, 1],
+      color: [0.18 + speedT * 0.08, 0.38 + speedT * 0.08, 0.72 + speedT * 0.16, 0.42],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.08 + speedT * 0.14
     });
     drawMesh(meshes.disc, {
-      position: [6.2 + drift * 0.35, 2.55 - state.cameraSwayY * 0.3, -92],
+      position: [6.4 + drift * 0.35, 1.5 - state.cameraSwayY * 0.22, -78],
       rotation: [0, 0, -0.18],
-      scale: [5.0, 5.0, 1],
+      scale: [6.2, 6.2, 1],
       color: [0.55, 0.86, 1, 0.82],
       texture: planetTexture,
       textureMix: 1,
       pulse: 0.08 + Math.sin(alphaTime * 0.18) * 0.04
     });
     drawMesh(meshes.disc, {
-      position: [6.2 + drift * 0.35, 2.55 - state.cameraSwayY * 0.3, -94],
+      position: [6.4 + drift * 0.35, 1.45 - state.cameraSwayY * 0.18, -82],
       rotation: [0, 0, 0],
-      scale: [7.2, 7.2, 1],
-      color: [0.28, 0.78, 1, 0.24],
+      scale: [9.5, 9.5, 1],
+      color: [0.28, 0.78, 1, 0.28],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.16 + speedT * 0.08
@@ -4731,13 +4753,36 @@
     const budget = getRenderBudgetTier();
     const decorScale = budget.tunnelDecorScale || 1;
     const offset = (state.time * state.speed) % spacing;
+    [-1.05, -2.8, -5.4].forEach((canopyZ, canopyIndex) => {
+      const canopyPulse = 0.025 + canopyIndex * 0.018 + speedT * 0.06;
+      drawCorridorMesh(meshes.cube, 0, 3.08, canopyZ, alphaTime, {
+        rotation: [0, 0, 0],
+        scale: [8.8, 0.14, 0.48],
+        color: [0.07, 0.18 + speedT * 0.04, 0.28 + speedT * 0.08, 1],
+        texture: colorTexture,
+        textureMix: 0.56,
+        uvScale: [8.6, 1],
+        pulse: canopyPulse
+      });
+      [-4.12, 4.12].forEach((postX) => {
+        drawCorridorMesh(meshes.cube, postX, 0.42, canopyZ - 0.14, alphaTime, {
+          rotation: [0, 0, 0],
+          scale: [0.18, 3.35 * decorScale, 0.42],
+          color: [0.07, 0.18, 0.24 + speedT * 0.05, 1],
+          texture: colorTexture,
+          textureMix: 0.58,
+          uvScale: [1, 3.2],
+          pulse: canopyPulse * 0.55
+        });
+      });
+    });
     let segmentIndex = 0;
-    for (let z = -9 + offset; z > -84; z -= spacing) {
+    for (let z = -4.8 + offset; z > -88; z -= spacing) {
       const pulse = 0.06 + Math.sin(alphaTime * 2.2 + z * 0.18) * 0.04 + speedT * 0.12;
       const markerColor = speedT > 0.55 ? [1, 0.42, 0.24, 1] : [0.28, 0.95, 1, 1];
       drawCorridorMesh(meshes.cube, 0, -3.18, z, alphaTime, {
         rotation: [0, 0, 0],
-        scale: [5.8, 0.08, 1.2],
+        scale: [6.8, 0.1, 1.5],
         color: [0.055 + speedT * 0.06, 0.2 + speedT * 0.06, 0.24 + speedT * 0.12, 1],
         texture: colorTexture,
         textureMix: 0.78,
@@ -4757,7 +4802,7 @@
       [-3.25, 3.25].forEach((railX) => {
         drawCorridorMesh(meshes.cube, railX, -2.64, z, alphaTime, {
           rotation: [0, 0, 0],
-          scale: [0.12, 0.8, 1.05],
+          scale: [0.15, 1.05, 1.26],
           color: [0.1, 0.42 + speedT * 0.12, 0.5 + speedT * 0.18, 1],
           texture: colorTexture,
           textureMix: 0.68,
@@ -4806,12 +4851,12 @@
     const ribDrift = 0.74 + Math.min(0.22, Math.max(0, (mult - 1) * 0.045));
     const ribSpacing = spacing * 1.2;
     const offsetRibs = (state.time * state.speed * ribDrift + ribSpacing * 0.41) % ribSpacing;
-    for (let z = -9.2 + offsetRibs; z > -76; z -= ribSpacing) {
+    for (let z = -5.2 + offsetRibs; z > -80; z -= ribSpacing) {
       const pulse = 0.035 + Math.sin(alphaTime * 1.7 + z * 0.31) * 0.028;
       drawMesh(meshes.cube, {
         position: [0, 2.62, z],
         rotation: [0, 0, 0],
-        scale: [7.35, 0.06, 0.58],
+        scale: [8.2, 0.07, 0.64],
         color: [0.07, 0.2, 0.34, 1],
         texture: colorTexture,
         textureMix: 0.52,
@@ -4824,60 +4869,72 @@
   function renderLaneSignals(alphaTime) {
     const speedT = speedProgress();
     const pendingBoost = state.pendingCorner ? 0.44 : 0;
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
-    gl.depthMask(false);
     let markerIndex = 0;
     for (let z = -16; z > -78; z -= 8.6) {
       const heading = corridorHeading(z - 2.2, alphaTime, 7.6);
       const anticipation = clamp(Math.abs(heading) * 17 + pendingBoost, 0, 1);
-      if (anticipation < 0.08) {
+      if (anticipation < 0.12) {
         markerIndex += 1;
         continue;
       }
       const bendSide = heading >= 0 ? 1 : -1;
-      const pulse = 0.09
-        + Math.sin(alphaTime * 2.4 + z * 0.18 + markerIndex * 0.6) * 0.04
-        + anticipation * (0.18 + speedT * 0.16);
-      const cueColor = [
-        0.28 + anticipation * 0.72,
-        0.88 - anticipation * 0.36,
-        1 - anticipation * 0.74,
-        0.48 + anticipation * 0.34
+      const pulse = 0.03 + anticipation * (0.1 + speedT * 0.08);
+      const outerMass = bendSide * (4.3 + anticipation * 0.78);
+      const rigColor = [
+        0.085 + anticipation * 0.08,
+        0.22 + anticipation * 0.12,
+        0.28 + anticipation * 0.1,
+        1
       ];
-      const outerX = bendSide * (2.55 + anticipation * 0.55);
-      drawCorridorMesh(meshes.cube, outerX, -1.12, z, alphaTime, {
-        rotation: [0, bendSide * 0.08, bendSide * 0.14],
-        scale: [0.11, 1.35 + anticipation * 0.58, 0.2],
-        color: cueColor,
-        texture: starTexture,
-        textureMix: 1,
+      drawCorridorMesh(meshes.cube, outerMass, -0.16, z - 0.18, alphaTime, {
+        rotation: [0.03, bendSide * 0.08, bendSide * 0.06],
+        scale: [0.18, 3.05 + anticipation * 0.92, 0.44],
+        color: rigColor,
+        texture: colorTexture,
+        textureMix: 0.62,
+        uvScale: [1, 3.6],
         pulse
       });
-      drawCorridorMesh(meshes.cube, bendSide * 1.36, -2.94, z - 0.08, alphaTime, {
-        rotation: [0, 0, bendSide * 0.18],
-        scale: [0.28, 0.05, 1.42],
-        color: [cueColor[0], cueColor[1], cueColor[2], 0.42 + anticipation * 0.3],
+      drawCorridorMesh(meshes.cube, bendSide * 3.44, 1.34, z - 0.36, alphaTime, {
+        rotation: [0.08, 0, bendSide * (0.38 + anticipation * 0.16)],
+        scale: [1.95, 0.12, 0.46],
+        color: [0.14 + anticipation * 0.14, 0.2 + anticipation * 0.08, 0.22 + anticipation * 0.06, 1],
         texture: warningTexture,
-        textureMix: 0.86,
-        uvScale: [3, 1],
-        pulse: pulse + 0.16
+        textureMix: 0.42,
+        uvScale: [2.6, 1],
+        pulse: pulse * 0.7
+      });
+      drawCorridorMesh(meshes.cube, bendSide * 2.78, 0.68, z - 0.72, alphaTime, {
+        rotation: [0.2, bendSide * 0.34, bendSide * 0.12],
+        scale: [1.22, 0.16, 0.84],
+        color: [0.12 + anticipation * 0.12, 0.27 + anticipation * 0.06, 0.3 + anticipation * 0.04, 1],
+        texture: colorTexture,
+        textureMix: 0.74,
+        uvScale: [2.2, 1.2],
+        pulse: pulse * 0.8
+      });
+      drawCorridorMesh(meshes.cube, -bendSide * 4.02, 0.42, z - 0.52, alphaTime, {
+        rotation: [0.14, -bendSide * 0.22, -bendSide * 0.3],
+        scale: [1.28, 0.08, 0.38],
+        color: [0.08, 0.19 + anticipation * 0.04, 0.24 + anticipation * 0.05, 1],
+        texture: colorTexture,
+        textureMix: 0.54,
+        uvScale: [2.4, 1],
+        pulse: pulse * 0.45
       });
       if (anticipation > 0.42 || (state.pendingCorner && markerIndex < 3)) {
-        drawCorridorMesh(meshes.cube, 0, 2.16, z - 0.22, alphaTime, {
+        drawCorridorMesh(meshes.cube, 0, 2.14, z - 0.22, alphaTime, {
           rotation: [0, 0, 0],
-          scale: [4.3, 0.08, 0.28],
-          color: [cueColor[0], cueColor[1] * 0.82, cueColor[2] * 0.72, 0.34 + anticipation * 0.26],
+          scale: [4.85, 0.1, 0.32],
+          color: [0.14 + anticipation * 0.06, 0.22 + anticipation * 0.04, 0.24 + anticipation * 0.04, 1],
           texture: warningTexture,
-          textureMix: 0.7,
+          textureMix: 0.54,
           uvScale: [4.5, 1],
-          pulse: pulse * 0.55
+          pulse: pulse
         });
       }
       markerIndex += 1;
     }
-    gl.depthMask(true);
-    gl.disable(gl.BLEND);
   }
 
   function renderSalvageDressing(alphaTime) {

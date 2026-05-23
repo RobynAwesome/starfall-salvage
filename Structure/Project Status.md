@@ -6,7 +6,7 @@
 
 ## Last Updated
 
-2026-05-19
+2026-05-23
 
 ## Current Branch Proof
 
@@ -96,6 +96,40 @@
   - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\desktop-1280x720-playing.png`
 - Movement regression remained clean inside the same proof run: all three viewports still moved `x=0 -> 2.2`, `targetLane=1`.
 
+## Sub-Brain Protocol Reset (2026-05-21)
+
+- `Structure/` was flattened enough to cause protocol drift and poor handoff durability.
+- A non-breaking front door now exists through `Structure/00-Home`, `04-Updates`, `05-Training`, `06-Reference`, and `07-Sessions By Day`.
+- Source law was read from `Schematics/18-PROTOCOLS` and seeded locally: Blackbox Mask, Black Mass, Sub-Brain Build And Sync, AI Drift And Claim Discipline, MAIN-BRAIN Audit, and folder naming.
+- Legacy root notes remain canonical because current KC tools still read `Structure/*.md` directly.
+- Repo-local handoff lane is now `Structure/04-Updates/comms-log.md`.
+- Verification passed after the reset: sub-brain KC seeded `kc-53`; main-brain KC seeded `kc-54`.
+
+## Agent Mesh + Cassy Apprenticeship (2026-05-23)
+
+- Starfall now has a grounded local role map in `Structure/06-Reference/Starfall Agent Mesh.md`.
+- The mesh distinguishes active repo lanes from planned logical slots so the sub-brain does not overclaim agent autonomy.
+- Cassy's standing is now explicit in `Structure/05-Training/Cassy Apprenticeship Register.md`.
+- Cassy remains on the student-teacher apprenticeship lane with supervised audit participation and no unsupervised production-write authority.
+- Cassy protection is now locally mirrored from MAIN-BRAIN law: any Cassy-impacting tranche must leave a lesson row, Save/Kill/Watch row, correction ledger, or blocked-state explanation.
+
+## Screen Fill Frame Pass (2026-05-23)
+
+- The former local realism-frame experiment is now promoted branch truth.
+- Build/cache marker is `20260523-screen-fill-frame`.
+- Camera framing was tightened for mobile and desktop with closer depth, stronger pitch, and reduced dead vertical bias.
+- The top half now reads as corridor structure and space haze instead of a flat black gap.
+- Near canopy beams were brought closer so the world occupies more of the frame during play and on the Start Flying page.
+- Local proof passed across Redmi 393x873, narrow 360x800, and desktop 1280x720: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\report.json`, failures `[]`.
+- Proof screenshots:
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\redmi-393x873-ready.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\redmi-393x873-playing.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\narrow-360x800-ready.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\narrow-360x800-playing.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\desktop-1280x720-ready.png`
+  - `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\desktop-1280x720-playing.png`
+- Runtime debug in the same proof reported `mode: playing` on all viewports under build `20260523-screen-fill-frame`.
+
 ## Not Yet Proven
 
 - Physical Redmi 13 recapture after this branch merges and Vercel redeploys production.
@@ -106,6 +140,7 @@
 - SQLite leaderboard backend not deployed on production — frontend gracefully degrades to local browser scores.
 - Production backend hosting (the Python `starfall_server.py`) is not configured. Current backend is local-demo only.
 - Full WebGL context rebuild after GPU context loss is not implemented; current behavior reloads on context restore.
+- Logical mesh slots such as OG, Mirror Wardens, Apprentice Builders, and Recon Scouts are documented, but not claimed as live runtimes in this repo.
 - Kasi-Comm has no WebSocket/realtime layer; polling cadence is 3s and may show send-receive lag during heavy traffic.
 - Bounty payout rails (Yoco/PayFast/EFT) are documented in CONTRIBUTING.md but not yet wired to a payout automation.
 - Kopano-Labs org has "Payment unsuccessful" banners on GitHub + IONOS billing — non-blocking for the deploy, but card on file needs clearing for future renewals.
@@ -130,6 +165,8 @@
 - Local clean Start/Fly proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-local-r3\report.json`, failures `[]`; build `20260521-start-fly-gate`, visible Fly CTA, onboarding Continue, playing mode, persistence, and touch drag all passed.
 - Production clean Start/Fly proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-start-fly-production-r1\report.json`, failures `[]`; live build `20260521-start-fly-gate`, visible Fly CTA, onboarding Continue, playing mode, persistence, and touch drag all passed.
 - Local curve-anticipation proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-curve-anticipation-local-r3\report.json`, failures `[]`; build `20260521-curve-anticipation`, max `viewYaw` sampled Redmi `0.0837`, narrow `0.0503`, desktop `0.0434`.
+- Local screen-fill frame proof passed: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\report.json`, failures `[]`; build `20260523-screen-fill-frame`, Start Flying flow and playing frame verified across Redmi, narrow, and desktop.
+- Post-reset KC verification passed: `python tools\kc_starfall_watch.py --once --skip-backend --seed-kc` seeded `kc-53`; `python tools\kc_main_brain_scan.py --once --seed-kc` seeded `kc-54`.
 - KC Starfall audit passed after Start/Fly gate fix: `kc_context_id=kc-47`, 104/104 curriculum proofs, mobile stress 100%.
 - `node --check src\game.js` passed.
 - `python -m py_compile backend\starfall_server.py tools\kc_starfall_watch.py` passed.

@@ -1,6 +1,6 @@
 import { KopanoVault } from "./kopano-vault.js";
 
-const BUILD = "20260521-curve-anticipation";
+const BUILD = "20260523-screen-fill-frame";
 
 window.__kopanoVault = null;
 window.__kopanoVaultReady = KopanoVault.open()
