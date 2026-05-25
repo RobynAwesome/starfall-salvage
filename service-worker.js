@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20260523-screen-fill-frame";
+const CACHE_NAME = "starfall-salvage-v20260525-live-frame";
 
 const ASSETS = [
   "./",
@@ -26,7 +26,18 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((response) => response || fetch(event.request))
-  );
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./", copy));
+          return response;
+        })
+        .catch(() => caches.match("./").then((response) => response || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  event.respondWith(caches.match(event.request).then((response) => response || fetch(event.request)));
 });
