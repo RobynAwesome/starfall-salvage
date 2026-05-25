@@ -119,3 +119,28 @@ Save - the screen-fill frame pass is no longer a detached local experiment; it i
 
 Next action:
 Run the repo checks and KC audits on the promoted marker, then commit the branch truth.
+
+## 2026-05-25 - SPACEFIELD FILL + LIVE PROOF - SAVE
+
+Signal:
+The playfield still had too much dead black space on mobile and desktop; realism had to carry aesthetics through visible space, salvage, and motion evidence.
+
+Target:
+`20260525-spacefield-fill` live branch and production alias.
+
+Action:
+- Added screen-space star/debris fill and sky salvage structure in `src/game.js`.
+- Kept canvas full viewport on desktop, Redmi width, and narrow mobile.
+- Seeded KC to Main Brain after the pass.
+
+Proof:
+- Commit `0b4852a`
+- Deployment `dpl_DpvtgJaqi6i7T4DPzJr1KysPAUPM`
+- Live proof report: `C:\Users\rkhol\AppData\Local\Temp\starfall-live-spacefield-fill-r3\report.json`
+- KC context: `kc-59`
+
+Save/Kill/Watch:
+Save - bounded file evidence, live browser proof, and KC teacher review align.
+
+Next action:
+Physical Redmi capture on the real phone, then tune density only if it hurts readability.
