@@ -105,14 +105,16 @@ textarea {
 }
 
 .shell {
- position: relative;
- width: 100%;
+ position: fixed;
+ inset: 0;
+ width: 100vw;
  max-width: 100vw;
  height: 100vh;
  height: 100dvh;
- max-height: 100dvh;
+ min-height: 100svh;
+ max-height: none;
  overflow: hidden;
- padding-bottom: env(safe-area-inset-bottom, 0px);
+ padding-bottom: 0;
 }
 
 .shell::after {
@@ -135,8 +137,12 @@ textarea {
 }
 
 #glCanvas {
- width: 100%;
- height: 100%;
+ position: fixed;
+ inset: 0;
+ width: 100vw;
+ height: 100vh;
+ height: 100dvh;
+ min-height: 100svh;
  display: block;
  background: #03040a;
  touch-action: none;
@@ -1266,6 +1272,27 @@ h1 {
  border-color: rgba(90, 224, 255, 0.92);
  background: radial-gradient(circle at 30% 30%, rgba(118, 238, 255, 0.96), rgba(24, 95, 160, 0.95));
  box-shadow: 0 7px 20px rgba(90, 224, 255, 0.32);
+}
+
+.mobile-fire-button[data-weapon="scatter"] {
+ border-color: rgba(157, 255, 176, 0.92);
+ background: radial-gradient(circle at 30% 30%, rgba(170, 255, 184, 0.96), rgba(30, 126, 74, 0.95));
+ color: #03130a;
+ box-shadow: 0 7px 20px rgba(157, 255, 176, 0.32);
+}
+
+.mobile-fire-button[data-weapon="pierce"],
+.mobile-fire-button[data-weapon="rail"] {
+ border-color: rgba(255, 209, 102, 0.92);
+ background: radial-gradient(circle at 30% 30%, rgba(255, 224, 124, 0.96), rgba(158, 82, 20, 0.95));
+ color: #120a02;
+ box-shadow: 0 7px 20px rgba(255, 209, 102, 0.34);
+}
+
+.mobile-fire-button[data-weapon="nova"] {
+ border-color: rgba(255, 107, 211, 0.92);
+ background: radial-gradient(circle at 30% 30%, rgba(255, 132, 214, 0.96), rgba(118, 37, 156, 0.96));
+ box-shadow: 0 7px 20px rgba(255, 107, 211, 0.34);
 }
 
 .mobile-fire-button:active {
@@ -2531,6 +2558,28 @@ select:focus {
  letter-spacing: 0.02em;
  background: rgba(8, 12, 22, 0.72);
  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.pmh-weapon {
+ min-width: 74px;
+ min-height: 44px;
+ padding: 0 10px;
+ border-radius: 10px;
+ border-color: rgba(78, 240, 255, 0.22);
+ background: rgba(8, 12, 22, 0.72);
+ color: var(--cyan);
+ font-size: 0.72rem;
+ font-weight: 900;
+ letter-spacing: 0.05em;
+ text-transform: uppercase;
+ white-space: nowrap;
+}
+
+.pmh-weapon[data-power="3"],
+.pmh-weapon[data-power="4"] {
+ border-color: rgba(255, 209, 102, 0.52);
+ color: #ffd166;
+ box-shadow: 0 0 18px rgba(255, 209, 102, 0.16);
 }
 
 .pmh-speed {

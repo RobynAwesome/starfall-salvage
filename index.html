@@ -18,9 +18,9 @@
   <link rel="icon" href="data:,">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="starfall-smoke.png">
-  <link rel="stylesheet" href="styles.css?v=20260525-live-frame">
-  <script type="module" src="src/pwa-boot.js?v=20260525-live-frame"></script>
-  <script src="src/game.js?v=20260525-live-frame" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20260525-fullscreen-weapons">
+  <script type="module" src="src/pwa-boot.js?v=20260525-fullscreen-weapons"></script>
+  <script src="src/game.js?v=20260525-fullscreen-weapons" defer></script>
 </head>
 <body>
   <main class="shell">
@@ -68,8 +68,11 @@
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="bolt" role="menuitem" aria-pressed="true">Bolt lane</button>
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="scatter" role="menuitem" aria-pressed="false">Scatter burst</button>
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="pierce" role="menuitem" aria-pressed="false">Pierce core</button>
+          <button type="button" class="flight-menu-item flight-weapon" data-weapon="rail" role="menuitem" aria-pressed="false">Rail lance</button>
+          <button type="button" class="flight-menu-item flight-weapon" data-weapon="nova" role="menuitem" aria-pressed="false">Nova fan</button>
         </div>
       </div>
+      <button type="button" class="pmh-weapon" id="weaponCycleButton" aria-label="Cycle weapon">Bolt I</button>
       <div class="pmh-speed"><strong id="pmhSpeed">1.0x</strong></div>
       </div>
     </header>
@@ -198,7 +201,7 @@
         <p><strong>What works now:</strong> Open this URL on a laptop or desktop &mdash; full game with onboarding, danger zone, shooting, and bosses.</p>
         <p><strong>Mobile is being rebuilt</strong> against the Asymmetric Edge Reality test (low-end Android, township infrastructure, zero-budget hardware). Re-open this page after the next deploy.</p>
         <p><strong>Got a mobile-perf fix or upgrade idea?</strong> Email <a href="mailto:rkholofelo@kopanolabs.com">rkholofelo@kopanolabs.com</a> &mdash; Sovereign Tech bounty applies (Tier 2, R500&ndash;R1500 ZAR via Yoco / PayFast / EFT).</p>
-        <p class="mobile-lockdown-meta">Build: 20260525-live-frame &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
+        <p class="mobile-lockdown-meta">Build: 20260525-fullscreen-weapons &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
       </div>
     </section>
 
@@ -268,9 +271,9 @@
           <li><strong>Mobile:</strong> Drag the flight deck to fly; tap to start; tap mid-flight to phase-dash.</li>
           <li><strong>Score:</strong> Collect blue energy cores. Avoid red debris. Hull starts at 3 hits.</li>
           <li><strong>Danger zone:</strong> At 2.0x speed the lane glows red and bosses appear. They fire back &mdash; shoot first. Another boss milestone hits every 2.0x band (4x, 6x, &hellip;).</li>
-          <li><strong>Shoot:</strong> Press F (desktop) or tap the FIRE button (mobile).</li>
+          <li><strong>Shoot:</strong> Press F (desktop) or tap the FIRE button (mobile). Cycle weapons with Q/E, the weapon chip, or Menu.</li>
           <li><strong>Orange plates:</strong> Range targets take two hits; clear them for a score burst.</li>
-          <li><strong>Gold orbs:</strong> Fly through them for a rapid-fire boost.</li>
+          <li><strong>Gold orbs:</strong> Fly through them to scale bullet power, size, and damage during the run.</li>
         </ul>
         <div class="onboarding-deck-tone">
           <p class="eyebrow">Pilot Identity (XY &bull; XX)</p>

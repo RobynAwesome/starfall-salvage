@@ -159,6 +159,11 @@ def check_mobile_stress_score(*, min_pass_pct: int = 80) -> dict[str, Any]:
         "m_flight_menu_css": ".flight-menu-toggle" in styles_css
         and ".flight-menu-panel" in styles_css,
         "m_ready_hides_play_hud": ".shell.is-ready .playing-minimal-hud" in styles_css,
+        "m_fullscreen_canvas_fixed": "#glCanvas" in styles_css
+        and "position: fixed" in styles_css
+        and "100svh" in styles_css,
+        "m_weapon_cycle_button": 'id="weaponCycleButton"' in index_html
+        and "cycleWeaponMode" in game_js,
     }
 
     passed = sum(1 for ok in proofs.values() if ok)
@@ -197,7 +202,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260525-live-frame"
+    current_build = "20260525-fullscreen-weapons"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
 
     proofs = {
@@ -307,9 +312,22 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "playing_hud_pause_visible": "playHud.hidden = false" in game_js
         and 'mode === "paused" && !blockMenu' in game_js,
         "weapon_mode_bolt_scatter_pierce": "STARFLIGHT_WEAPON_STORAGE_KEY" in game_js
-        and 'w === "scatter"' in game_js
-        and 'w === "pierce"' in game_js
+        and '"scatter"' in game_js
+        and '"pierce"' in game_js
         and "setWeaponMode" in game_js,
+        "weapon_mode_extended_rail_nova": 'data-weapon="rail"' in index_html
+        and 'data-weapon="nova"' in index_html
+        and '"rail"' in game_js
+        and '"nova"' in game_js,
+        "weapon_power_scales_bullets": "weaponPower" in game_js
+        and "powerScale" in game_js
+        and "spark.damage" in game_js,
+        "visible_bullet_beams": "beamLength" in game_js
+        and "beamRadius" in game_js,
+        "revive_reaction_minigame": "spawnReviveReactionCore" in game_js
+        and "reaction-tap" in game_js,
+        "fullscreen_fov_composition": "aspect > 1.85" in game_js
+        and "cameraDepth = isTouchCapable ? -4.12 : -3.05" in game_js,
         "touch_range_performance_opt": 'TOUCH_FULL_RANGE_PX = Math.floor(70 *' in game_js,
         "pause_minimal_toggle_hardened": 'state.mode === "playing" || state.mode === "paused"' in game_js,
         "maintainer_map_present": "npm run gate" in _read_text("docs/MAINTAINER-MAP.md")
