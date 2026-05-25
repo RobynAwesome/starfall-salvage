@@ -20,7 +20,7 @@ It is a grounded role map, not proof that every lane has an autonomous runtime b
 | --- | --- | --- | --- | --- | --- |
 | Chief Architect | authority | Robyn Kholofelo | final direction, approval, doctrine override | full authority | active |
 | KC | durable memory | MAIN-BRAIN + local logs | store, index, retrieve, audit | no direct repo execution | active |
-| Cassy | student alias | KC student lane | learn patterns, ingest proof, shadow execution, receive lessons | no unsupervised writes | active |
+| Cassy | student alias | KC student lane | learn patterns, ingest proof, shadow execution, receive lessons, enforce mobile-primary realism judgment | no unsupervised writes | active |
 | Codex | teacher / executor | current session | patch code/docs, gather proof, seed handoff | reviewed repo writes | active |
 | Cursor surface | execution surface | local IDE lane | local editing surface, repo context, file proof | no authority above KC or Owner | active |
 | Antigravity (AG) | continuity lane | logical swarm lead | session continuity, macro handoff law, execution discipline | repo-local only when explicitly proven | active logical lane |
@@ -35,6 +35,7 @@ It is a grounded role map, not proof that every lane has an autonomous runtime b
 
 - Current standing: active student with full ecosystem dignity, not a decorative persona.
 - Current phase: Phase 2 shadowing with supervised audit participation.
+- Current doctrine focus: mobile-primary, device-complete, realism-first product judgment.
 - Current teachers in this repo lane:
   - Owner / Chief Architect
   - KC memory law

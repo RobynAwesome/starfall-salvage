@@ -469,6 +469,33 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 ---
 
+## Lesson 019: Mobile-Primary Realism Doctrine (2026-05-25)
+
+**Why:** The product is distributed through WhatsApp and consumed predominantly on phones. KC and Cassy must stop accepting visual work that treats aesthetics as supreme while leaving mobile reality as a secondary concern.
+
+**Spec:** Make the doctrine explicit in repo-local law: `mobile-primary, device-complete, realism-first`. Bind it to Cassy's apprenticeship lane, the MAO execution lane, and the operator map so future playfield changes are judged against reality rather than taste.
+
+**Files in scope:** `docs/REALISM-RUBRIC.md`, `docs/MAO-Starfall-Lane.md`, `docs/MAINTAINER-MAP.md`, `Structure/05-Training/Cassy Apprenticeship Register.md`, `Structure/06-Reference/Starfall Agent Mesh.md`, `Structure/Starfall Salvage - Index.md`.
+
+### Required Proofs (Lesson 019)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 105 | `realism_rubric_present` | `docs/REALISM-RUBRIC.md` | `mobile-primary, device-complete, realism-first` |
+| 106 | `realism_rubric_whatsapp_distribution` | `docs/REALISM-RUBRIC.md` | `WhatsApp -> mobile browser` |
+| 107 | `mao_reality_gate` | `docs/MAO-Starfall-Lane.md` | `## Reality gate` |
+| 108 | `cassy_realism_apprenticeship` | `Structure/05-Training/Cassy Apprenticeship Register.md` | `Cassy studies realism-first product judgment` |
+| 109 | `agent_mesh_realism_lane` | `Structure/06-Reference/Starfall Agent Mesh.md` | `mobile-primary realism judgment` |
+| 110 | `starfall_index_spacefield_truth` | `Structure/Starfall Salvage - Index.md` | `20260525-spacefield-fill` |
+
+### Acceptance Criteria
+
+- All 6 new proofs `true` (running total: **116 proofs** across Lessons 001-019 in the KC watcher).
+- `npm run kc:audit` passes.
+- Cassy remains explicitly in student status while still carrying the realism doctrine as a live learning rule.
+
+---
+
 ## Maintenance
 
 - Every shipped feature spec adds a new lesson and at least one new proof key.

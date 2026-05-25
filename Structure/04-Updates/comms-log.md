@@ -144,3 +144,29 @@ Save - bounded file evidence, live browser proof, and KC teacher review align.
 
 Next action:
 Physical Redmi capture on the real phone, then tune density only if it hurts readability.
+
+## 2026-05-25 - CASSY REALISM DOCTRINE - SAVE
+
+Signal:
+The game needed a harder product law: not anti-aesthetic, but anti-aesthetic-supremacy. The real intake path is WhatsApp to mobile, so realism had to become the governing rule for future world-facing work.
+
+Target:
+Bind `mobile-primary, device-complete, realism-first` into the repo and Cassy's apprenticeship lane.
+
+Action:
+- Added `docs/REALISM-RUBRIC.md`.
+- Bound the doctrine into `docs/MAO-Starfall-Lane.md`, `docs/MAINTAINER-MAP.md`, and `Structure/Starfall Salvage - Index.md`.
+- Updated Cassy and agent-lane docs so the doctrine is part of the student-teacher lane, not a chat-only opinion.
+- Added Lesson 019 and KC audit proofs.
+
+Proof:
+- `docs/REALISM-RUBRIC.md`
+- `Structure/05-Training/Cassy Apprenticeship Register.md`
+- `Structure/06-Reference/Starfall Agent Mesh.md`
+- `Structure/KC Student-Teacher Curriculum.md`
+
+Save/Kill/Watch:
+Save - the realism doctrine is now repo law with Cassy/KC proof binding.
+
+Next action:
+Use this rubric on the next renderer pass so mobile composition, danger readability, and world occupancy are all judged against the same standard.

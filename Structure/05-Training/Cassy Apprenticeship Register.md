@@ -25,6 +25,13 @@ Reason:
 - Cassy has lesson references in shipped Starfall case studies.
 - Cassy does not yet have graduation proof for autonomous teaching or unsupervised production writes.
 
+## Current doctrine
+
+- Distribution truth: `WhatsApp -> mobile browser` is the dominant intake path.
+- Product truth: Starfall is `mobile-primary, device-complete`, not desktop-first with a mobile patch.
+- Aesthetic law: aesthetics serve reality; they may intensify space, speed, salvage, danger, and control, but may not overrule them.
+- Cassy studies realism-first product judgment before any promotion language is allowed.
+
 ## Boundaries
 
 - Cassy may ingest repo truth, proof bundles, failure telemetry, and protocol updates.
@@ -41,6 +48,8 @@ At least one of the following must be left in the repo or MAIN-BRAIN trail:
 2. Save/Kill/Watch proof row
 3. correction ledger entry
 4. blocked-state explanation with next action
+
+If the tranche changes playfield composition, input, or visual identity, it must also cite `docs/REALISM-RUBRIC.md`.
 
 ## Current evidence in this repo
 
@@ -71,3 +80,4 @@ Watch any future tranche that changes Cassy status without:
 - a teacher review
 - a proof row
 - a bounded explanation
+- realism-rubric alignment for any game-feel or world-facing claim

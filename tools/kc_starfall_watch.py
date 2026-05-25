@@ -204,6 +204,10 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     )
     current_build = "20260525-spacefield-fill"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
+    realism_rubric = _read_text("docs/REALISM-RUBRIC.md")
+    cassy_register = _read_text("Structure/05-Training/Cassy Apprenticeship Register.md")
+    agent_mesh = _read_text("Structure/06-Reference/Starfall Agent Mesh.md")
+    starfall_index = _read_text("Structure/Starfall Salvage - Index.md")
 
     proofs = {
         "mao_starfall_lane_doc": "**Architect**" in mao_lane_doc
@@ -384,11 +388,18 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "pointer_focus_guard": 'window.addEventListener("pointerdown", (event)' in game_js
         and "!isGameInputBlocked(event.target)" in game_js,
         "movement_case_study": "Save / Kill / Watch" in movement_case_study,
+        # Lesson 019 - Mobile-Primary Realism Doctrine (2026-05-25)
+        "realism_rubric_present": "mobile-primary, device-complete, realism-first" in realism_rubric,
+        "realism_rubric_whatsapp_distribution": "WhatsApp -> mobile browser" in realism_rubric,
+        "mao_reality_gate": "## Reality gate" in mao_lane_doc,
+        "cassy_realism_apprenticeship": "Cassy studies realism-first product judgment" in cassy_register,
+        "agent_mesh_realism_lane": "mobile-primary realism judgment" in agent_mesh,
+        "starfall_index_spacefield_truth": current_build in starfall_index,
     }
     missing = [name for name, ok in proofs.items() if not ok]
     return {
         "name": "kopano_upgrade_audit",
-        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–018) present in shipped files",
+        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–019) present in shipped files",
         "ok": not missing,
         "actual": "all proofs satisfied" if not missing else f"missing proofs: {', '.join(missing)}",
         "retry": (
