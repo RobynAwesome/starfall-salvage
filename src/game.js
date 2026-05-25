@@ -521,7 +521,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260525-spacefield-fill";
+  const GAME_BUILD = "20260525-fullscreen-presence";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -2286,15 +2286,19 @@
   const screenViewMatrix = Mat4.create();
   const screenProjectionMatrix = Mat4.create();
   const screenSpaceField = Array.from(
-    { length: isTouchCapable ? 98 : 58 },
+    { length: isTouchCapable ? 102 : 62 },
     (_, index) => createScreenSpaceFieldParticle(index)
   );
+  const screenSpaceSweepers = Array.from(
+    { length: isTouchCapable ? 7 : 5 },
+    (_, index) => createScreenSpaceSweeper(index)
+  );
   const starLayers = [
-    createStarLayer(isTouchCapable ? 122 : 134, 20, 100, 0.18, 0.028, 0.09, isTouchCapable ? 0.82 : 0.62),
-    createStarLayer(isTouchCapable ? 86 : 96, 12, 76, 0.58, 0.05, 0.15, isTouchCapable ? 1 : 0.9),
-    createStarLayer(isTouchCapable ? 34 : 40, 8, 58, 0.92, 0.08, 0.22, 1)
+    createStarLayer(isTouchCapable ? 132 : 144, 20, 100, 0.18, 0.028, 0.09, isTouchCapable ? 0.86 : 0.66),
+    createStarLayer(isTouchCapable ? 92 : 102, 12, 76, 0.58, 0.05, 0.15, isTouchCapable ? 1 : 0.92),
+    createStarLayer(isTouchCapable ? 38 : 46, 8, 58, 0.92, 0.08, 0.22, 1)
   ];
-  const skySalvage = Array.from({ length: isTouchCapable ? 18 : 26 }, (_, index) => createSkySalvage(index));
+  const skySalvage = Array.from({ length: isTouchCapable ? 22 : 30 }, (_, index) => createSkySalvage(index));
   const salvageDressing = Array.from({ length: isTouchCapable ? 18 : 28 }, (_, index) => createSalvageDressing(index));
 
   function readDebugState() {
@@ -2431,11 +2435,26 @@
       kind: index % 4,
       side,
       x: randomRange(-9.8, 9.8),
-      y: randomRange(isTouchCapable ? 2.4 : 1.2, isTouchCapable ? 6.4 : 5.4),
+      y: randomRange(isTouchCapable ? 1.35 : 0.8, isTouchCapable ? 5.45 : 4.9),
       z: randomRange(-WORLD_WRAP_DEPTH - 34, -28),
-      scale: randomRange(0.52, 1.32),
+      scale: randomRange(0.58, 1.46),
       phase: Math.random() * Math.PI * 2,
       spin: randomRange(-0.08, 0.08),
+      tint: Math.random()
+    };
+  }
+
+  function createScreenSpaceSweeper(index) {
+    const upperBand = index % 2 === 0;
+    return {
+      x: randomRange(-0.22, 0.22),
+      y: upperBand ? randomRange(-0.08, 0.52) : randomRange(-0.68, -0.28),
+      scaleX: randomRange(0.62, 1.26),
+      scaleY: randomRange(0.014, 0.034),
+      drift: randomRange(0.004, 0.012),
+      bob: randomRange(0.008, 0.024),
+      phase: Math.random() * Math.PI * 2,
+      roll: randomRange(-0.18, 0.18),
       tint: Math.random()
     };
   }
@@ -2445,7 +2464,7 @@
     return {
       debris,
       x: randomRange(-0.98, 0.98),
-      y: randomRange(isTouchCapable ? -0.34 : -0.5, 0.86),
+      y: randomRange(isTouchCapable ? -0.88 : -0.78, 0.92),
       size: debris ? randomRange(0.028, 0.07) : randomRange(0.0035, 0.009),
       length: randomRange(0.06, 0.18),
       phase: Math.random() * Math.PI * 2,
@@ -2470,6 +2489,97 @@
 
   function speedProgress() {
     return clamp(((state.lastSpeedMultiplier || 1) - 1) / 3.5, 0, 1);
+  }
+
+  function getFrameProfile(aspect = canvas.width / Math.max(1, canvas.height)) {
+    if (isTouchCapable) {
+      if (aspect < 0.52) {
+        return {
+          fovScale: 0.72,
+          viewBiasY: 0.12,
+          cameraDepth: -2.7,
+          readyPitch: 0.24,
+          playPitch: 0.19,
+          backdropLift: -1.15,
+          backdropScale: 1.26,
+          canopyZShift: 2.4,
+          canopyScale: 1.22,
+          screenFieldAlpha: 1.18,
+          starDrift: 1.2
+        };
+      }
+      if (aspect < 0.82) {
+        return {
+          fovScale: 0.78,
+          viewBiasY: 0.18,
+          cameraDepth: -3.0,
+          readyPitch: 0.28,
+          playPitch: 0.22,
+          backdropLift: -0.92,
+          backdropScale: 1.16,
+          canopyZShift: 1.7,
+          canopyScale: 1.14,
+          screenFieldAlpha: 1.08,
+          starDrift: 1.12
+        };
+      }
+      return {
+        fovScale: 0.82,
+        viewBiasY: 0.22,
+        cameraDepth: -3.18,
+        readyPitch: 0.3,
+        playPitch: 0.24,
+        backdropLift: -0.64,
+        backdropScale: 1.08,
+        canopyZShift: 1.0,
+        canopyScale: 1.08,
+        screenFieldAlpha: 1,
+        starDrift: 1.04
+      };
+    }
+    if (aspect > 1.85) {
+      return {
+        fovScale: 0.62,
+        viewBiasY: -0.12,
+        cameraDepth: -2.32,
+        readyPitch: 0.22,
+        playPitch: 0.18,
+        backdropLift: -0.88,
+        backdropScale: 1.14,
+        canopyZShift: 0.9,
+        canopyScale: 1.18,
+        screenFieldAlpha: 1.06,
+        starDrift: 1.12
+      };
+    }
+    if (aspect > 1.35) {
+      return {
+        fovScale: 0.7,
+        viewBiasY: -0.02,
+        cameraDepth: -2.58,
+        readyPitch: 0.26,
+        playPitch: 0.21,
+        backdropLift: -0.56,
+        backdropScale: 1.08,
+        canopyZShift: 0.45,
+        canopyScale: 1.1,
+        screenFieldAlpha: 1.02,
+        starDrift: 1.06
+      };
+    }
+    return {
+      fovScale: 1,
+      viewBiasY: 0.18,
+      cameraDepth: -3.05,
+      readyPitch: 0.34,
+      playPitch: 0.28,
+      backdropLift: 0,
+      backdropScale: 1,
+      canopyZShift: 0,
+      canopyScale: 1,
+      screenFieldAlpha: 1,
+      starDrift: 1
+    };
   }
 
   function wrapLaneZ(baseZ, speedFactor = 1, near = 10, depth = WORLD_WRAP_DEPTH) {
@@ -4799,14 +4909,8 @@
   function renderScene(alphaTime) {
     resizeCanvas();
     const aspect = canvas.width / Math.max(1, canvas.height);
-    let renderFov = state.currentFov;
-    if (isTouchCapable && aspect < 0.92) {
-      renderFov *= 0.8;
-    } else if (aspect > 1.85) {
-      renderFov *= 0.56;
-    } else if (aspect > 1.35) {
-      renderFov *= 0.66;
-    }
+    const frameProfile = getFrameProfile(aspect);
+    const renderFov = state.currentFov * frameProfile.fovScale;
     Mat4.perspective(projectionMatrix, renderFov, aspect, 0.1, 120);
 
     const shakeLife = state.hitShakeTime > 0 ? state.hitShakeTime / 0.42 : 0;
@@ -4814,8 +4918,8 @@
     const shakeX = Math.sin(alphaTime * 82) * shakeAmount;
     const shakeY = Math.cos(alphaTime * 67) * shakeAmount * 0.72;
     const follow = getCameraFollow();
-    const viewBiasY = isTouchCapable ? 0.42 : 0.18;
-    const cameraDepth = isTouchCapable ? -4.12 : -3.05;
+    const viewBiasY = frameProfile.viewBiasY;
+    const cameraDepth = frameProfile.cameraDepth;
     const camTrackX = isTouchCapable ? 0.34 : Math.max(follow.x * 0.72, 0.06);
     const bendHeading = state.mode === "playing"
       ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, alphaTime)
@@ -4829,8 +4933,8 @@
     const targetCamY = shakeY - player.y * follow.y + viewBiasY + Math.abs(targetViewYaw) * 0.12;
     const targetViewPitch = (
       state.mode === "ready"
-        ? (isTouchCapable ? 0.48 : 0.34)
-        : (isTouchCapable ? 0.38 : 0.28)
+        ? frameProfile.readyPitch
+        : frameProfile.playPitch
     ) + Math.abs(targetViewYaw) * 0.22;
     const camLerp = 0.1;
     state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
@@ -4884,6 +4988,7 @@
   }
 
   function renderScreenSpaceSpacefield(alphaTime) {
+    const frameProfile = getFrameProfile();
     Mat4.identity(screenViewMatrix);
     Mat4.identity(screenProjectionMatrix);
     gl.uniformMatrix4fv(locations.view, false, screenViewMatrix);
@@ -4897,12 +5002,49 @@
       position: [isTouchCapable ? -0.08 : 0.12, isTouchCapable ? 0.22 : 0.18, 0],
       rotation: [0, 0, Math.sin(alphaTime * 0.04) * 0.08],
       scale: [1.58, isTouchCapable ? 0.82 : 0.62, 1],
-      color: [0.04 + speedT * 0.03, 0.14 + speedT * 0.04, 0.24 + speedT * 0.08, isTouchCapable ? 0.32 : 0.13],
+      color: [
+        0.04 + speedT * 0.03,
+        0.14 + speedT * 0.04,
+        0.24 + speedT * 0.08,
+        (isTouchCapable ? 0.34 : 0.16) * frameProfile.screenFieldAlpha
+      ],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.03 + speedT * 0.05
     });
+    drawMesh(meshes.disc, {
+      position: [isTouchCapable ? 0.22 : -0.28, isTouchCapable ? -0.18 : -0.08, 0],
+      rotation: [0, 0, -0.06 + Math.sin(alphaTime * 0.03) * 0.04],
+      scale: [1.26, isTouchCapable ? 0.54 : 0.46, 1],
+      color: [
+        0.03 + speedT * 0.03,
+        0.1 + speedT * 0.03,
+        0.18 + speedT * 0.06,
+        (isTouchCapable ? 0.18 : 0.12) * frameProfile.screenFieldAlpha
+      ],
+      texture: nebulaTexture,
+      textureMix: 1,
+      pulse: 0.02 + speedT * 0.04
+    });
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    screenSpaceSweepers.forEach((sweeper, index) => {
+      const drift = alphaTime * sweeper.drift + sweeper.phase;
+      const x = sweeper.x + Math.sin(drift) * 0.14 - state.cameraSwayX * 0.06;
+      const y = sweeper.y + Math.cos(drift * 0.72) * sweeper.bob - state.cameraSwayY * 0.04;
+      const alpha = (sweeper.tint > 0.6 ? 0.18 : 0.12) * frameProfile.screenFieldAlpha;
+      drawMesh(meshes.cube, {
+        position: [x, y, 0],
+        rotation: [0, 0, sweeper.roll + Math.sin(drift * 0.4 + index) * 0.06],
+        scale: [sweeper.scaleX, sweeper.scaleY, 0.001],
+        color: sweeper.tint > 0.6
+          ? [0.1, 0.28 + speedT * 0.06, 0.38 + speedT * 0.08, alpha]
+          : [0.06, 0.18 + speedT * 0.04, 0.24 + speedT * 0.06, alpha],
+        texture: colorTexture,
+        textureMix: 0.72,
+        uvScale: [3.2, 1],
+        pulse: 0.01 + speedT * 0.03
+      });
+    });
     screenSpaceField.forEach((particle) => {
       const drift = (alphaTime * particle.drift + particle.phase) % (Math.PI * 2);
       const x = particle.x + Math.sin(drift) * 0.018 - state.cameraSwayX * 0.03;
@@ -4913,8 +5055,8 @@
           rotation: [0, 0, particle.phase + alphaTime * 0.05],
           scale: [particle.length, particle.size * 0.16, 0.001],
         color: particle.tint > 0.58
-            ? [0.18, 0.5 + speedT * 0.08, 0.62 + speedT * 0.08, isTouchCapable ? 0.3 : 0.18]
-            : [0.12, 0.28 + speedT * 0.05, 0.36 + speedT * 0.08, isTouchCapable ? 0.24 : 0.14],
+            ? [0.18, 0.5 + speedT * 0.08, 0.62 + speedT * 0.08, (isTouchCapable ? 0.3 : 0.18) * frameProfile.screenFieldAlpha]
+            : [0.12, 0.28 + speedT * 0.05, 0.36 + speedT * 0.08, (isTouchCapable ? 0.24 : 0.14) * frameProfile.screenFieldAlpha],
           texture: colorTexture,
           textureMix: 0.65,
           uvScale: [2, 1],
@@ -4929,8 +5071,8 @@
         rotation: [0, 0, particle.phase],
         scale: [particle.size, particle.size, 0.001],
         color: warm
-          ? [1, 0.82, 0.52, isTouchCapable ? 0.56 : 0.34]
-          : [0.68, 0.92, 1, isTouchCapable ? 0.62 : 0.36],
+          ? [1, 0.82, 0.52, (isTouchCapable ? 0.56 : 0.34) * frameProfile.screenFieldAlpha]
+          : [0.68, 0.92, 1, (isTouchCapable ? 0.62 : 0.36) * frameProfile.screenFieldAlpha],
         texture: starTexture,
         textureMix: 1,
         pulse: twinkle
@@ -4957,26 +5099,29 @@
   }
 
   function renderBackdrop(alphaTime) {
+    const frameProfile = getFrameProfile();
     const speedT = speedProgress();
     const drift = Math.sin(alphaTime * 0.055) * 0.35 + state.cameraSwayX * 0.55;
     const mobileBoost = isTouchCapable ? 1 : 0;
+    const lift = frameProfile.backdropLift;
+    const scaleBoost = frameProfile.backdropScale;
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     drawMesh(meshes.disc, {
-      position: [0.4 + drift * 0.12, 3.2 + mobileBoost * 1.35 + state.cameraSwayY * 0.12, -66],
+      position: [0.4 + drift * 0.12, 3.2 + mobileBoost * 1.35 + lift + state.cameraSwayY * 0.12, -66],
       rotation: [0, 0, 0.05],
-      scale: [27 + mobileBoost * 8, 13.5 + mobileBoost * 5.5, 1],
-      color: [0.08 + speedT * 0.04, 0.16 + speedT * 0.05, 0.3 + speedT * 0.08, 0.24 + mobileBoost * 0.1],
+      scale: [(27 + mobileBoost * 8) * scaleBoost, (13.5 + mobileBoost * 5.5) * scaleBoost, 1],
+      color: [0.08 + speedT * 0.04, 0.16 + speedT * 0.05, 0.3 + speedT * 0.08, 0.26 + mobileBoost * 0.1],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.03 + speedT * 0.05
     });
     if (isTouchCapable) {
       drawMesh(meshes.disc, {
-        position: [-1.4 + drift * 0.2, 5.6 + state.cameraSwayY * 0.08, -74],
+        position: [-1.4 + drift * 0.2, 5.6 + lift * 0.9 + state.cameraSwayY * 0.08, -74],
         rotation: [0, 0, -0.08],
-        scale: [23, 9.2, 1],
+        scale: [23 * scaleBoost, 9.2 * scaleBoost, 1],
         color: [0.08 + speedT * 0.05, 0.24 + speedT * 0.05, 0.4 + speedT * 0.08, 0.26],
         texture: nebulaTexture,
         textureMix: 1,
@@ -4984,28 +5129,28 @@
       });
     }
     drawMesh(meshes.disc, {
-      position: [-4.8 + drift, 0.95 + state.cameraSwayY * 0.42, -84],
+      position: [-4.8 + drift, 0.95 + lift * 0.5 + state.cameraSwayY * 0.42, -84],
       rotation: [0, 0, -0.22 + Math.sin(alphaTime * 0.03) * 0.04],
-      scale: [16.5, 9.8, 1],
-      color: [0.18 + speedT * 0.08, 0.38 + speedT * 0.08, 0.72 + speedT * 0.16, 0.42],
+      scale: [16.5 * scaleBoost, 9.8 * scaleBoost, 1],
+      color: [0.18 + speedT * 0.08, 0.38 + speedT * 0.08, 0.72 + speedT * 0.16, 0.48],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.08 + speedT * 0.14
     });
     drawMesh(meshes.disc, {
-      position: [6.4 + drift * 0.35, 1.5 - state.cameraSwayY * 0.22, -78],
+      position: [6.4 + drift * 0.35, 1.5 + lift * 0.36 - state.cameraSwayY * 0.22, -78],
       rotation: [0, 0, -0.18],
-      scale: [6.2, 6.2, 1],
+      scale: [6.2 * Math.max(1, scaleBoost * 0.92), 6.2 * Math.max(1, scaleBoost * 0.92), 1],
       color: [0.55, 0.86, 1, 0.82],
       texture: planetTexture,
       textureMix: 1,
       pulse: 0.08 + Math.sin(alphaTime * 0.18) * 0.04
     });
     drawMesh(meshes.disc, {
-      position: [6.4 + drift * 0.35, 1.45 - state.cameraSwayY * 0.18, -82],
+      position: [6.4 + drift * 0.35, 1.45 + lift * 0.34 - state.cameraSwayY * 0.18, -82],
       rotation: [0, 0, 0],
-      scale: [9.5, 9.5, 1],
-      color: [0.28, 0.78, 1, 0.28],
+      scale: [9.5 * scaleBoost, 9.5 * scaleBoost, 1],
+      color: [0.28, 0.78, 1, 0.34],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.16 + speedT * 0.08
@@ -5015,11 +5160,12 @@
   }
 
   function renderStars(alphaTime) {
+    const frameProfile = getFrameProfile();
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.depthMask(false);
     starLayers.forEach((layer, layerIndex) => {
-      const layerDrift = state.cameraSwayX * (1.4 - layerIndex * 0.34);
+      const layerDrift = state.cameraSwayX * (1.4 - layerIndex * 0.34) * frameProfile.starDrift;
       const horizonDrift = Math.sin(alphaTime * (0.08 + layerIndex * 0.03)) * (0.18 + layerIndex * 0.08);
       layer.stars.forEach((star) => {
         const wrappedZ = wrapLaneZ(star.z, layer.speedFactor, layer.near, layer.depth);
@@ -5029,7 +5175,7 @@
           position: [star.x + layerDrift, star.y + horizonDrift + state.cameraSwayY * 0.5, wrappedZ],
           rotation: [0, 0, star.phase],
           scale: [star.size, star.size, star.size],
-          color: warm ? [1, 0.82, 0.58, layer.alpha] : [0.7, 0.92, 1, layer.alpha],
+          color: warm ? [1, 0.82, 0.58, layer.alpha * 1.04] : [0.7, 0.92, 1, layer.alpha * 1.04],
           texture: starTexture,
           textureMix: 1,
           pulse: twinkle
@@ -5110,17 +5256,18 @@
   }
 
   function renderTunnel(alphaTime) {
+    const frameProfile = getFrameProfile();
     const spacing = 4.8;
     const speedT = speedProgress();
     const budget = getRenderBudgetTier();
     const decorScale = budget.tunnelDecorScale || 1;
     const offset = (state.time * state.speed) % spacing;
-    const canopySlices = isTouchCapable ? [-10.2, -18.4, -28.6] : [-1.05, -2.8, -5.4];
+    const canopySlices = isTouchCapable ? [-8.4, -14.8, -22.8, -31.8] : [-1.05, -2.8, -5.4, -9.2];
     canopySlices.forEach((canopyZ, canopyIndex) => {
       const canopyPulse = 0.025 + canopyIndex * 0.018 + speedT * 0.06;
-      drawCorridorMesh(meshes.cube, 0, 3.08, canopyZ, alphaTime, {
+      drawCorridorMesh(meshes.cube, 0, 3.08, canopyZ + frameProfile.canopyZShift, alphaTime, {
         rotation: [0, 0, 0],
-        scale: [8.8, 0.14, 0.48],
+        scale: [8.8 * frameProfile.canopyScale, 0.14, 0.52],
         color: [0.07, 0.18 + speedT * 0.04, 0.28 + speedT * 0.08, 1],
         texture: colorTexture,
         textureMix: 0.56,
@@ -5128,7 +5275,7 @@
         pulse: canopyPulse
       });
       [-4.12, 4.12].forEach((postX) => {
-        drawCorridorMesh(meshes.cube, postX, 0.42, canopyZ - 0.14, alphaTime, {
+        drawCorridorMesh(meshes.cube, postX, 0.42, canopyZ - 0.14 + frameProfile.canopyZShift, alphaTime, {
           rotation: [0, 0, 0],
           scale: [0.18, 3.35 * decorScale, 0.42],
           color: [0.07, 0.18, 0.24 + speedT * 0.05, 1],

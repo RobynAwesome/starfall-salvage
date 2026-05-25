@@ -2592,6 +2592,42 @@ select:focus {
  color: var(--cyan);
 }
 
+@media (max-width: 420px) {
+ .playing-minimal-hud {
+  grid-template-columns: 1fr;
+  gap: 8px;
+ }
+
+ .pmh-score {
+  padding-top: 0;
+ }
+
+ .pmh-controls {
+  justify-content: space-between;
+  gap: 6px;
+ }
+
+ .pmh-pause,
+ .flight-menu-toggle,
+ .pmh-weapon {
+  min-width: 0;
+ }
+
+ .flight-menu-toggle {
+  padding: 0 10px;
+ }
+
+ .pmh-weapon {
+  padding: 0 8px;
+  font-size: 0.68rem;
+ }
+
+ .pmh-speed {
+  min-width: 44px;
+  padding-top: 8px;
+ }
+}
+
 .flight-menu-wrap {
  position: relative;
  flex: 0 0 auto;

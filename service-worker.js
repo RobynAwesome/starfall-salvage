@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20260525-spacefield-fill";
+const CACHE_NAME = "starfall-salvage-v20260525-fullscreen-presence";
 
 const ASSETS = [
   "./",

@@ -202,7 +202,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260525-spacefield-fill"
+    current_build = "20260525-fullscreen-presence"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
     realism_rubric = _read_text("docs/REALISM-RUBRIC.md")
     cassy_register = _read_text("Structure/05-Training/Cassy Apprenticeship Register.md")
@@ -330,12 +330,14 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         and "beamRadius" in game_js,
         "revive_reaction_minigame": "spawnReviveReactionCore" in game_js
         and "reaction-tap" in game_js,
-        "fullscreen_fov_composition": "aspect > 1.85" in game_js
-        and "cameraDepth = isTouchCapable ? -4.12 : -3.05" in game_js,
+        "fullscreen_fov_composition": "getFrameProfile" in game_js
+        and "fovScale" in game_js
+        and "cameraDepth" in game_js,
         "spacefield_sky_salvage_fill": "skySalvage" in game_js
         and "renderSkySalvage" in game_js
         and "screenSpaceField" in game_js
         and "renderScreenSpaceSpacefield" in game_js
+        and "screenSpaceSweepers" in game_js
         and current_build in game_js,
         "touch_range_performance_opt": 'TOUCH_FULL_RANGE_PX = Math.floor(70 *' in game_js,
         "pause_minimal_toggle_hardened": 'state.mode === "playing" || state.mode === "paused"' in game_js,

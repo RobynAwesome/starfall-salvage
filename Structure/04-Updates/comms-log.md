@@ -170,3 +170,29 @@ Save - the realism doctrine is now repo law with Cassy/KC proof binding.
 
 Next action:
 Use this rubric on the next renderer pass so mobile composition, danger readability, and world occupancy are all judged against the same standard.
+
+## 2026-05-25 - FULLSCREEN PRESENCE PASS - SAVE
+
+Signal:
+The canvas already filled the viewport, but the world composition did not. Mobile and desktop still read like a small runner trapped in a large black screen.
+
+Target:
+Promote build `20260525-fullscreen-presence` as the new branch truth for viewport-aware world occupancy.
+
+Action:
+- Added viewport framing logic in `src/game.js` through `getFrameProfile()`.
+- Brought canopy structure closer and increased top-frame occupancy.
+- Added screen-space sweepers, denser stars, and lower sky-salvage placement to make the space lane read as a place.
+- Fixed narrow-mobile HUD collision so score no longer clashes with the pause/menu rail.
+
+Proof:
+- `C:\Users\rkhol\AppData\Local\Temp\starfall-runtime-fullscreen-presence-r1\desktop.png`
+- `C:\Users\rkhol\AppData\Local\Temp\starfall-runtime-fullscreen-presence-r1\redmi.png`
+- `C:\Users\rkhol\AppData\Local\Temp\starfall-runtime-fullscreen-presence-r1\narrow.png`
+- `index.html`, `styles.css`, `src/game.js`, `src/pwa-boot.js`, `service-worker.js`
+
+Save/Kill/Watch:
+Save - bounded runtime evidence shows stronger full-screen presence without forking device rules.
+
+Next action:
+Run gate + KC seed, then push and verify the public build marker.

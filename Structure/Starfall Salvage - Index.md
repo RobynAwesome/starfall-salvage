@@ -33,16 +33,16 @@ Compatibility rule: these folders organize access without moving the legacy root
 - GitHub repo: `https://github.com/Kopano-Labs/starfall-salvage`
 - Local static proof URL: `http://127.0.0.1:5180/`
 - Local backend proof URL: `http://127.0.0.1:8765/` (optional Python backend lane)
-- Live public URL: `https://starfallsalvage.kopanolabs.com` (Vercel Hobby + IONOS CNAME; currently serving build `20260525-spacefield-fill` on the production alias).
+- Live public URL: `https://starfallsalvage.kopanolabs.com` (Vercel Hobby + IONOS CNAME; current runtime target is build `20260525-fullscreen-presence` once deployed on the production alias).
 - Main Brain root: `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics`
 - KC implementation: `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics\06-Reference\kopano-code-implementation`
 
 ## Current Truth
 
 - The game is live on the public Kopano Labs GitHub repo (public 2026-05-06 per Sovereign Tech / CONTRIBUTING.md doctrine).
-- The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; the current production gameplay runtime is build `20260525-spacefield-fill`.
+- The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; the current runtime branch build is `20260525-fullscreen-presence`.
 - The older mobile-lockdown notes are historical context, not the current branch truth. Current work unifies PC, Android, Xiaomi, and Apple browser gameplay under one ruleset and adapts only presentation density, safe-area, and touch affordances.
-- Build `20260525-spacefield-fill` is the current branch gameplay truth. It keeps controls intact and fills the playfield with denser screen-space stars, salvage silhouettes, and sky structure on mobile and desktop.
+- Build `20260525-fullscreen-presence` is the current branch gameplay truth. It keeps controls intact, strengthens full-screen framing, lowers dead black space, and preserves one ruleset across mobile and desktop.
 - Product doctrine is now explicit: `mobile-primary, device-complete, realism-first`. See `docs/REALISM-RUBRIC.md`.
 - Root node alignment: 5 Pillars, 15 Commandments, CRUD-only mandate, 80% Optimal Threshold, Asymmetric Edge Reality, Testimony Delta.
 - Thesis alignment: Starfall demonstrates Pillar 5 (Expansion) — raw WebGL under township constraints proves Commandment 9 (Offline-First Mandate) and the AER test.
@@ -85,3 +85,4 @@ Compatibility rule: these folders organize access without moving the legacy root
 - `Structure/2026-05-23 - Screen Fill Frame Pass Case Study.md` - promoted frame pass for closer canopy mass and fuller-screen world occupancy.
 - Screen-fill frame proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\report.json` with failures `[]`.
 - Live spacefield-fill proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-live-spacefield-fill-r3\report.json` with failures `[]`.
+- Fullscreen-presence local proof: `C:\Users\rkhol\AppData\Local\Temp\starfall-runtime-fullscreen-presence-r1\report.json` with screenshot payloads for `desktop.png`, `redmi.png`, and `narrow.png`.

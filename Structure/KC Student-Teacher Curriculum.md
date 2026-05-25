@@ -486,7 +486,7 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 | 107 | `mao_reality_gate` | `docs/MAO-Starfall-Lane.md` | `## Reality gate` |
 | 108 | `cassy_realism_apprenticeship` | `Structure/05-Training/Cassy Apprenticeship Register.md` | `Cassy studies realism-first product judgment` |
 | 109 | `agent_mesh_realism_lane` | `Structure/06-Reference/Starfall Agent Mesh.md` | `mobile-primary realism judgment` |
-| 110 | `starfall_index_spacefield_truth` | `Structure/Starfall Salvage - Index.md` | `20260525-spacefield-fill` |
+| 110 | `starfall_index_spacefield_truth` | `Structure/Starfall Salvage - Index.md` | `20260525-fullscreen-presence` |
 
 ### Acceptance Criteria
 
