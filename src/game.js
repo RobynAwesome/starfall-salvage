@@ -521,7 +521,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260525-fullscreen-weapons";
+  const GAME_BUILD = "20260525-spacefield-fill";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -2283,11 +2283,18 @@
   const objects = [];
   const sparks = [];
   const trailParticles = [];
+  const screenViewMatrix = Mat4.create();
+  const screenProjectionMatrix = Mat4.create();
+  const screenSpaceField = Array.from(
+    { length: isTouchCapable ? 98 : 58 },
+    (_, index) => createScreenSpaceFieldParticle(index)
+  );
   const starLayers = [
-    createStarLayer(isTouchCapable ? 88 : 134, 20, 100, 0.18, 0.024, 0.075, 0.62),
-    createStarLayer(isTouchCapable ? 58 : 96, 12, 76, 0.58, 0.04, 0.13, 0.9),
-    createStarLayer(isTouchCapable ? 24 : 40, 8, 58, 0.92, 0.075, 0.19, 1)
+    createStarLayer(isTouchCapable ? 122 : 134, 20, 100, 0.18, 0.028, 0.09, isTouchCapable ? 0.82 : 0.62),
+    createStarLayer(isTouchCapable ? 86 : 96, 12, 76, 0.58, 0.05, 0.15, isTouchCapable ? 1 : 0.9),
+    createStarLayer(isTouchCapable ? 34 : 40, 8, 58, 0.92, 0.08, 0.22, 1)
   ];
+  const skySalvage = Array.from({ length: isTouchCapable ? 18 : 26 }, (_, index) => createSkySalvage(index));
   const salvageDressing = Array.from({ length: isTouchCapable ? 18 : 28 }, (_, index) => createSalvageDressing(index));
 
   function readDebugState() {
@@ -2415,6 +2422,35 @@
         phase: Math.random() * Math.PI * 2,
         tint: Math.random()
       }))
+    };
+  }
+
+  function createSkySalvage(index) {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    return {
+      kind: index % 4,
+      side,
+      x: randomRange(-9.8, 9.8),
+      y: randomRange(isTouchCapable ? 2.4 : 1.2, isTouchCapable ? 6.4 : 5.4),
+      z: randomRange(-WORLD_WRAP_DEPTH - 34, -28),
+      scale: randomRange(0.52, 1.32),
+      phase: Math.random() * Math.PI * 2,
+      spin: randomRange(-0.08, 0.08),
+      tint: Math.random()
+    };
+  }
+
+  function createScreenSpaceFieldParticle(index) {
+    const debris = index % (isTouchCapable ? 5 : 7) === 0;
+    return {
+      debris,
+      x: randomRange(-0.98, 0.98),
+      y: randomRange(isTouchCapable ? -0.34 : -0.5, 0.86),
+      size: debris ? randomRange(0.028, 0.07) : randomRange(0.0035, 0.009),
+      length: randomRange(0.06, 0.18),
+      phase: Math.random() * Math.PI * 2,
+      drift: randomRange(0.004, 0.018),
+      tint: Math.random()
     };
   }
 
@@ -4835,14 +4871,76 @@
     gl.disable(gl.BLEND);
     gl.depthMask(true);
 
+    renderScreenSpaceSpacefield(alphaTime);
     renderBackdrop(alphaTime);
     renderStars(alphaTime);
+    renderSkySalvage(alphaTime);
     renderTunnel(alphaTime);
     renderLaneSignals(alphaTime);
     renderSalvageDressing(alphaTime);
     renderObjects(alphaTime);
     renderPlayer(alphaTime);
     renderGlowPass(alphaTime);
+  }
+
+  function renderScreenSpaceSpacefield(alphaTime) {
+    Mat4.identity(screenViewMatrix);
+    Mat4.identity(screenProjectionMatrix);
+    gl.uniformMatrix4fv(locations.view, false, screenViewMatrix);
+    gl.uniformMatrix4fv(locations.projection, false, screenProjectionMatrix);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const speedT = speedProgress();
+    drawMesh(meshes.disc, {
+      position: [isTouchCapable ? -0.08 : 0.12, isTouchCapable ? 0.22 : 0.18, 0],
+      rotation: [0, 0, Math.sin(alphaTime * 0.04) * 0.08],
+      scale: [1.58, isTouchCapable ? 0.82 : 0.62, 1],
+      color: [0.04 + speedT * 0.03, 0.14 + speedT * 0.04, 0.24 + speedT * 0.08, isTouchCapable ? 0.32 : 0.13],
+      texture: nebulaTexture,
+      textureMix: 1,
+      pulse: 0.03 + speedT * 0.05
+    });
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    screenSpaceField.forEach((particle) => {
+      const drift = (alphaTime * particle.drift + particle.phase) % (Math.PI * 2);
+      const x = particle.x + Math.sin(drift) * 0.018 - state.cameraSwayX * 0.03;
+      const y = particle.y + Math.cos(drift * 0.7) * 0.012 - state.cameraSwayY * 0.02;
+      if (particle.debris) {
+        drawMesh(meshes.cube, {
+          position: [x, y, 0],
+          rotation: [0, 0, particle.phase + alphaTime * 0.05],
+          scale: [particle.length, particle.size * 0.16, 0.001],
+        color: particle.tint > 0.58
+            ? [0.18, 0.5 + speedT * 0.08, 0.62 + speedT * 0.08, isTouchCapable ? 0.3 : 0.18]
+            : [0.12, 0.28 + speedT * 0.05, 0.36 + speedT * 0.08, isTouchCapable ? 0.24 : 0.14],
+          texture: colorTexture,
+          textureMix: 0.65,
+          uvScale: [2, 1],
+          pulse: 0.01 + speedT * 0.04
+        });
+        return;
+      }
+      const warm = particle.tint > 0.82;
+      const twinkle = 0.05 + Math.sin(alphaTime * 1.6 + particle.phase) * 0.035;
+      drawMesh(meshes.cube, {
+        position: [x, y, 0],
+        rotation: [0, 0, particle.phase],
+        scale: [particle.size, particle.size, 0.001],
+        color: warm
+          ? [1, 0.82, 0.52, isTouchCapable ? 0.56 : 0.34]
+          : [0.68, 0.92, 1, isTouchCapable ? 0.62 : 0.36],
+        texture: starTexture,
+        textureMix: 1,
+        pulse: twinkle
+      });
+    });
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
+    gl.uniformMatrix4fv(locations.view, false, viewMatrix);
+    gl.uniformMatrix4fv(locations.projection, false, projectionMatrix);
   }
 
   function renderGlowPass(alphaTime) {
@@ -4861,18 +4959,30 @@
   function renderBackdrop(alphaTime) {
     const speedT = speedProgress();
     const drift = Math.sin(alphaTime * 0.055) * 0.35 + state.cameraSwayX * 0.55;
+    const mobileBoost = isTouchCapable ? 1 : 0;
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     drawMesh(meshes.disc, {
-      position: [0.4 + drift * 0.12, 2.8 + state.cameraSwayY * 0.12, -66],
+      position: [0.4 + drift * 0.12, 3.2 + mobileBoost * 1.35 + state.cameraSwayY * 0.12, -66],
       rotation: [0, 0, 0.05],
-      scale: [27, 13.5, 1],
-      color: [0.08 + speedT * 0.04, 0.16 + speedT * 0.05, 0.3 + speedT * 0.08, 0.24],
+      scale: [27 + mobileBoost * 8, 13.5 + mobileBoost * 5.5, 1],
+      color: [0.08 + speedT * 0.04, 0.16 + speedT * 0.05, 0.3 + speedT * 0.08, 0.24 + mobileBoost * 0.1],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.03 + speedT * 0.05
     });
+    if (isTouchCapable) {
+      drawMesh(meshes.disc, {
+        position: [-1.4 + drift * 0.2, 5.6 + state.cameraSwayY * 0.08, -74],
+        rotation: [0, 0, -0.08],
+        scale: [23, 9.2, 1],
+        color: [0.08 + speedT * 0.05, 0.24 + speedT * 0.05, 0.4 + speedT * 0.08, 0.26],
+        texture: nebulaTexture,
+        textureMix: 1,
+        pulse: 0.06 + speedT * 0.08
+      });
+    }
     drawMesh(meshes.disc, {
       position: [-4.8 + drift, 0.95 + state.cameraSwayY * 0.42, -84],
       rotation: [0, 0, -0.22 + Math.sin(alphaTime * 0.03) * 0.04],
@@ -4925,6 +5035,75 @@
           pulse: twinkle
         });
       });
+    });
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+  }
+
+  function renderSkySalvage(alphaTime) {
+    const speedT = speedProgress();
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    skySalvage.forEach((piece, index) => {
+      const z = wrapLaneZ(piece.z, 0.2 + speedT * 0.08, 24, WORLD_WRAP_DEPTH + 36);
+      const sway = Math.sin(alphaTime * (0.12 + index * 0.003) + piece.phase) * (0.24 + speedT * 0.18);
+      const spin = piece.phase + alphaTime * piece.spin;
+      const s = piece.scale * (isTouchCapable ? 1.06 : 1);
+      const alpha = (piece.tint > 0.68 ? 0.26 : 0.18) + speedT * 0.08;
+      const color = piece.tint > 0.68
+        ? [0.12, 0.36 + speedT * 0.06, 0.48 + speedT * 0.08, alpha]
+        : [0.08, 0.22 + speedT * 0.04, 0.3 + speedT * 0.05, alpha];
+      const x = piece.x + sway + state.cameraSwayX * 0.32;
+      const y = piece.y + Math.cos(alphaTime * 0.1 + piece.phase) * 0.16 + state.cameraSwayY * 0.14;
+
+      if (piece.kind === 0) {
+        drawMesh(meshes.cube, {
+          position: [x, y, z],
+          rotation: [0.08, spin * 0.4, piece.side * 0.28],
+          scale: [1.45 * s, 0.1 * s, 0.72 * s],
+          color,
+          texture: colorTexture,
+          textureMix: 0.72,
+          uvScale: [2.4, 1],
+          pulse: 0.02 + speedT * 0.08
+        });
+      } else if (piece.kind === 1) {
+        drawMesh(meshes.cube, {
+          position: [x, y, z],
+          rotation: [0.18, spin, piece.side * 0.18],
+          scale: [0.34 * s, 0.34 * s, 0.34 * s],
+          color,
+          texture: warningTexture,
+          textureMix: 0.46,
+          uvScale: [1.4, 1.4],
+          pulse: 0.03 + speedT * 0.1
+        });
+      } else if (piece.kind === 2) {
+        [-1, 1].forEach((wing) => {
+          drawMesh(meshes.cube, {
+            position: [x + wing * piece.side * 0.52 * s, y, z],
+            rotation: [0.12, spin * 0.3, wing * piece.side * 0.22],
+            scale: [0.72 * s, 0.06 * s, 0.28 * s],
+            color,
+            texture: colorTexture,
+            textureMix: 0.7,
+            uvScale: [1.8, 1],
+            pulse: 0.02 + speedT * 0.07
+          });
+        });
+      } else {
+        drawMesh(meshes.cube, {
+          position: [x, y, z],
+          rotation: [spin * 0.35, piece.side * 0.24, spin],
+          scale: [0.08 * s, 0.86 * s, 0.08 * s],
+          color,
+          texture: colorTexture,
+          textureMix: 0.58,
+          uvScale: [1, 2.2],
+          pulse: 0.02 + speedT * 0.06
+        });
+      }
     });
     gl.depthMask(true);
     gl.disable(gl.BLEND);

@@ -1,6 +1,6 @@
 import { KopanoVault } from "./kopano-vault.js";
 
-const BUILD = "20260525-fullscreen-weapons";
+const BUILD = "20260525-spacefield-fill";
 
 window.__kopanoVault = null;
 window.__kopanoVaultReady = KopanoVault.open()
