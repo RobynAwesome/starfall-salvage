@@ -1,8 +1,14 @@
 /**
  * Optional mobile layout audit (Playwright). Not part of npm run gate.
  * Usage: serve repo on PORT (default 8765), then: npm run mobile:stress:pw
+ * Optional: STARFALL_URL=https://starfallsalvage.kopanolabs.com/ node tools/playwright_mobile_audit.js
  */
-const { chromium } = require("playwright");
+let chromium;
+try {
+  ({ chromium } = require("playwright"));
+} catch {
+  ({ chromium } = require("playwright-core"));
+}
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -17,8 +23,8 @@ fs.mkdirSync(outDir, { recursive: true });
 
 const VIEWPORTS = [
   { label: "iphone_14", width: 390, height: 844, scale: 3 },
-  { label: "pixel_7", width: 412, height: 915, scale: 2.625 },
-  { label: "narrow_android", width: 360, height: 800, scale: 2 }
+  { label: "narrow_android", width: 360, height: 800, scale: 2 },
+  { label: "mobile_landscape", width: 800, height: 360, scale: 2 }
 ];
 
 function intersect(a, b) {
@@ -26,7 +32,7 @@ function intersect(a, b) {
   return !(a.right <= b.left || a.left >= b.right || a.bottom <= b.top || a.top >= b.bottom);
 }
 
-async function inspect(page, label) {
+async function inspect(page, label, phase) {
   const metrics = await page.evaluate(() => {
     const pack = (selector) => {
       const el = document.querySelector(selector);
@@ -53,14 +59,22 @@ async function inspect(page, label) {
 
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },
+      shellClass: document.querySelector(".shell")?.className || null,
+      build: document.querySelector('script[src*="src/game.js"]')?.getAttribute("src") || null,
+      serviceWorkerController: Boolean(navigator.serviceWorker && navigator.serviceWorker.controller),
       horizontalOverflow:
         document.documentElement.scrollWidth > window.innerWidth + 1,
       canvas: pack("#glCanvas"),
       playingHud: pack("#playingMinimalHud"),
+      pauseButton: pack("#pauseMinimalButton"),
       flightMenuToggle: pack("#flightMenuToggle"),
       flightMenuPanel: pack("#flightMenuPanel"),
       fire: pack("#mobileFireButton"),
-      sovereign: pack("#sovereignScrim")
+      sovereign: pack("#sovereignScrim"),
+      statusPanel: pack("#statusPanel"),
+      leaderboardPanel: pack("#leaderboardPanel"),
+      ecosystemPanel: pack("#ecosystemPanel"),
+      onboardingModal: pack("#onboardingModal")
     };
   });
 
@@ -69,7 +83,7 @@ async function inspect(page, label) {
     flightMenuFire: intersect(metrics.flightMenuPanel, metrics.fire)
   };
 
-  const screenshot = path.join(outDir, `${label}.png`);
+  const screenshot = path.join(outDir, `${label}-${phase}.png`);
   await page.screenshot({ path: screenshot, fullPage: false });
   return { label, screenshot, metrics };
 }
@@ -87,10 +101,23 @@ async function inspect(page, label) {
     });
     const page = await context.newPage();
     try {
-      await page.goto(target, { waitUntil: "domcontentloaded", timeout: 20000 });
-      await page.click("#startButton", { timeout: 8000 }).catch(() => {});
+      await page.goto(target, { waitUntil: "networkidle", timeout: 30000 });
+      await page.waitForSelector("#sovereignPrimaryCta", { timeout: 10000 });
+      const ready = await inspect(page, vp.label, "ready");
+
+      await page.locator("#sovereignPrimaryCta").click({ force: true });
+      const onboardingVisible = await page.locator("#onboardingModal").isVisible().catch(() => false);
+      if (onboardingVisible) {
+        await page.locator("#onboardingContinueButton").click({ force: true });
+      }
+      await page.waitForFunction(
+        () => document.querySelector(".shell")?.classList.contains("is-playing"),
+        null,
+        { timeout: 20000 }
+      );
       await page.waitForTimeout(1200);
-      results.push(await inspect(page, vp.label));
+      const playing = await inspect(page, vp.label, "playing");
+      results.push({ label: vp.label, ready, onboardingVisible, playing });
     } catch (err) {
       results.push({ label: vp.label, error: String(err) });
     } finally {
