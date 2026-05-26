@@ -2616,7 +2616,12 @@ select:focus {
   gap: 6px;
  }
 
- .pmh-pause,
+ .pmh-pause {
+  min-width: 48px;
+  width: 48px;
+  flex: 0 0 48px;
+ }
+
  .flight-menu-toggle,
  .pmh-weapon {
   min-width: 0;

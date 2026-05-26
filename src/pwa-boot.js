@@ -1,6 +1,6 @@
 import { KopanoVault } from "./kopano-vault.js";
 
-const BUILD = "20260525-fullscreen-presence";
+const BUILD = "20260526-ready-shell";
 const SW_URL = `/service-worker.js?v=${encodeURIComponent(BUILD)}`;
 const SW_RELOAD_KEY = `starfall-sw-refresh:${BUILD}`;
 

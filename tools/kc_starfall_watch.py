@@ -202,7 +202,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260525-fullscreen-presence"
+    current_build = "20260526-ready-shell"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
     realism_rubric = _read_text("docs/REALISM-RUBRIC.md")
     cassy_register = _read_text("Structure/05-Training/Cassy Apprenticeship Register.md")
