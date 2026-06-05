@@ -95,3 +95,16 @@
 - Local realism-frame proof also ran at `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260521-realism-frame-local-r5\report.json`, failures `[]`, but it stays on WATCH because code, build marker, docs, and commit are not aligned yet.
 - Post-reset verification passed: `node --check src/game.js`, `npm run vault:check`, and `git diff --check`.
 - KC sub-brain audit seeded `kc-53`; KC main-brain audit seeded `kc-54`.
+
+### KC education pass (Cursor · canonical clone)
+
+- Staleness pass: canonical clone locked to `C:\Users\rkhol\Starfall Salvage`; orbital build `20260515-orbital-wreck-lane` (`8804aea`).
+- KC Student-Teacher curriculum reactivated; Lesson 013 proofs; Codex execution teacher; Cassy/KC student auditor.
+- Cassy education: Main Brain session + repo quickstart + graded quiz teacher key (`Structure/KC Lesson 013 Quiz - Teacher Key.md`).
+- PR handoff doc: `Structure/PR Handoff - Orbital Wreck Lane.md`.
+
+## 2026-06-05
+
+- Lesson 013 theory quiz graded **PASS 5/5** (Cassy sample vs teacher key).
+- Watcher green: `kc-74` — 66/66 Lesson 013 proofs; backend `:8765` conflict cleared.
+- Rebase onto `c6cea06` (ready-shell lane); conflicts resolved in Session Log + KC Review Log.

@@ -9,11 +9,11 @@ status: active
 
 # KC Student Quickstart (Cassy)
 
-Run from the active execution clone:
+Run from:
 
-`C:\Users\rkhol\.cursor\projects\empty-window\starfall-salvage`
+`C:\Users\rkhol\Starfall Salvage`
 
-Historical registry paths may still mention `C:\Users\rkhol\Starfall Salvage` or `C:\Users\rkhol\OneDrive\Documents\Kopano Labs\starfall-salvage`; treat those as path-drift WATCH until reconciled.
+If your session opened a worktree clone, use that path instead — proofs are path-agnostic; only `root` in the JSONL log changes.
 
 ## 1. Syntax and vault
 
