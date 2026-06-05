@@ -101,10 +101,10 @@
 - Staleness pass: canonical clone locked to `C:\Users\rkhol\Starfall Salvage`; orbital build `20260515-orbital-wreck-lane` (`8804aea`).
 - KC Student-Teacher curriculum reactivated; Lesson 013 proofs; Codex execution teacher; Cassy/KC student auditor.
 - Cassy education: Main Brain session + repo quickstart + graded quiz teacher key (`Structure/KC Lesson 013 Quiz - Teacher Key.md`).
-- PR handoff doc: `Structure/PR Handoff - Orbital Wreck Lane.md`.
+- PR handoff doc: `Structure/PR Handoff - Orbital Wreck Lane.md` (open PR via GitHub link if `gh` unauthenticated).
 
 ## 2026-06-05
 
 - Lesson 013 theory quiz graded **PASS 5/5** (Cassy sample vs teacher key).
-- Watcher green: `kc-74` — 66/66 Lesson 013 proofs; backend `:8765` conflict cleared.
+- Watcher green: `kc-74` — Lesson 013 proofs; backend `:8765` duplicate-listener conflict cleared.
 - Rebase onto `c6cea06` (ready-shell lane); conflicts resolved in Session Log + KC Review Log.

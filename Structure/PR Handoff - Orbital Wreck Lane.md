@@ -10,8 +10,9 @@ status: ready-for-owner-review
 # PR Handoff (Owner / Chief Architect)
 
 **Branch:** `codex/starfall-mobile-weapon-ecosystem`  
-**Tip:** `c6cea06` (rebase base; KC docs land on top)  
-**Build:** `20260526-ready-shell` (includes orbital wreck + movement + start-fly + ready-shell)  
+**Tip:** `c6cea06` (+ KC docs commits on rebase)  
+**Build:** `20260526-ready-shell` (orbital wreck + movement + start-fly + ready-shell)  
+**KC audit:** `kc-74` theory PASS 5/5; see `KC Review Log.jsonl`
 **Open PR:** https://github.com/Kopano-Labs/starfall-salvage/pull/new/codex/starfall-mobile-weapon-ecosystem
 
 > Cursor `gh` CLI is not authenticated in this environment. Owner or Codex opens the PR from the link above.
@@ -30,13 +31,14 @@ status: ready-for-owner-review
 
 - Adds orbital wreck-lane playfield identity: parallax stars, space backdrop, curved salvage corridor, wreck decor, camera banking (`8804aea`).
 - Preserves unified device ecosystem, mobile comfort pass, and vanilla stack (no React/Tailwind).
-- KC Student-Teacher lane reactivated: Lesson 013 proofs (66 total), green watcher run `kc-35`, Cassy education pack.
+- KC Student-Teacher lane reactivated: Lesson 013 proofs (66 total), theory quiz PASS 5/5, watcher green, Cassy education pack.
 
 ## Commits (high level)
 
 - `8804aea` — orbital wreck lane code + cache bust
 - `5bf0c47` — KC curriculum, staleness sync, vault supersede pointers
 - `bc0285b` — KC audit log + Cassy quickstart
+- `8664efd` — Lesson 013 quiz teacher key + PR handoff + session log
 
 ## Test plan
 
@@ -58,6 +60,6 @@ status: ready-for-owner-review
 
 ## KC status at handoff
 
-- Watcher: **6/6 checks**, **66/66 proofs**, `kc-35`
-- Theory quiz: teacher key at `Structure/KC Lesson 013 Quiz - Teacher Key.md`
+- Watcher: **6/6 checks**, **66/66 proofs** (latest context after push — see `KC Review Log.jsonl`)
+- Theory quiz: **PASS 5/5** — teacher key `Structure/KC Lesson 013 Quiz - Teacher Key.md`
 - **Not** owner-proof production ready until live Redmi capture
