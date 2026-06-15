@@ -1,49 +1,62 @@
-# Starfall Salvage - WebGL Edition
+# Starfall Salvage (Star 4) — Mining Support & Salvage Intelligence | KPGS Ecosystem
 
-Starfall Salvage is a fresh raw-WebGL browser game inspired by the supplied Pong project structure. It keeps the same assignment-friendly approach of plain HTML, CSS, JavaScript, shaders, buffers, event listening, and a real-time animation loop, but changes the gameplay into a 3D salvage runner.
+> *"The earth is the LORD's, and everything in it."* — Psalm 24:1
 
-## Run
+[![KPGS](https://img.shields.io/badge/KPGS-Governed-7b61ff)](https://kopanolabs.com)
+[![APWA](https://img.shields.io/badge/APWA-6_Dimensions-00d4aa)](https://kopanolabs.com)
+[![Eddie](https://img.shields.io/badge/Sector_02-Eddie_BGF-ff6600)](https://kopanolabs.com)
 
-Open `index.html` in a WebGL-capable browser, or serve the folder locally.
+## What Is This
 
-Static frontend only:
+Star 4 Salvage / Starfall Salvage is a **mining support, salvage intelligence, and downtime-reduction operator** serving existing mines and contractors under South Africa's tightening compliance, transformation, logistics, and commodity-volatility environment.
 
-```powershell
-python -m http.server 8765
+Governed by **Eddie BGF Mining** — Sector 02 Lead in the KPGS Agent Swarm.
+
+## APWA Mining Intelligence
+
+| # | Dimension | Mining Implementation |
+|---|-----------|----------------------|
+| 1 | **Connectivity** | Offline asset inspection · Mine-site dead zones |
+| 2 | **Role** | Salvage operator · Mine contractor · Compliance officer |
+| 3 | **Urgency** | Standard ops → Section 54 stoppage → Emergency recovery |
+| 4 | **Device** | Rugged tablets · Android phones · Site kiosks |
+| 5 | **Trust** | Chain-of-custody · Lawful copper documentation · MHSA compliance |
+| 6 | **Local Context** | Mining belt · Commodity type · DMRE region · B-BBEE level |
+
+## Opportunity Lanes
+
+| Lane | Signal | Risk | Opportunity |
+|------|--------|------|-------------|
+| SA Sector | Cadastre delay + licensing friction | High | Target existing mines, brownfield zones |
+| B-BBEE | Transformation procurement pressure | Medium | Build compliant supplier profile |
+| Infrastructure | Transnet rail/port bottlenecks | High | Road-haulage wear, parts recovery |
+| Heavy Assets | Predictive maintenance / edge telemetry | Medium | Low-cost asset telemetry |
+| Compliance | MHSA Amendment Bill + Section 54 risk | Very High | Contractor safety file |
+| Commodities | Copper/cobalt/battery minerals volatile | High | Lawful high-value scrap |
+| Mining Tech | AI moving into operations | Medium | Kopano Context as field intelligence |
+
+## Kopano Context Compression
+
+```
+Cadastre delay    → licensing friction
+Infrastructure    → logistics friction
+Commodity swing   → cash-flow friction
+Heavy assets      → downtime friction
+MHSA enforcement  → compliance friction
+B-BBEE            → supplier-access friction
+
+Star 4 Salvage = classified-response layer
 ```
 
-Then browse to `http://localhost:8765`.
+## KPGS Ecosystem Mesh
 
-Local backend demo with pilot profiles and score sync stored in SQLite:
+| Node | URL | SWFUS |
+|------|-----|-------|
+| KopanoLabs | [kopanolabs.com](https://kopanolabs.com) | Soil |
+| KRRababalela | [krrababalela.com](https://krrababalela.com) | Sky |
+| KasiLink | [kasilink.com](https://kasilink.com) | Water |
+| CrisisConnect | [crisisconnect.kopanolabs.com](https://crisisconnect.kopanolabs.com) | Fire |
+| FivesArena | [fivesarena.com](https://fivesarena.com) | Underground |
+| KopanoContext | [kopanocontext.kopanolabs.com](https://kopanocontext.kopanolabs.com) | Sky |
 
-```powershell
-python backend\starfall_server.py --port 8765
-```
-
-Then browse to `http://127.0.0.1:8765`.
-
-No compilation is required because this project uses browser-native WebGL and JavaScript.
-
-## Controls
-
-- `WASD` or arrow keys: move the salvage drone
-- `Space`: phase dash through one dangerous object
-- `P`: pause or resume
-- `R`: restart
-- Buttons on screen: sign in, start, pause, reset
-
-## Profile Mode
-
-The pilot sign-in is demo-safe. If the Python backend is running, the game stores pilot profiles and leaderboard entries in `.data/starfall.db` using SQLite. If the backend is unavailable, it falls back to browser `localStorage` so the game still works offline.
-
-## Files
-
-- `index.html`: game canvas and HUD markup
-- `styles.css`: responsive full-screen game layout
-- `src/game.js`: raw WebGL renderer, matrix transforms, game loop, collision, input, procedural textures
-- `backend/starfall_server.py`: optional local SQLite backend for pilot profiles and scores
-- `tools/kc_starfall_watch.py`: KC hard-QA watcher for pass/fail/retry logs (includes **mobile static stress ≥ 80%** before `npm run gate` passes)
-- `docs/MAINTAINER-MAP.md`: one-page entrypoints, gate command, optional Playwright audit
-- `docs/MAO-Starfall-Lane.md`: MAO protocol (Architect / Business / Forensic Sociology) bound to this repo’s gates and multitask + weapon lane checks
-- `DEPLOYMENT.md`: subdomain and hosting runbook
-- `PROJECT_DOCUMENTATION.md`: assignment-style documentation
+**Jesus is King. Classify before interpret. Receipt or HOLD.**
