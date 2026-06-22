@@ -30,8 +30,15 @@
     "context:smoke": "npm run context:typecheck && node --experimental-strip-types tools/kopano_context_smoke.mjs"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
+    "turbo": "^2.5.0",
     "typescript": "^5.4.0"
+  },
+  "overrides": {
+    "tar": ">=6.2.1",
+    "vite": ">=6.3.5",
+    "uuid": ">=11.1.1",
+    "qs": ">=6.11.2",
+    "esbuild": ">=0.25.0"
   },
   "engines": {
     "node": ">=20.0.0"
