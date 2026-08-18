@@ -1,0 +1,43 @@
+name: KPGS KC Sync Proof
+
+on:
+  pull_request:
+    paths:
+      - "apps/api/kc_sync_api.py"
+      - "apps/api/test_kc_sync_progressive.py"
+      - "apps/api/requirements.txt"
+      - ".github/workflows/kpgs-kc-sync-proof.yml"
+  push:
+    branches:
+      - "kpgs-*"
+    paths:
+      - "apps/api/kc_sync_api.py"
+      - "apps/api/test_kc_sync_progressive.py"
+      - "apps/api/requirements.txt"
+      - ".github/workflows/kpgs-kc-sync-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    name: Compile · Unit proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install API dependencies
+        run: python -m pip install --disable-pip-version-check -r apps/api/requirements.txt
+
+      - name: Compile governed adapter
+        run: python -m compileall -q apps/api/kc_sync_api.py apps/api/test_kc_sync_progressive.py
+
+      - name: Prove canonical membrane and projection receipts
+        run: python -m unittest -v apps.api.test_kc_sync_progressive
