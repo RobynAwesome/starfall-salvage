@@ -35,46 +35,61 @@ jobs:
           cache: "pip"
           cache-dependency-path: apps/api/requirements.txt
 
-      - name: Install API dependencies
+      - id: install
+        name: Install API dependencies
         run: python -m pip install -r apps/api/requirements.txt
 
-      - name: Check dependency consistency
+      - id: pipcheck
+        name: Check dependency consistency
         run: python -m pip check
 
-      - name: Compile governed API modules
+      - id: compile
+        name: Compile governed API modules
         run: >-
           python -m py_compile
           apps/api/kpgs_progressive.py
           apps/api/kc_sync_api.py
           tests/test_kpgs_progressive.py
 
-      - name: Run KPGS projection tests
+      - id: test
+        name: Run KPGS projection tests
         run: python -m unittest discover -s tests -p 'test_kpgs*.py' -v
 
       - name: Emit KPGS proof receipt
+        if: always()
         env:
           TESTED_SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           REF_NAME: ${{ github.ref_name }}
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          PIPCHECK_OUTCOME: ${{ steps.pipcheck.outcome }}
+          COMPILE_OUTCOME: ${{ steps.compile.outcome }}
+          TEST_OUTCOME: ${{ steps.test.outcome }}
         shell: bash
         run: |
+          proof_status="PASS"
+          for outcome in "$INSTALL_OUTCOME" "$PIPCHECK_OUTCOME" "$COMPILE_OUTCOME" "$TEST_OUTCOME"; do
+            if [ "$outcome" != "success" ]; then
+              proof_status="FAIL"
+            fi
+          done
           mkdir -p governance/receipts
           cat > governance/receipts/kpgs-branch-proof.json <<EOF
           {
             "schema": "starfall.kpgs.branch-proof.v1",
-            "status": "PASS",
+            "status": "${proof_status}",
             "tested_sha": "${TESTED_SHA}",
             "branch": "${REF_NAME}",
             "workflow": "KPGS Branch Proof",
             "run_id": "${RUN_ID}",
             "run_attempt": "${RUN_ATTEMPT}",
-            "commands": [
-              "python -m pip install -r apps/api/requirements.txt",
-              "python -m pip check",
-              "python -m py_compile apps/api/kpgs_progressive.py apps/api/kc_sync_api.py tests/test_kpgs_progressive.py",
-              "python -m unittest discover -s tests -p test_kpgs*.py -v"
-            ],
+            "steps": {
+              "install": "${INSTALL_OUTCOME}",
+              "pip_check": "${PIPCHECK_OUTCOME}",
+              "compile": "${COMPILE_OUTCOME}",
+              "test": "${TEST_OUTCOME}"
+            },
             "canonical_source": {
               "repository": "RobynAwesome/Introduction-to-MCP",
               "commit": "70f40324978ee8c3c1a8a77a29e6ac84c7f6bf3a",
@@ -84,8 +99,13 @@ jobs:
           EOF
 
       - name: Commit proof receipt
+        if: always()
         shell: bash
         run: |
+          if [ ! -f governance/receipts/kpgs-branch-proof.json ]; then
+            echo "No proof receipt was emitted."
+            exit 1
+          fi
           if git diff --quiet -- governance/receipts/kpgs-branch-proof.json; then
             echo "Proof receipt already represents this exact SHA."
             exit 0
