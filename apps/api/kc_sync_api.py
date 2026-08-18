@@ -61,9 +61,9 @@ KPGS_PROJECTION_STATE_CLASSES = {"derived_projection", "non_authoritative"}
 # ─── Config ──────────────────────────────────────────────────────────────────
 
 DB_PATH: Path = Path(os.getenv("KC_SYNC_DB", ".data/kc_sync.db"))
-RATE_LIMIT_WINDOW: int = 60          # seconds
-RATE_LIMIT_MAX:    int = 120         # requests per window per origin
-IDEMPOTENCY_TTL:   int = 7 * 24 * 3600  # 7 days — matches sync_queue.purge()
+RATE_LIMIT_WINDOW: int = 60
+RATE_LIMIT_MAX: int = 120
+IDEMPOTENCY_TTL: int = 7 * 24 * 3600
 
 # ─── FastAPI app ──────────────────────────────────────────────────────────────
 
@@ -78,8 +78,8 @@ app.add_middleware(
     allow_origins=[
         "https://starfallsalvage.kopanolabs.com",
         "http://127.0.0.1:8765",
-        "http://localhost:8100",   # Ionic dev server
-        "http://localhost:3000",   # Next.js dev
+        "http://localhost:8100",
+        "http://localhost:3000",
     ],
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type", "X-Idempotency-Key", "X-Pilot-Id"],
@@ -100,7 +100,6 @@ def get_db():
 
 
 def init_db() -> None:
-    """Create tables on first boot."""
     with get_db() as conn:
         conn.executescript("""
         CREATE TABLE IF NOT EXISTS idempotency_keys (
@@ -155,7 +154,6 @@ def init_db() -> None:
 # ─── Rate limiting ────────────────────────────────────────────────────────────
 
 def check_rate_limit(origin: str) -> None:
-    """Raises 429 if origin exceeds RATE_LIMIT_MAX requests per window."""
     window = int(time.time() // RATE_LIMIT_WINDOW) * RATE_LIMIT_WINDOW
     with get_db() as conn:
         row = conn.execute(
@@ -187,17 +185,10 @@ def full_payload_hash(data: Any) -> str:
 
 
 def payload_hash(data: Any) -> str:
-    """Legacy 16-character digest retained for the existing header-idempotency table."""
     return full_payload_hash(data)[:16]
 
 
 def check_idempotency(key: str, data: Any) -> tuple[bool, str | None]:
-    """
-    Returns (is_duplicate, cached_response_json).
-    If duplicate with same payload → (True, cached_response).
-    If key not seen        → (False, None).
-    If key seen but hash mismatch → raises 422.
-    """
     h = payload_hash(data)
     cutoff = time.time() - IDEMPOTENCY_TTL
     with get_db() as conn:
@@ -218,7 +209,6 @@ def check_idempotency(key: str, data: Any) -> tuple[bool, str | None]:
 
 
 def record_idempotency(key: str, data: Any, response_json: str) -> None:
-    """Legacy idempotency recording path. Governed writes record atomically in their transaction."""
     with get_db() as conn:
         conn.execute(
             """INSERT OR IGNORE INTO idempotency_keys
@@ -231,85 +221,87 @@ def record_idempotency(key: str, data: Any, response_json: str) -> None:
 # ─── Payload / receipt models ─────────────────────────────────────────────────
 
 class KpgsProgressiveEnvelope(BaseModel):
-    update_id            : str = ""
-    protocol             : str = ""
-    canonical_source_sha : str = ""
-    apu_state            : str = "UNSPECIFIED"
-    boundary_marker      : str = ""
-    crud_intent          : str = ""
-    state_class          : str = ""
-    authority_effect     : str = ""
-    foc_asserted         : bool = False
-    correlation_id       : str | None = None
+    update_id: str = ""
+    protocol: str = ""
+    canonical_source_sha: str = ""
+    apu_state: str = "UNSPECIFIED"
+    boundary_marker: str = ""
+    crud_intent: str = ""
+    state_class: str = ""
+    authority_effect: str = ""
+    foc_asserted: bool = False
+    correlation_id: str | None = None
 
 
 class ScorePayload(BaseModel):
-    id              : str
-    pilot_id        : str | None = None
-    callsign        : str        = "Unknown"
-    score           : int        = 0
-    cores           : int        = 0
-    time_alive      : float      = 0.0
-    wave            : int        = 1
-    mode            : str        = "desktop"
-    saved_at        : str
-    idempotency_key : str
+    id: str
+    pilot_id: str | None = None
+    callsign: str = "Unknown"
+    score: int = 0
+    cores: int = 0
+    time_alive: float = 0.0
+    wave: int = 1
+    mode: str = "desktop"
+    saved_at: str
+    idempotency_key: str
 
 
 class ChatPayload(BaseModel):
-    id              : str
-    callsign        : str
-    pilot_id        : str | None = None
-    message         : str
-    ts              : str
-    idempotency_key : str
+    id: str
+    callsign: str
+    pilot_id: str | None = None
+    message: str
+    ts: str
+    idempotency_key: str
 
 
 class SyncBatch(BaseModel):
-    """Batch payload from kopano_vault sync_queue."""
-    scores   : list[ScorePayload] = Field(default_factory=list)
-    chat     : list[ChatPayload] = Field(default_factory=list)
-    pilot_id : str | None = None
+    scores: list[ScorePayload] = Field(default_factory=list)
+    chat: list[ChatPayload] = Field(default_factory=list)
+    pilot_id: str | None = None
     client_ts: str | None = None
-    kpgs     : KpgsProgressiveEnvelope | None = None
+    kpgs: KpgsProgressiveEnvelope | None = None
 
 
 class KpgsStageReceipt(BaseModel):
-    stage  : str
-    status : str
-    reason : str
+    stage: str
+    status: str
+    reason: str
 
 
 class KpgsSwfusReceipt(BaseModel):
-    schema                      : Literal["kpgs.swfus.receipt.v1"] = KPGS_SWFUS_RECEIPT_SCHEMA
-    receipt_id                  : str
-    update_id                   : str
-    node_id                     : str
-    operation                   : Literal["CREATE"] = "CREATE"
-    disposition                 : Literal["APPLIED", "HELD", "REJECTED"]
-    stages                      : list[KpgsStageReceipt]
-    synchronized                : bool
-    canonical_authority_changed : Literal[False] = False
-    state_digest                : str | None = None
-    evidence_refs               : list[str] = Field(default_factory=list)
-    correlation_id              : str = ""
-    boundary_marker             : str
-    replayed                    : bool = False
-    created_at                  : str
+    schema: Literal["kpgs.swfus.receipt.v1"] = KPGS_SWFUS_RECEIPT_SCHEMA
+    receipt_id: str
+    update_id: str
+    node_id: str
+    operation: Literal["CREATE"] = "CREATE"
+    disposition: Literal["APPLIED", "HELD", "REJECTED"]
+    stages: list[KpgsStageReceipt]
+    synchronized: bool
+    canonical: Literal[False] = False
+    authority_effect: Literal["none"] = "none"
+    transport_grants_authority: Literal[False] = False
+    canonical_authority_changed: Literal[False] = False
+    state_digest: str | None = None
+    evidence_refs: list[str] = Field(default_factory=list)
+    correlation_id: str = ""
+    boundary_marker: str
+    replayed: bool = False
+    created_at: str
 
 
 class SyncResult(BaseModel):
-    accepted    : int = 0
-    duplicates  : int = 0
-    errors      : list[str] = Field(default_factory=list)
+    accepted: int = 0
+    duplicates: int = 0
+    errors: list[str] = Field(default_factory=list)
     kpgs_receipt: KpgsSwfusReceipt | None = None
 
 
 class ProgressivePreflight(BaseModel):
-    governed : bool
-    admitted : bool = False
+    governed: bool
+    admitted: bool = False
     http_status: int = 200
-    receipt  : KpgsSwfusReceipt | None = None
+    receipt: KpgsSwfusReceipt | None = None
 
 
 # ─── KPGS progressive-update membrane ────────────────────────────────────────
@@ -339,6 +331,9 @@ def fresh_receipt(envelope: KpgsProgressiveEnvelope) -> KpgsSwfusReceipt:
             for stage_name in KPGS_STAGE_ORDER
         ],
         synchronized=False,
+        canonical=False,
+        authority_effect="none",
+        transport_grants_authority=False,
         canonical_authority_changed=False,
         evidence_refs=[],
         correlation_id=(envelope.correlation_id or "").strip(),
@@ -401,13 +396,6 @@ def preflight_progressive_update(
     x_idempotency_key: str | None,
     x_pilot_id: str | None,
 ) -> ProgressivePreflight:
-    """
-    Apply the canonical eight-stage membrane before any score/chat projection write.
-
-    Client self-assertion is not accepted as POC. The server derives evidence from
-    the transport identity, validated Pydantic records, deterministic payload hash,
-    target IDs and pilot consistency.
-    """
     envelope = batch.kpgs
     if envelope is None:
         return ProgressivePreflight(governed=False)
@@ -415,7 +403,6 @@ def preflight_progressive_update(
     receipt = fresh_receipt(envelope)
     update_id = envelope.update_id.strip()
 
-    # 1. TELEMETRY
     if not update_id or len(update_id) > 200:
         return stop_preflight(
             receipt,
@@ -427,7 +414,6 @@ def preflight_progressive_update(
         )
     set_stage(receipt, "TELEMETRY", "PASS", "stable governed update identity admitted")
 
-    # 2. CLASSIFICATION
     state_class = envelope.state_class.strip()
     authority_effect = envelope.authority_effect.strip()
     apu_state = envelope.apu_state.strip().upper() or "UNSPECIFIED"
@@ -460,7 +446,6 @@ def preflight_progressive_update(
         )
     set_stage(receipt, "CLASSIFICATION", "PASS", f"projection state admitted; APU={apu_state}")
 
-    # 3. ROUTING
     record_count = len(batch.scores) + len(batch.chat)
     if record_count == 0:
         return stop_preflight(
@@ -473,7 +458,6 @@ def preflight_progressive_update(
         )
     set_stage(receipt, "ROUTING", "PASS", f"/api/v1/sync -> SQLite score/chat projection ({record_count} targets)")
 
-    # 4. PROTOCOL_SELECTION
     if (
         envelope.protocol != KPGS_PROGRESSIVE_SCHEMA
         or envelope.canonical_source_sha != KPGS_CANONICAL_COMMIT
@@ -493,7 +477,6 @@ def preflight_progressive_update(
         f"{KPGS_PROGRESSIVE_SCHEMA} pinned to {KPGS_CANONICAL_COMMIT}",
     )
 
-    # 5. INVARIANT_AUDIT
     if envelope.crud_intent != "CREATE":
         return stop_preflight(
             receipt,
@@ -537,7 +520,6 @@ def preflight_progressive_update(
         "literal #NB present; CREATE bounded; APU GREEN; authority remains none",
     )
 
-    # 6. POC_FOC_CHECK
     if envelope.foc_asserted:
         return stop_preflight(
             receipt,
@@ -613,7 +595,6 @@ def governed_payload_digest(batch: SyncBatch) -> str:
 
 
 def lookup_governed_replay(update_id: str, digest: str) -> dict[str, Any] | None:
-    """Return the original governed response for an exact update replay; conflict on changed content."""
     with get_db() as conn:
         row = conn.execute(
             "SELECT payload_hash, response FROM governed_sync_receipts WHERE update_id=?",
@@ -634,7 +615,6 @@ def lookup_governed_replay(update_id: str, digest: str) -> dict[str, Any] | None
 
 
 def projection_conflicts(conn: sqlite3.Connection, batch: SyncBatch) -> list[str]:
-    """Fresh governed CREATE cannot silently adopt rows previously projected by another update."""
     conflicts: list[str] = []
     for score in batch.scores:
         if conn.execute("SELECT 1 FROM synced_scores WHERE id=?", (score.id,)).fetchone():
@@ -672,6 +652,9 @@ def finalize_applied_receipt(
     )
     receipt.disposition = "APPLIED"
     receipt.synchronized = True
+    receipt.canonical = False
+    receipt.authority_effect = "none"
+    receipt.transport_grants_authority = False
     receipt.canonical_authority_changed = False
     receipt.state_digest = state_digest
     receipt.receipt_id = receipt_id(receipt.update_id, "APPLIED", state_digest)
@@ -767,20 +750,11 @@ def execute_governed_projection(
     x_idempotency_key: str,
     preflight_receipt: KpgsSwfusReceipt,
 ) -> tuple[SyncResult, int]:
-    """
-    Execute a fresh governed CREATE atomically with its replay receipt.
-
-    The receipt is inserted in the same SQLite transaction as the projections.
-    It is returned only after the context manager commits successfully; therefore
-    DISTRIBUTION=PASS is never returned for a rolled-back transaction.
-    """
     digest = governed_payload_digest(batch)
     replay = lookup_governed_replay(preflight_receipt.update_id, digest)
     if replay is not None:
         return SyncResult.model_validate(replay), status.HTTP_200_OK
 
-    # Preserve the existing header-idempotency collision law. A cached transport
-    # response without a governed update receipt cannot be upgraded into proof.
     duplicate_header, _cached = check_idempotency(
         x_idempotency_key,
         batch.model_dump(mode="json"),
@@ -840,8 +814,6 @@ def execute_governed_projection(
             )
         return result, status.HTTP_200_OK
     except sqlite3.IntegrityError:
-        # Concurrent exact retry: only the transaction that persisted the governed
-        # receipt wins. The loser may return replay only when the stored digest matches.
         replay = lookup_governed_replay(preflight_receipt.update_id, digest)
         if replay is not None:
             return SyncResult.model_validate(replay), status.HTTP_200_OK
@@ -857,7 +829,6 @@ async def startup_event():
 
 @app.get("/api/health")
 async def health():
-    """Health probe — mirrors starfall_server.py /api/health contract."""
     return {
         "ok": True,
         "service": "kc-sync-gateway",
@@ -882,12 +853,6 @@ async def sync_batch(
     x_idempotency_key: str | None = Header(default=None),
     x_pilot_id: str | None = Header(default=None),
 ):
-    """
-    Drain endpoint for kopano_vault sync_queue.
-
-    Legacy batches remain compatible and receive no fabricated governance receipt.
-    Batches containing `kpgs` opt into the canonical progressive-update membrane.
-    """
     origin = request.client.host if request.client else "unknown"
     check_rate_limit(origin)
 
@@ -910,7 +875,6 @@ async def sync_batch(
             content=result.model_dump(mode="json", exclude_none=True),
         )
 
-    # Legacy compatibility path — behavior intentionally retained.
     if x_idempotency_key:
         is_dup, cached = check_idempotency(x_idempotency_key, batch.model_dump(mode="json"))
         if is_dup:
@@ -935,7 +899,6 @@ async def sync_batch(
 
 @app.get("/api/v1/leaderboard")
 async def leaderboard(limit: int = 10):
-    """Top N scores across all pilots."""
     if limit > 100:
         limit = 100
     with get_db() as conn:
@@ -951,7 +914,6 @@ async def leaderboard(limit: int = 10):
 
 @app.get("/api/v1/chat")
 async def chat_history(limit: int = 50):
-    """Recent chat messages — mirrors /api/chat from starfall_server.py."""
     if limit > 200:
         limit = 200
     with get_db() as conn:
