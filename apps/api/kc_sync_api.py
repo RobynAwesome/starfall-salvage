@@ -24,27 +24,34 @@ import os
 import sqlite3
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+
+from apps.api.kpgs_progressive import (
+    mark_projection_applied,
+    mark_projection_hold,
+    mark_replayed,
+    preflight_projection,
+)
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
 DB_PATH: Path = Path(os.getenv("KC_SYNC_DB", ".data/kc_sync.db"))
-RATE_LIMIT_WINDOW: int = 60          # seconds
-RATE_LIMIT_MAX:    int = 120         # requests per window per origin
-IDEMPOTENCY_TTL:   int = 7 * 24 * 3600  # 7 days — matches sync_queue.purge()
+RATE_LIMIT_WINDOW: int = 60
+RATE_LIMIT_MAX: int = 120
+IDEMPOTENCY_TTL: int = 7 * 24 * 3600
 
 # ─── FastAPI app ──────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="KC Sync Gateway",
     description="Starfall Salvage — kopano_vault offline sync endpoint",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -52,8 +59,8 @@ app.add_middleware(
     allow_origins=[
         "https://starfallsalvage.kopanolabs.com",
         "http://127.0.0.1:8765",
-        "http://localhost:8100",   # Ionic dev server
-        "http://localhost:3000",   # Next.js dev
+        "http://localhost:8100",
+        "http://localhost:3000",
     ],
     allow_methods=["POST", "GET"],
     allow_headers=["Content-Type", "X-Idempotency-Key", "X-Pilot-Id"],
@@ -78,11 +85,11 @@ def init_db() -> None:
     with get_db() as conn:
         conn.executescript("""
         CREATE TABLE IF NOT EXISTS idempotency_keys (
-            key         TEXT PRIMARY KEY,
+            key          TEXT PRIMARY KEY,
             payload_hash TEXT NOT NULL,
-            status      TEXT NOT NULL DEFAULT 'accepted',
-            created_at  REAL NOT NULL,
-            response    TEXT
+            status       TEXT NOT NULL DEFAULT 'accepted',
+            created_at   REAL NOT NULL,
+            response     TEXT
         );
 
         CREATE TABLE IF NOT EXISTS synced_scores (
@@ -110,13 +117,12 @@ def init_db() -> None:
         );
 
         CREATE TABLE IF NOT EXISTS rate_limit_log (
-            origin      TEXT NOT NULL,
+            origin       TEXT NOT NULL,
             window_start REAL NOT NULL,
-            count       INTEGER NOT NULL DEFAULT 0,
+            count        INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (origin, window_start)
         );
         """)
-
 
 # ─── Rate limiting ────────────────────────────────────────────────────────────
 
@@ -126,21 +132,20 @@ def check_rate_limit(origin: str) -> None:
     with get_db() as conn:
         row = conn.execute(
             "SELECT count FROM rate_limit_log WHERE origin=? AND window_start=?",
-            (origin, window)
+            (origin, window),
         ).fetchone()
         count = (row["count"] if row else 0) + 1
         conn.execute(
             """INSERT INTO rate_limit_log (origin, window_start, count)
                VALUES (?,?,?)
                ON CONFLICT(origin, window_start) DO UPDATE SET count=excluded.count""",
-            (origin, window, count)
+            (origin, window, count),
         )
     if count > RATE_LIMIT_MAX:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Slow down, pilot — sync rate limit reached.",
         )
-
 
 # ─── Idempotency helpers ──────────────────────────────────────────────────────
 
@@ -151,20 +156,14 @@ def payload_hash(data: Any) -> str:
 
 
 def check_idempotency(key: str, data: Any) -> tuple[bool, str | None]:
-    """
-    Returns (is_duplicate, cached_response_json).
-    If duplicate with same payload → (True, cached_response).
-    If key not seen        → (False, None).
-    If key seen but hash mismatch → raises 422 (idempotency key reused with different payload).
-    """
+    """Legacy batch-level idempotency behavior."""
     h = payload_hash(data)
     cutoff = time.time() - IDEMPOTENCY_TTL
     with get_db() as conn:
-        # Clean expired keys
         conn.execute("DELETE FROM idempotency_keys WHERE created_at < ?", (cutoff,))
         row = conn.execute(
             "SELECT payload_hash, response FROM idempotency_keys WHERE key=?",
-            (key,)
+            (key,),
         ).fetchone()
 
     if row is None:
@@ -187,46 +186,149 @@ def record_idempotency(key: str, data: Any, response_json: str) -> None:
         )
 
 
+def _governed_idempotency_row(conn: sqlite3.Connection, key: str):
+    cutoff = time.time() - IDEMPOTENCY_TTL
+    conn.execute("DELETE FROM idempotency_keys WHERE created_at < ?", (cutoff,))
+    return conn.execute(
+        "SELECT payload_hash, response FROM idempotency_keys WHERE key=?",
+        (key,),
+    ).fetchone()
+
+
+def _record_governed_idempotency(
+    conn: sqlite3.Connection,
+    key: str,
+    data: Any,
+    response_json: str,
+) -> None:
+    conn.execute(
+        """INSERT INTO idempotency_keys
+           (key, payload_hash, status, created_at, response)
+           VALUES (?,?,?,?,?)""",
+        (key, payload_hash(data), "accepted", time.time(), response_json),
+    )
+
 # ─── Payload models ───────────────────────────────────────────────────────────
 
 class ScorePayload(BaseModel):
-    id              : str
-    pilot_id        : str | None = None
-    callsign        : str        = "Unknown"
-    score           : int        = 0
-    cores           : int        = 0
-    time_alive      : float      = 0.0
-    wave            : int        = 1
-    mode            : str        = "desktop"
-    saved_at        : str
-    idempotency_key : str
+    id: str
+    pilot_id: str | None = None
+    callsign: str = "Unknown"
+    score: int = 0
+    cores: int = 0
+    time_alive: float = 0.0
+    wave: int = 1
+    mode: str = "desktop"
+    saved_at: str
+    idempotency_key: str
 
 
 class ChatPayload(BaseModel):
-    id              : str
-    callsign        : str
-    pilot_id        : str | None = None
-    message         : str
-    ts              : str
-    idempotency_key : str
+    id: str
+    callsign: str
+    pilot_id: str | None = None
+    message: str
+    ts: str
+    idempotency_key: str
 
 
 class SyncBatch(BaseModel):
-    """
-    Batch payload from kopano_vault sync_queue.
-    A single POST may contain multiple record types.
-    """
-    scores   : list[ScorePayload]  = Field(default_factory=list)
-    chat     : list[ChatPayload]   = Field(default_factory=list)
-    pilot_id : str | None          = None
-    client_ts: str | None          = None  # ISO-8601 client timestamp for drift logging
+    """Batch payload from kopano_vault sync_queue."""
+
+    scores: list[ScorePayload] = Field(default_factory=list)
+    chat: list[ChatPayload] = Field(default_factory=list)
+    pilot_id: str | None = None
+    client_ts: str | None = None
+    kpgs: dict[str, Any] | None = None
 
 
 class SyncResult(BaseModel):
-    accepted  : int = 0
+    accepted: int = 0
     duplicates: int = 0
-    errors    : list[str] = Field(default_factory=list)
+    errors: list[str] = Field(default_factory=list)
+    kpgs_receipt: dict[str, Any] | None = None
 
+
+def _legacy_payload(batch: SyncBatch) -> dict[str, Any]:
+    """Preserve the pre-KPGS batch hash shape exactly for legacy clients."""
+    return batch.model_dump(exclude={"kpgs"})
+
+
+def _governed_payload(batch: SyncBatch) -> dict[str, Any]:
+    """Governed idempotency binds both projection content and governance intent."""
+    return batch.model_dump()
+
+
+def _apply_projection_records(
+    conn: sqlite3.Connection,
+    batch: SyncBatch,
+    *,
+    strict: bool,
+) -> SyncResult:
+    result = SyncResult()
+
+    for score in batch.scores:
+        try:
+            existing = conn.execute(
+                "SELECT id FROM synced_scores WHERE id=?", (score.id,)
+            ).fetchone()
+            if existing:
+                result.duplicates += 1
+                continue
+            conn.execute(
+                """INSERT INTO synced_scores
+                   (id, pilot_id, callsign, score, cores, time_alive, wave,
+                    mode, saved_at, idempotency_key, synced_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    score.id,
+                    score.pilot_id,
+                    score.callsign,
+                    score.score,
+                    score.cores,
+                    score.time_alive,
+                    score.wave,
+                    score.mode,
+                    score.saved_at,
+                    score.idempotency_key,
+                    time.time(),
+                ),
+            )
+            result.accepted += 1
+        except Exception as exc:
+            if strict:
+                raise RuntimeError(f"score {score.id}: {exc}") from exc
+            result.errors.append(f"score {score.id}: {exc}")
+
+    for msg in batch.chat:
+        try:
+            existing = conn.execute(
+                "SELECT id FROM synced_chat WHERE id=?", (msg.id,)
+            ).fetchone()
+            if existing:
+                result.duplicates += 1
+                continue
+            conn.execute(
+                """INSERT INTO synced_chat
+                   (id, callsign, pilot_id, message, ts, idempotency_key, synced_at)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (
+                    msg.id,
+                    msg.callsign,
+                    msg.pilot_id,
+                    msg.message,
+                    msg.ts,
+                    msg.idempotency_key,
+                    time.time(),
+                ),
+            )
+            result.accepted += 1
+        except Exception as exc:
+            if strict:
+                raise RuntimeError(f"chat {msg.id}: {exc}") from exc
+            result.errors.append(f"chat {msg.id}: {exc}")
+
+    return result
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
@@ -237,103 +339,149 @@ async def startup_event():
 
 @app.get("/api/health")
 async def health():
-    """Health probe — mirrors starfall_server.py /api/health contract."""
-    return {"ok": True, "service": "kc-sync-gateway", "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    return {
+        "ok": True,
+        "service": "kc-sync-gateway",
+        "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
 
 
-@app.post("/api/v1/sync", response_model=SyncResult)
+@app.post(
+    "/api/v1/sync",
+    response_model=SyncResult,
+    response_model_exclude_none=True,
+)
 async def sync_batch(
-    request    : Request,
-    batch      : SyncBatch,
+    request: Request,
+    batch: SyncBatch,
     x_idempotency_key: str | None = Header(default=None),
-    x_pilot_id       : str | None = Header(default=None),
+    x_pilot_id: str | None = Header(default=None),
 ):
+    """Drain endpoint for kopano_vault sync_queue.
+
+    No `kpgs` property => legacy compatibility lane.
+    Any explicit `kpgs` property => governed projection lane and fail-closed gates.
     """
-    Drain endpoint for kopano_vault sync_queue.
+    del x_pilot_id  # retained as a compatibility header; not a governance authority
 
-    Headers:
-        X-Idempotency-Key  — stable key for the entire batch (UUID recommended)
-        X-Pilot-Id         — pilot UUID from kopano_vault pilot_profiles (optional)
-
-    Body:
-        SyncBatch JSON — lists of score + chat records
-
-    Returns:
-        SyncResult — accepted / duplicates / errors counts
-    """
     origin = request.client.host if request.client else "unknown"
     check_rate_limit(origin)
 
-    # Batch-level idempotency
-    if x_idempotency_key:
-        is_dup, cached = check_idempotency(x_idempotency_key, batch.model_dump())
-        if is_dup:
-            return Response(
-                content=cached,
-                media_type="application/json",
-                status_code=status.HTTP_409_CONFLICT,
+    governed_selected = "kpgs" in batch.model_fields_set
+
+    if not governed_selected:
+        legacy_payload = _legacy_payload(batch)
+        if x_idempotency_key:
+            is_dup, cached = check_idempotency(x_idempotency_key, legacy_payload)
+            if is_dup:
+                return Response(
+                    content=cached,
+                    media_type="application/json",
+                    status_code=status.HTTP_409_CONFLICT,
+                )
+
+        with get_db() as conn:
+            result = _apply_projection_records(conn, batch, strict=False)
+
+        if x_idempotency_key:
+            record_idempotency(
+                x_idempotency_key,
+                legacy_payload,
+                result.model_dump_json(exclude_none=True),
             )
+        return result
 
-    result = SyncResult()
-
-    with get_db() as conn:
-        # ── scores ────────────────────────────────────────────────────────────
-        for score in batch.scores:
-            try:
-                existing = conn.execute(
-                    "SELECT id FROM synced_scores WHERE id=?", (score.id,)
-                ).fetchone()
-                if existing:
-                    result.duplicates += 1
-                    continue
-                conn.execute(
-                    """INSERT INTO synced_scores
-                       (id, pilot_id, callsign, score, cores, time_alive, wave,
-                        mode, saved_at, idempotency_key, synced_at)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
-                    (
-                        score.id, score.pilot_id, score.callsign,
-                        score.score, score.cores, score.time_alive, score.wave,
-                        score.mode, score.saved_at, score.idempotency_key,
-                        time.time(),
-                    ),
-                )
-                result.accepted += 1
-            except Exception as exc:
-                result.errors.append(f"score {score.id}: {exc}")
-
-        # ── chat messages ──────────────────────────────────────────────────────
-        for msg in batch.chat:
-            try:
-                existing = conn.execute(
-                    "SELECT id FROM synced_chat WHERE id=?", (msg.id,)
-                ).fetchone()
-                if existing:
-                    result.duplicates += 1
-                    continue
-                conn.execute(
-                    """INSERT INTO synced_chat
-                       (id, callsign, pilot_id, message, ts, idempotency_key, synced_at)
-                       VALUES (?,?,?,?,?,?,?)""",
-                    (
-                        msg.id, msg.callsign, msg.pilot_id,
-                        msg.message, msg.ts, msg.idempotency_key,
-                        time.time(),
-                    ),
-                )
-                result.accepted += 1
-            except Exception as exc:
-                result.errors.append(f"chat {msg.id}: {exc}")
-
-    # Record batch idempotency key after successful processing
-    if x_idempotency_key:
-        record_idempotency(
-            x_idempotency_key,
-            batch.model_dump(),
-            result.model_dump_json(),
+    projection_payload = _legacy_payload(batch)
+    preflight = preflight_projection(
+        batch.kpgs,
+        idempotency_key=x_idempotency_key,
+        projection_payload=projection_payload,
+        record_count=len(batch.scores) + len(batch.chat),
+    )
+    if not preflight.admitted:
+        return JSONResponse(
+            status_code=preflight.http_status,
+            content={
+                "accepted": 0,
+                "duplicates": 0,
+                "errors": [preflight.receipt["stages"][next(
+                    stage_name
+                    for stage_name, stage_value in preflight.receipt["stages"].items()
+                    if stage_value["status"] in {"HOLD", "REJECT"}
+                )]["detail"]],
+                "kpgs_receipt": preflight.receipt,
+            },
         )
 
-    return result
+    # preflight requires this header, so the cast is now structurally safe.
+    governed_key = str(x_idempotency_key)
+    governed_payload = _governed_payload(batch)
+    governed_hash = payload_hash(governed_payload)
+
+    try:
+        with get_db() as conn:
+            # BEGIN IMMEDIATE serializes competing governed writers so projection
+            # mutation and batch receipt persistence share one atomic boundary.
+            conn.execute("BEGIN IMMEDIATE")
+            prior = _governed_idempotency_row(conn, governed_key)
+            if prior is not None:
+                if prior["payload_hash"] != governed_hash:
+                    held = mark_projection_hold(
+                        preflight.receipt,
+                        "Idempotency key collision: the same key is bound to different governed content.",
+                    )
+                    return JSONResponse(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        content={
+                            "accepted": 0,
+                            "duplicates": 0,
+                            "errors": ["Idempotency key reused with a different governed payload."],
+                            "kpgs_receipt": held,
+                        },
+                    )
+
+                cached = json.loads(prior["response"] or "{}")
+                if isinstance(cached.get("kpgs_receipt"), dict):
+                    cached["kpgs_receipt"] = mark_replayed(cached["kpgs_receipt"])
+                return JSONResponse(status_code=status.HTTP_200_OK, content=cached)
+
+            result = _apply_projection_records(conn, batch, strict=True)
+            receipt = mark_projection_applied(
+                preflight.receipt,
+                accepted=result.accepted,
+                duplicates=result.duplicates,
+            )
+            governed_result = SyncResult(
+                accepted=result.accepted,
+                duplicates=result.duplicates,
+                errors=result.errors,
+                kpgs_receipt=receipt,
+            )
+            response_json = governed_result.model_dump_json(exclude_none=True)
+            _record_governed_idempotency(
+                conn,
+                governed_key,
+                governed_payload,
+                response_json,
+            )
+
+        # get_db committed the SQLite projection + receipt identity. Only now may
+        # the receiving sink be represented as distribution PASS.
+        return governed_result
+    except Exception as exc:
+        held = mark_projection_hold(
+            preflight.receipt,
+            f"Projection transaction rolled back: {type(exc).__name__}.",
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "accepted": 0,
+                "duplicates": 0,
+                "errors": ["Governed projection transaction rolled back."],
+                "kpgs_receipt": held,
+            },
+        )
 
 
 @app.get("/api/v1/leaderboard")
@@ -347,7 +495,7 @@ async def leaderboard(limit: int = 10):
                FROM synced_scores
                ORDER BY score DESC
                LIMIT ?""",
-            (limit,)
+            (limit,),
         ).fetchall()
     return {"leaderboard": [dict(r) for r in rows]}
 
@@ -363,6 +511,6 @@ async def chat_history(limit: int = 50):
                FROM synced_chat
                ORDER BY ts DESC
                LIMIT ?""",
-            (limit,)
+            (limit,),
         ).fetchall()
     return {"messages": [dict(r) for r in rows]}
