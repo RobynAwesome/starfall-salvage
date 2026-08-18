@@ -86,6 +86,10 @@ class KcSyncProgressiveUpdateTests(unittest.TestCase):
             [item.stage for item in decision.receipt.stages],
             list(api.KPGS_STAGE_ORDER),
         )
+        self.assertFalse(decision.receipt.canonical)
+        self.assertEqual(decision.receipt.authority_effect, "none")
+        self.assertFalse(decision.receipt.transport_grants_authority)
+        self.assertFalse(decision.receipt.canonical_authority_changed)
         self.assertEqual(self.stage(decision.receipt, "STATE_UPDATE").status, "NOT_REACHED")
         self.assertEqual(self.stage(decision.receipt, "DISTRIBUTION").status, "NOT_REACHED")
 
@@ -96,6 +100,9 @@ class KcSyncProgressiveUpdateTests(unittest.TestCase):
         self.assertFalse(decision.admitted)
         assert decision.receipt is not None
         self.assertEqual(decision.receipt.disposition, "REJECTED")
+        self.assertFalse(decision.receipt.canonical)
+        self.assertEqual(decision.receipt.authority_effect, "none")
+        self.assertFalse(decision.receipt.transport_grants_authority)
         self.assertEqual(self.stage(decision.receipt, "INVARIANT_AUDIT").status, "REJECT")
         self.assertEqual(self.stage(decision.receipt, "STATE_UPDATE").status, "NOT_REACHED")
         self.assertEqual(self.row_count("synced_scores"), 0)
@@ -107,6 +114,9 @@ class KcSyncProgressiveUpdateTests(unittest.TestCase):
         self.assertFalse(yellow.admitted)
         assert yellow.receipt is not None
         self.assertEqual(yellow.receipt.disposition, "HELD")
+        self.assertFalse(yellow.receipt.canonical)
+        self.assertEqual(yellow.receipt.authority_effect, "none")
+        self.assertFalse(yellow.receipt.transport_grants_authority)
         self.assertEqual(self.stage(yellow.receipt, "STATE_UPDATE").status, "NOT_REACHED")
 
         missing_nb = api.preflight_progressive_update(
@@ -182,6 +192,9 @@ class KcSyncProgressiveUpdateTests(unittest.TestCase):
         self.assertEqual(receipt.schema, "kpgs.swfus.receipt.v1")
         self.assertEqual(receipt.disposition, "APPLIED")
         self.assertTrue(receipt.synchronized)
+        self.assertFalse(receipt.canonical)
+        self.assertEqual(receipt.authority_effect, "none")
+        self.assertFalse(receipt.transport_grants_authority)
         self.assertFalse(receipt.canonical_authority_changed)
         self.assertFalse(receipt.replayed)
         self.assertEqual(receipt.boundary_marker, "#NB")
@@ -212,6 +225,9 @@ class KcSyncProgressiveUpdateTests(unittest.TestCase):
         self.assertEqual(http_status, 200)
         assert replayed.kpgs_receipt is not None
         self.assertTrue(replayed.kpgs_receipt.replayed)
+        self.assertFalse(replayed.kpgs_receipt.canonical)
+        self.assertEqual(replayed.kpgs_receipt.authority_effect, "none")
+        self.assertFalse(replayed.kpgs_receipt.transport_grants_authority)
         self.assertEqual(replayed.kpgs_receipt.receipt_id, original_receipt_id)
         self.assertEqual(self.row_count("synced_scores"), 1)
         self.assertEqual(self.row_count("governed_sync_receipts"), 1)
@@ -254,6 +270,9 @@ class KcSyncProgressiveUpdateTests(unittest.TestCase):
         assert result.kpgs_receipt is not None
         self.assertEqual(result.kpgs_receipt.disposition, "HELD")
         self.assertFalse(result.kpgs_receipt.synchronized)
+        self.assertFalse(result.kpgs_receipt.canonical)
+        self.assertEqual(result.kpgs_receipt.authority_effect, "none")
+        self.assertFalse(result.kpgs_receipt.transport_grants_authority)
         self.assertEqual(self.stage(result.kpgs_receipt, "STATE_UPDATE").status, "HOLD")
         self.assertEqual(self.stage(result.kpgs_receipt, "DISTRIBUTION").status, "NOT_REACHED")
         self.assertEqual(self.row_count("governed_sync_receipts"), 0)
