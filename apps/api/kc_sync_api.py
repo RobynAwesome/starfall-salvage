@@ -24,13 +24,19 @@ import os
 import sqlite3
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from apps.api.kpgs_progressive import (
+    KpgsProgressiveEnvelope,
+    evaluate_projection_preflight,
+    mark_projection_applied,
+    mark_replay,
+)
 
 # ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -44,7 +50,7 @@ IDEMPOTENCY_TTL:   int = 7 * 24 * 3600  # 7 days — matches sync_queue.purge()
 app = FastAPI(
     title="KC Sync Gateway",
     description="Starfall Salvage — kopano_vault offline sync endpoint",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 app.add_middleware(
@@ -215,17 +221,40 @@ class SyncBatch(BaseModel):
     """
     Batch payload from kopano_vault sync_queue.
     A single POST may contain multiple record types.
+
+    `kpgs` is optional for backwards compatibility. Its presence selects the
+    canonical progressive-update lane; absence keeps the original legacy path.
     """
     scores   : list[ScorePayload]  = Field(default_factory=list)
     chat     : list[ChatPayload]   = Field(default_factory=list)
     pilot_id : str | None          = None
     client_ts: str | None          = None  # ISO-8601 client timestamp for drift logging
+    kpgs     : KpgsProgressiveEnvelope | None = None
 
 
 class SyncResult(BaseModel):
     accepted  : int = 0
     duplicates: int = 0
     errors    : list[str] = Field(default_factory=list)
+
+
+# ─── Governed response helpers ────────────────────────────────────────────────
+
+def governed_response(
+    result: SyncResult,
+    receipt: dict[str, Any],
+    *,
+    status_code: int = status.HTTP_200_OK,
+) -> Response:
+    payload = {
+        **result.model_dump(),
+        "kpgs": {"receipt": receipt},
+    }
+    return Response(
+        content=json.dumps(payload, separators=(",", ":"), sort_keys=True),
+        media_type="application/json",
+        status_code=status_code,
+    )
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
@@ -241,7 +270,7 @@ async def health():
     return {"ok": True, "service": "kc-sync-gateway", "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
 
 
-@app.post("/api/v1/sync", response_model=SyncResult)
+@app.post("/api/v1/sync")
 async def sync_batch(
     request    : Request,
     batch      : SyncBatch,
@@ -251,23 +280,53 @@ async def sync_batch(
     """
     Drain endpoint for kopano_vault sync_queue.
 
-    Headers:
-        X-Idempotency-Key  — stable key for the entire batch (UUID recommended)
-        X-Pilot-Id         — pilot UUID from kopano_vault pilot_profiles (optional)
-
-    Body:
-        SyncBatch JSON — lists of score + chat records
-
-    Returns:
-        SyncResult — accepted / duplicates / errors counts
+    Legacy batches keep the original accepted/duplicate/error response shape and
+    duplicate 409 semantics. A batch containing `kpgs` selects the governed
+    progressive-update lane and receives an eight-stage non-authoritative receipt.
     """
     origin = request.client.host if request.client else "unknown"
     check_rate_limit(origin)
 
-    # Batch-level idempotency
+    batch_dump = batch.model_dump()
+    kpgs_receipt: dict[str, Any] | None = None
+
+    # Canonical preflight happens before idempotency lookup or projection writes.
+    # Pydantic has already validated the batch/envelope shape at this point.
+    if batch.kpgs is not None:
+        record_ids = [f"score:{item.id}" for item in batch.scores] + [
+            f"chat:{item.id}" for item in batch.chat
+        ]
+        record_keys = [item.idempotency_key for item in batch.scores] + [
+            item.idempotency_key for item in batch.chat
+        ]
+        admitted, http_status, kpgs_receipt = evaluate_projection_preflight(
+            batch.kpgs,
+            batch_idempotency_key=x_idempotency_key,
+            record_ids=record_ids,
+            record_idempotency_keys=record_keys,
+        )
+        if not admitted:
+            return governed_response(
+                SyncResult(),
+                kpgs_receipt,
+                status_code=http_status,
+            )
+
+    # Batch-level idempotency. Governed exact replay returns the cached governed
+    # response as a 200 without rerunning SQLite mutation. Legacy behavior remains 409.
     if x_idempotency_key:
-        is_dup, cached = check_idempotency(x_idempotency_key, batch.model_dump())
+        is_dup, cached = check_idempotency(x_idempotency_key, batch_dump)
         if is_dup:
+            if batch.kpgs is not None and cached:
+                cached_payload = json.loads(cached)
+                cached_receipt = cached_payload.get("kpgs", {}).get("receipt")
+                if isinstance(cached_receipt, dict):
+                    cached_payload["kpgs"]["receipt"] = mark_replay(cached_receipt)
+                return Response(
+                    content=json.dumps(cached_payload, separators=(",", ":"), sort_keys=True),
+                    media_type="application/json",
+                    status_code=status.HTTP_200_OK,
+                )
             return Response(
                 content=cached,
                 media_type="application/json",
@@ -325,12 +384,39 @@ async def sync_batch(
             except Exception as exc:
                 result.errors.append(f"chat {msg.id}: {exc}")
 
-    # Record batch idempotency key after successful processing
+    # Build the exact response before caching it under the batch idempotency key.
+    if batch.kpgs is not None and kpgs_receipt is not None:
+        kpgs_receipt = mark_projection_applied(
+            kpgs_receipt,
+            accepted=result.accepted,
+            duplicates=result.duplicates,
+            errors=result.errors,
+        )
+        governed_payload = {
+            **result.model_dump(),
+            "kpgs": {"receipt": kpgs_receipt},
+        }
+        response_json = json.dumps(
+            governed_payload,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    else:
+        response_json = result.model_dump_json()
+
+    # Record batch idempotency key after processing.
     if x_idempotency_key:
         record_idempotency(
             x_idempotency_key,
-            batch.model_dump(),
-            result.model_dump_json(),
+            batch_dump,
+            response_json,
+        )
+
+    if batch.kpgs is not None and kpgs_receipt is not None:
+        return Response(
+            content=response_json,
+            media_type="application/json",
+            status_code=status.HTTP_200_OK,
         )
 
     return result
