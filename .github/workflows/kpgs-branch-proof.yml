@@ -1,0 +1,97 @@
+name: KPGS Branch Proof
+
+on:
+  push:
+    branches:
+      - "kpgs-*"
+    paths-ignore:
+      - "governance/receipts/kpgs-branch-proof.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kpgs-branch-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proof:
+    name: Install · Compile · Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+          cache-dependency-path: apps/api/requirements.txt
+
+      - name: Install API dependencies
+        run: python -m pip install -r apps/api/requirements.txt
+
+      - name: Check dependency consistency
+        run: python -m pip check
+
+      - name: Compile governed API modules
+        run: >-
+          python -m py_compile
+          apps/api/kpgs_progressive.py
+          apps/api/kc_sync_api.py
+          tests/test_kpgs_progressive.py
+
+      - name: Run KPGS projection tests
+        run: python -m unittest discover -s tests -p 'test_kpgs*.py' -v
+
+      - name: Emit KPGS proof receipt
+        env:
+          TESTED_SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          REF_NAME: ${{ github.ref_name }}
+        shell: bash
+        run: |
+          mkdir -p governance/receipts
+          cat > governance/receipts/kpgs-branch-proof.json <<EOF
+          {
+            "schema": "starfall.kpgs.branch-proof.v1",
+            "status": "PASS",
+            "tested_sha": "${TESTED_SHA}",
+            "branch": "${REF_NAME}",
+            "workflow": "KPGS Branch Proof",
+            "run_id": "${RUN_ID}",
+            "run_attempt": "${RUN_ATTEMPT}",
+            "commands": [
+              "python -m pip install -r apps/api/requirements.txt",
+              "python -m pip check",
+              "python -m py_compile apps/api/kpgs_progressive.py apps/api/kc_sync_api.py tests/test_kpgs_progressive.py",
+              "python -m unittest discover -s tests -p test_kpgs*.py -v"
+            ],
+            "canonical_source": {
+              "repository": "RobynAwesome/Introduction-to-MCP",
+              "commit": "70f40324978ee8c3c1a8a77a29e6ac84c7f6bf3a",
+              "contract": "kpgs.progressive-update.v1"
+            }
+          }
+          EOF
+
+      - name: Commit proof receipt
+        shell: bash
+        run: |
+          if git diff --quiet -- governance/receipts/kpgs-branch-proof.json; then
+            echo "Proof receipt already represents this exact SHA."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add governance/receipts/kpgs-branch-proof.json
+          git commit -m "chore(kpgs): record exact-head branch proof"
+          git push origin HEAD:${{ github.ref_name }}
