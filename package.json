@@ -42,7 +42,8 @@
     "form-data": ">=4.0.4",
     "launch-editor": ">=2.6.1",
     "@babel/core": ">=7.29.6",
-    "turbo": ">=2.3.3"
+    "turbo": ">=2.3.3",
+    "browserslist": ">=4.28.7"
   },
   "engines": {
     "node": ">=20.0.0"
