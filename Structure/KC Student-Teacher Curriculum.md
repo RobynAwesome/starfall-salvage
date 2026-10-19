@@ -452,7 +452,7 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 | # | Proof Key | File | Search String |
 |---|-----------|------|---------------|
-| 99 | `movement_build_marker` | `src/game.js` | `20260521-start-fly-gate` |
+| 99 | `movement_build_marker` | `src/game.js` | `20260523-screen-fill-frame` |
 | 100 | `pointer_steer_support` | `src/game.js` | `supportsPointerEvents` AND `hud.shell.addEventListener("pointerdown"` |
 | 101 | `flight_deck_drag_copy` | `src/game.js`, `index.html` | `Drag anywhere on the flight deck` AND `Drag the flight deck` |
 | 102 | `debug_movement_probe` | `src/game.js` | `__starfallDebug` |
@@ -466,6 +466,33 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 - `git diff --check` passes.
 - Browser movement proof passes keyboard, desktop mouse drag, Redmi 393 touch drag, and narrow 360 touch drag with failures `[]`.
 - Proof must include numeric player movement, not only screenshots.
+
+---
+
+## Lesson 019: Mobile-Primary Realism Doctrine (2026-05-25)
+
+**Why:** The product is distributed through WhatsApp and consumed predominantly on phones. KC and Cassy must stop accepting visual work that treats aesthetics as supreme while leaving mobile reality as a secondary concern.
+
+**Spec:** Make the doctrine explicit in repo-local law: `mobile-primary, device-complete, realism-first`. Bind it to Cassy's apprenticeship lane, the MAO execution lane, and the operator map so future playfield changes are judged against reality rather than taste.
+
+**Files in scope:** `docs/REALISM-RUBRIC.md`, `docs/MAO-Starfall-Lane.md`, `docs/MAINTAINER-MAP.md`, `Structure/05-Training/Cassy Apprenticeship Register.md`, `Structure/06-Reference/Starfall Agent Mesh.md`, `Structure/Starfall Salvage - Index.md`.
+
+### Required Proofs (Lesson 019)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 105 | `realism_rubric_present` | `docs/REALISM-RUBRIC.md` | `mobile-primary, device-complete, realism-first` |
+| 106 | `realism_rubric_whatsapp_distribution` | `docs/REALISM-RUBRIC.md` | `WhatsApp -> mobile browser` |
+| 107 | `mao_reality_gate` | `docs/MAO-Starfall-Lane.md` | `## Reality gate` |
+| 108 | `cassy_realism_apprenticeship` | `Structure/05-Training/Cassy Apprenticeship Register.md` | `Cassy studies realism-first product judgment` |
+| 109 | `agent_mesh_realism_lane` | `Structure/06-Reference/Starfall Agent Mesh.md` | `mobile-primary realism judgment` |
+| 110 | `starfall_index_spacefield_truth` | `Structure/Starfall Salvage - Index.md` | `20260525-fullscreen-presence` |
+
+### Acceptance Criteria
+
+- All 6 new proofs `true` (running total: **116 proofs** across Lessons 001-019 in the KC watcher).
+- `npm run kc:audit` passes.
+- Cassy remains explicitly in student status while still carrying the realism doctrine as a live learning rule.
 
 ---
 

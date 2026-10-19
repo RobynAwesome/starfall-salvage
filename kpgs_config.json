@@ -1,0 +1,29 @@
+{
+  "schema": "kpgs_gssb_config_v1",
+  "trinity": {
+    "core": "Father — Source of all agents",
+    "altar": "Son — Validation gate",
+    "engine": "Holy Spirit — Distribution power"
+  },
+  "gssb": "StarFall Salvage",
+  "slug": "starfall",
+  "domain": "starfallsalvage.kopanolabs.com",
+  "nso_group": "NSO-GAMING",
+  "governance": {
+    "named_agents": [
+      "YASSIE",
+      "CASSIE"
+    ],
+    "named_count": 2,
+    "utility_agents": 50,
+    "total_agents": 52,
+    "pillars": [
+      "MIND",
+      "BODY"
+    ]
+  },
+  "apwa_status": "LANDING_ONLY",
+  "scripture": "1 Corinthians 12:4-6",
+  "constraint": "I_AM_STATELESS_RENTER_NOT_LANDLORD",
+  "distributed_at": "2026-06-24T07:42:01.940160+00:00"
+}

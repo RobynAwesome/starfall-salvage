@@ -91,6 +91,7 @@
     flightMenuPanel: document.getElementById("flightMenuPanel"),
     flightResumeItem: document.getElementById("flightResumeItem"),
     flightStepOutItem: document.getElementById("flightStepOutItem"),
+    weaponCycleButton: document.getElementById("weaponCycleButton"),
     gameOverSovereign: document.getElementById("gameOverSovereign"),
     gameOverFinal: document.getElementById("gameOverFinal"),
     gameOverBest: document.getElementById("gameOverBest"),
@@ -229,10 +230,10 @@
     scrim.setAttribute("aria-hidden", "false");
     scrim.classList.remove("sovereign-scrim--backdrop-only");
     if (hud.sovereignSubline) {
-      hud.sovereignSubline.textContent = "Tap to fly — sovereign lane";
+      hud.sovereignSubline.textContent = "Start Flying — orbital salvage lane";
     }
     if (hud.sovereignPrimaryCta) {
-      hud.sovereignPrimaryCta.textContent = "Tap to fly";
+      hud.sovereignPrimaryCta.textContent = "Start Flying";
     }
     syncEventTicker();
   }
@@ -329,6 +330,15 @@
     logEvent("buff_collected", { kind });
   }
 
+  function applyWeaponPower(amount = 1) {
+    const nextPower = clamp((player.weaponPower || 1) + amount, 1, WEAPON_POWER_MAX);
+    player.weaponPower = nextPower;
+    player.weaponPowerTimer = WEAPON_POWER_SECONDS;
+    setEventMessage(`Weapon power ${romanPower(nextPower)}`);
+    logEvent("weapon_power_collected", { power: nextPower });
+    updateHud();
+  }
+
   function tickBuffs(dt) {
     if (player.buffTimer > 0) {
       player.buffTimer = Math.max(0, player.buffTimer - dt);
@@ -340,14 +350,28 @@
     if (player.buffKind !== "aegis") {
       player.aegisHits = 0;
     }
+    if (player.weaponPowerTimer > 0) {
+      player.weaponPowerTimer = Math.max(0, player.weaponPowerTimer - dt);
+      if (player.weaponPowerTimer <= 0) {
+        player.weaponPower = 1;
+      }
+    }
   }
 
   function activeBuffLabel() {
+    const powerLabel = player.weaponPower > 1 && player.weaponPowerTimer > 0
+      ? `Power ${romanPower(player.weaponPower)} ${player.weaponPowerTimer.toFixed(0)}s`
+      : "";
     if (!player.buffKind || player.buffTimer <= 0) {
+      if (powerLabel) {
+        return powerLabel;
+      }
       return player.fireBoostTimer > 0 ? "Rapid" : "—";
     }
     const def = BUFF_DEFS[player.buffKind];
-    return def ? `${def.label} ${player.buffTimer.toFixed(0)}s` : "—";
+    return def
+      ? `${def.label} ${player.buffTimer.toFixed(0)}s${powerLabel ? ` / ${powerLabel}` : ""}`
+      : (powerLabel || "—");
   }
 
   function updateSpeedVisuals(multiplier) {
@@ -497,7 +521,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260521-start-fly-gate";
+  const GAME_BUILD = "20260526-ready-shell";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -507,6 +531,9 @@
   const CORNER_INTERVAL_SEC = 16;
   const SWIPE_TURN_WINDOW_SEC = 0.55;
   const SWIPE_TURN_MIN_PX = 42;
+  const CORRIDOR_LOOKAHEAD_Z = -34;
+  const CORRIDOR_HEADING_SAMPLE = 8.4;
+  const CORRIDOR_VIEW_YAW_MAX = 0.24;
   const SURVEY_PLAY_THRESHOLD = 5; // Show survey every N completed runs (non-extractive discovery)
 
   let playCountSinceSurvey = 0;
@@ -809,6 +836,8 @@
     smoothCamX: 0,
     smoothCamY: 0,
     viewRoll: 0,
+    viewPitch: 0,
+    viewYaw: 0,
     cameraYaw: 0,
     turnAnimActive: false,
     turnAnimFrom: 0,
@@ -1233,7 +1262,7 @@
   };
 
   const keys = new Set();
-  const blockingKeys = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "f"]);
+  const blockingKeys = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "f", "q", "e"]);
   let fireHeld = false;
   let mouseFireHeld = false;
   let dashRequested = false;
@@ -1318,6 +1347,9 @@
     if (key === "r") {
       resetGame();
       startGame();
+    }
+    if ((key === "q" || key === "e") && state.mode === "playing" && !event.repeat) {
+      cycleWeaponMode(key === "q" ? -1 : 1);
     }
     if (key === "f") {
       fireHeld = true;
@@ -2035,11 +2067,92 @@
   });
 
   const STARFLIGHT_WEAPON_STORAGE_KEY = "starfall_salvage_weapon_v1";
+  const WEAPON_ORDER = ["bolt", "scatter", "pierce", "rail", "nova"];
+  const WEAPON_POWER_MAX = 4;
+  const WEAPON_POWER_SECONDS = 11;
+  const WEAPON_DEFS = {
+    bolt: {
+      label: "Bolt lane",
+      short: "BOLT",
+      cooldown: 0.16,
+      rapidCooldown: 0.08,
+      speed: -78,
+      size: 0.24,
+      damage: 1,
+      color: [0.42, 0.96, 1, 1],
+      offsets: [0],
+      length: 1.7
+    },
+    scatter: {
+      label: "Scatter burst",
+      short: "SCAT",
+      cooldown: 0.27,
+      rapidCooldown: 0.13,
+      speed: -68,
+      size: 0.16,
+      damage: 0.82,
+      color: [0.55, 1, 0.62, 1],
+      offsets: [-0.26, -0.13, 0, 0.13, 0.26],
+      spread: 4.2,
+      length: 1.25
+    },
+    pierce: {
+      label: "Pierce core",
+      short: "PIERCE",
+      cooldown: 0.21,
+      rapidCooldown: 0.1,
+      speed: -72,
+      size: 0.28,
+      damage: 1.35,
+      color: [1, 0.72, 0.28, 1],
+      offsets: [0],
+      pierce: true,
+      length: 2.05
+    },
+    rail: {
+      label: "Rail lance",
+      short: "RAIL",
+      cooldown: 0.31,
+      rapidCooldown: 0.16,
+      speed: -92,
+      size: 0.22,
+      damage: 2.2,
+      color: [0.86, 0.98, 1, 1],
+      offsets: [0],
+      pierce: true,
+      length: 3.25
+    },
+    nova: {
+      label: "Nova fan",
+      short: "NOVA",
+      cooldown: 0.34,
+      rapidCooldown: 0.17,
+      speed: -64,
+      size: 0.2,
+      damage: 1.1,
+      color: [1, 0.42, 0.92, 1],
+      offsets: [-0.32, -0.16, 0, 0.16, 0.32],
+      spread: 5.6,
+      length: 1.55
+    }
+  };
+
+  function isWeaponMode(mode) {
+    return WEAPON_ORDER.includes(mode);
+  }
+
+  function currentWeaponDef() {
+    return WEAPON_DEFS[player.weaponMode] || WEAPON_DEFS.bolt;
+  }
+
+  function romanPower(level) {
+    return ["", "I", "II", "III", "IV"][level] || String(level);
+  }
 
   function readWeaponModeFromStorage() {
     try {
       const raw = window.localStorage.getItem(STARFLIGHT_WEAPON_STORAGE_KEY);
-      if (raw === "scatter" || raw === "pierce" || raw === "bolt") {
+      if (isWeaponMode(raw)) {
         return raw;
       }
     } catch {
@@ -2077,24 +2190,27 @@
     buffKind: "",
     buffTimer: 0,
     aegisHits: 0,
+    weaponPower: 1,
+    weaponPowerTimer: 0,
     weaponMode: readWeaponModeFromStorage(),
     viewPitch: 0,
     viewRoll: 0
   };
 
   function setWeaponMode(mode) {
-    const next = mode === "scatter" || mode === "pierce" ? mode : "bolt";
+    const next = isWeaponMode(mode) ? mode : "bolt";
     player.weaponMode = next;
     persistWeaponMode(next);
     syncFlightWeaponButtons();
-    if (next === "bolt") {
-      setEventMessage("Bolt lane", 0.55);
-    } else if (next === "scatter") {
-      setEventMessage("Scatter burst", 0.55);
-    } else {
-      setEventMessage("Pierce core", 0.55);
-    }
+    setEventMessage((WEAPON_DEFS[next] || WEAPON_DEFS.bolt).label, 0.55);
+    updateHud();
     logEvent("weapon_mode_set", { mode: next });
+  }
+
+  function cycleWeaponMode(direction = 1) {
+    const index = Math.max(0, WEAPON_ORDER.indexOf(player.weaponMode || "bolt"));
+    const nextIndex = (index + direction + WEAPON_ORDER.length) % WEAPON_ORDER.length;
+    setWeaponMode(WEAPON_ORDER[nextIndex]);
   }
 
   function syncFlightWeaponButtons() {
@@ -2156,15 +2272,33 @@
     );
     syncFlightWeaponButtons();
   }
+  if (hud.weaponCycleButton) {
+    hud.weaponCycleButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      cycleWeaponMode(1);
+      closeFlightMenu();
+    });
+  }
 
   const objects = [];
   const sparks = [];
   const trailParticles = [];
+  const screenViewMatrix = Mat4.create();
+  const screenProjectionMatrix = Mat4.create();
+  const screenSpaceField = Array.from(
+    { length: isTouchCapable ? 102 : 62 },
+    (_, index) => createScreenSpaceFieldParticle(index)
+  );
+  const screenSpaceSweepers = Array.from(
+    { length: isTouchCapable ? 7 : 5 },
+    (_, index) => createScreenSpaceSweeper(index)
+  );
   const starLayers = [
-    createStarLayer(isTouchCapable ? 72 : 110, 20, 100, 0.18, 0.024, 0.075, 0.52),
-    createStarLayer(isTouchCapable ? 48 : 74, 12, 76, 0.58, 0.04, 0.13, 0.82),
-    createStarLayer(isTouchCapable ? 18 : 32, 8, 58, 0.92, 0.075, 0.19, 0.95)
+    createStarLayer(isTouchCapable ? 132 : 144, 20, 100, 0.18, 0.028, 0.09, isTouchCapable ? 0.86 : 0.66),
+    createStarLayer(isTouchCapable ? 92 : 102, 12, 76, 0.58, 0.05, 0.15, isTouchCapable ? 1 : 0.92),
+    createStarLayer(isTouchCapable ? 38 : 46, 8, 58, 0.92, 0.08, 0.22, 1)
   ];
+  const skySalvage = Array.from({ length: isTouchCapable ? 22 : 30 }, (_, index) => createSkySalvage(index));
   const salvageDressing = Array.from({ length: isTouchCapable ? 18 : 28 }, (_, index) => createSalvageDressing(index));
 
   function readDebugState() {
@@ -2197,6 +2331,7 @@
         roll: Number(state.cameraRoll.toFixed(4)),
         swayX: Number(state.cameraSwayX.toFixed(4)),
         swayY: Number(state.cameraSwayY.toFixed(4)),
+        viewYaw: Number(state.viewYaw.toFixed(4)),
         follow: getCameraFollow()
       },
       bounds,
@@ -2294,6 +2429,50 @@
     };
   }
 
+  function createSkySalvage(index) {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    return {
+      kind: index % 4,
+      side,
+      x: randomRange(-9.8, 9.8),
+      y: randomRange(isTouchCapable ? 1.35 : 0.8, isTouchCapable ? 5.45 : 4.9),
+      z: randomRange(-WORLD_WRAP_DEPTH - 34, -28),
+      scale: randomRange(0.58, 1.46),
+      phase: Math.random() * Math.PI * 2,
+      spin: randomRange(-0.08, 0.08),
+      tint: Math.random()
+    };
+  }
+
+  function createScreenSpaceSweeper(index) {
+    const upperBand = index % 2 === 0;
+    return {
+      x: randomRange(-0.22, 0.22),
+      y: upperBand ? randomRange(-0.08, 0.52) : randomRange(-0.68, -0.28),
+      scaleX: randomRange(0.62, 1.26),
+      scaleY: randomRange(0.014, 0.034),
+      drift: randomRange(0.004, 0.012),
+      bob: randomRange(0.008, 0.024),
+      phase: Math.random() * Math.PI * 2,
+      roll: randomRange(-0.18, 0.18),
+      tint: Math.random()
+    };
+  }
+
+  function createScreenSpaceFieldParticle(index) {
+    const debris = index % (isTouchCapable ? 5 : 7) === 0;
+    return {
+      debris,
+      x: randomRange(-0.98, 0.98),
+      y: randomRange(isTouchCapable ? -0.88 : -0.78, 0.92),
+      size: debris ? randomRange(0.028, 0.07) : randomRange(0.0035, 0.009),
+      length: randomRange(0.06, 0.18),
+      phase: Math.random() * Math.PI * 2,
+      drift: randomRange(0.004, 0.018),
+      tint: Math.random()
+    };
+  }
+
   function createSalvageDressing(index) {
     const side = Math.random() < 0.5 ? -1 : 1;
     return {
@@ -2310,6 +2489,97 @@
 
   function speedProgress() {
     return clamp(((state.lastSpeedMultiplier || 1) - 1) / 3.5, 0, 1);
+  }
+
+  function getFrameProfile(aspect = canvas.width / Math.max(1, canvas.height)) {
+    if (isTouchCapable) {
+      if (aspect < 0.52) {
+        return {
+          fovScale: 0.72,
+          viewBiasY: 0.12,
+          cameraDepth: -2.7,
+          readyPitch: 0.24,
+          playPitch: 0.19,
+          backdropLift: -1.15,
+          backdropScale: 1.26,
+          canopyZShift: 2.4,
+          canopyScale: 1.22,
+          screenFieldAlpha: 1.18,
+          starDrift: 1.2
+        };
+      }
+      if (aspect < 0.82) {
+        return {
+          fovScale: 0.78,
+          viewBiasY: 0.18,
+          cameraDepth: -3.0,
+          readyPitch: 0.28,
+          playPitch: 0.22,
+          backdropLift: -0.92,
+          backdropScale: 1.16,
+          canopyZShift: 1.7,
+          canopyScale: 1.14,
+          screenFieldAlpha: 1.08,
+          starDrift: 1.12
+        };
+      }
+      return {
+        fovScale: 0.82,
+        viewBiasY: 0.22,
+        cameraDepth: -3.18,
+        readyPitch: 0.3,
+        playPitch: 0.24,
+        backdropLift: -0.64,
+        backdropScale: 1.08,
+        canopyZShift: 1.0,
+        canopyScale: 1.08,
+        screenFieldAlpha: 1,
+        starDrift: 1.04
+      };
+    }
+    if (aspect > 1.85) {
+      return {
+        fovScale: 0.62,
+        viewBiasY: -0.12,
+        cameraDepth: -2.32,
+        readyPitch: 0.22,
+        playPitch: 0.18,
+        backdropLift: -0.88,
+        backdropScale: 1.14,
+        canopyZShift: 0.9,
+        canopyScale: 1.18,
+        screenFieldAlpha: 1.06,
+        starDrift: 1.12
+      };
+    }
+    if (aspect > 1.35) {
+      return {
+        fovScale: 0.7,
+        viewBiasY: -0.02,
+        cameraDepth: -2.58,
+        readyPitch: 0.26,
+        playPitch: 0.21,
+        backdropLift: -0.56,
+        backdropScale: 1.08,
+        canopyZShift: 0.45,
+        canopyScale: 1.1,
+        screenFieldAlpha: 1.02,
+        starDrift: 1.06
+      };
+    }
+    return {
+      fovScale: 1,
+      viewBiasY: 0.18,
+      cameraDepth: -3.05,
+      readyPitch: 0.34,
+      playPitch: 0.28,
+      backdropLift: 0,
+      backdropScale: 1,
+      canopyZShift: 0,
+      canopyScale: 1,
+      screenFieldAlpha: 1,
+      starDrift: 1
+    };
   }
 
   function wrapLaneZ(baseZ, speedFactor = 1, near = 10, depth = WORLD_WRAP_DEPTH) {
@@ -2341,6 +2611,15 @@
       pose.y + localX * s + localY * c,
       z
     ];
+  }
+
+  function corridorHeading(z, alphaTime, sample = CORRIDOR_HEADING_SAMPLE) {
+    const here = corridorPose(z, alphaTime);
+    const ahead = corridorPose(z - sample, alphaTime);
+    const horizon = corridorPose(z - sample * 3.8, alphaTime);
+    const localSlope = Math.atan2(ahead.x - here.x, sample);
+    const horizonLead = horizon.x - here.x;
+    return localSlope + horizonLead * 0.24;
   }
 
   function drawCorridorMesh(mesh, localX, localY, z, alphaTime, options) {
@@ -2384,7 +2663,9 @@
   const reviveState = {
     timer: 0,
     taps: 0,
-    need: REVIVE_TAPS_NEEDED
+    need: REVIVE_TAPS_NEEDED,
+    variant: "tapstorm",
+    activeCore: null
   };
   let reviveTapHandler = null;
 
@@ -2397,6 +2678,39 @@
       return;
     }
     hud.reviveArena.innerHTML = "";
+    reviveState.activeCore = null;
+  }
+
+  function setReviveCopy(title, copy) {
+    const titleNode = document.getElementById("reviveTitle");
+    const copyNode = hud.reviveModal ? hud.reviveModal.querySelector(".revive-copy") : null;
+    if (titleNode) {
+      titleNode.textContent = title;
+    }
+    if (copyNode) {
+      copyNode.textContent = copy;
+    }
+  }
+
+  function spawnReviveReactionCore() {
+    if (!hud.reviveArena) {
+      return;
+    }
+    hud.reviveArena.innerHTML = "";
+    const core = document.createElement("button");
+    core.type = "button";
+    core.className = "revive-core reaction-tap";
+    core.setAttribute("aria-label", "Tap calibration core");
+    const ring = document.createElement("span");
+    ring.className = "revive-calibration-ring";
+    ring.setAttribute("aria-hidden", "true");
+    core.appendChild(ring);
+    const x = randomRange(18, 82);
+    const y = randomRange(18, 82);
+    core.style.left = `${x}%`;
+    core.style.top = `${y}%`;
+    hud.reviveArena.appendChild(core);
+    reviveState.activeCore = core;
   }
 
   function unbindReviveTapStorm() {
@@ -2414,6 +2728,27 @@
       }
       const target = event.target;
       if (target && (target.id === "reviveSkipButton" || target.closest("#reviveSkipButton"))) {
+        return;
+      }
+      if (reviveState.variant === "reaction") {
+        const core = target && target.closest(".revive-core.reaction-tap");
+        if (!core || core !== reviveState.activeCore) {
+          return;
+        }
+        event.preventDefault();
+        core.classList.add("is-caught");
+        reviveState.taps += 1;
+        if (hud.reviveProgress) {
+          hud.reviveProgress.textContent = `${reviveState.taps} / ${reviveState.need}`;
+        }
+        if (navigator.vibrate) {
+          navigator.vibrate(12);
+        }
+        if (reviveState.taps >= reviveState.need) {
+          completeRevive(true);
+          return;
+        }
+        window.setTimeout(spawnReviveReactionCore, 130);
         return;
       }
       event.preventDefault();
@@ -2436,9 +2771,10 @@
   function startReviveMiniGame() {
     state.reviveUsedThisRun = true;
     state.mode = "revive";
-    reviveState.timer = REVIVE_TIME_SECONDS;
+    reviveState.variant = Math.floor(state.score) % 2 === 0 ? "reaction" : "tapstorm";
+    reviveState.timer = reviveState.variant === "reaction" ? 4.2 : REVIVE_TIME_SECONDS;
     reviveState.taps = 0;
-    reviveState.need = REVIVE_TAPS_NEEDED;
+    reviveState.need = reviveState.variant === "reaction" ? 3 : REVIVE_TAPS_NEEDED;
     if (hud.shell) {
       hud.shell.classList.add("is-revive-slow");
     }
@@ -2447,14 +2783,26 @@
     }
     attachModalBackTrap(MODAL_TRAP.revive, () => completeRevive(false));
     if (hud.reviveTimer) {
-      hud.reviveTimer.textContent = REVIVE_TIME_SECONDS.toFixed(1);
+      hud.reviveTimer.textContent = reviveState.timer.toFixed(1);
     }
     if (hud.reviveProgress) {
-      hud.reviveProgress.textContent = `0 / ${REVIVE_TAPS_NEEDED}`;
+      hud.reviveProgress.textContent = `0 / ${reviveState.need}`;
     }
     clearReviveArena();
+    if (reviveState.variant === "reaction") {
+      setReviveCopy(
+        "SYSTEM FAILURE — HIT THE CORES",
+        "Tap each calibration core before the lane collapses to relaunch with 1 hull. One rescue per run."
+      );
+      spawnReviveReactionCore();
+    } else {
+      setReviveCopy(
+        "SYSTEM FAILURE — TAP TO REBOOT",
+        "Rapid-tap anywhere on this panel five times before the lane collapses to relaunch with 1 hull. One rescue per run."
+      );
+    }
     bindReviveTapStorm();
-    setEventMessage("SYSTEM FAILURE — tap to reboot");
+    setEventMessage(reviveState.variant === "reaction" ? "SYSTEM FAILURE — hit the cores" : "SYSTEM FAILURE — tap to reboot");
     syncShellPlayState();
   }
 
@@ -2566,6 +2914,8 @@
     state.smoothCamX = 0;
     state.smoothCamY = 0;
     state.viewRoll = 0;
+    state.viewPitch = 0;
+    state.viewYaw = 0;
     state.lastHudScore = -1;
     state.lastHudSpeedLabel = "";
     player.x = 0;
@@ -2583,6 +2933,8 @@
     player.buffKind = "";
     player.buffTimer = 0;
     player.aegisHits = 0;
+    player.weaponPower = 1;
+    player.weaponPowerTimer = 0;
     objects.length = 0;
     sparks.length = 0;
     trailParticles.length = 0;
@@ -3669,11 +4021,6 @@
     collapseEcosystemFlyout();
     submitScore();
     persistRunReceipt(finalScore);
-    if (hit) {
-      state.mode = "gameover";
-      if (navigator.vibrate) navigator.vibrate([40, 60, 40]); // Sovereign pattern
-      logEvent("game_over", { score: state.score, time: Number(state.time.toFixed(1)) });
-    }
     revealShareButton(finalScore);
     logEvent("game_over", { score: finalScore, cores: state.cores, time: Number(state.time.toFixed(2)) });
     syncShellPlayState();
@@ -3689,7 +4036,7 @@
     if (player.buffKind && player.buffTimer > 0) {
       return player.buffKind;
     }
-    return player.fireBoostTimer > 0 ? "rapid" : "pulse";
+    return player.fireBoostTimer > 0 ? "rapid" : (player.weaponMode || "bolt");
   }
 
   function activeWeaponLabel() {
@@ -3697,13 +4044,34 @@
     if (kind === "overcharge" || kind === "rapid") return "RAPID";
     if (kind === "triad") return "TRIAD";
     if (kind === "prism") return "PRISM";
-    return "FIRE";
+    return `${(WEAPON_DEFS[player.weaponMode] || WEAPON_DEFS.bolt).short} ${romanPower(player.weaponPower || 1)}`;
+  }
+
+  function syncWeaponHud() {
+    const kind = activeWeaponKind();
+    const label = activeWeaponLabel();
+    const power = String(player.weaponPower || 1);
+    if (hud.weaponCycleButton) {
+      hud.weaponCycleButton.textContent = `${(WEAPON_DEFS[player.weaponMode] || WEAPON_DEFS.bolt).short} ${romanPower(player.weaponPower || 1)}`;
+      hud.weaponCycleButton.dataset.weapon = player.weaponMode || "bolt";
+      hud.weaponCycleButton.dataset.power = power;
+      hud.weaponCycleButton.title = "Cycle weapon (Q/E)";
+    }
+    if (hud.mobileFireButton) {
+      hud.mobileFireButton.textContent = label;
+      hud.mobileFireButton.dataset.weapon = kind;
+      hud.mobileFireButton.dataset.power = power;
+      hud.mobileFireButton.title = kind === player.weaponMode
+        ? `Fire ${label.toLowerCase()}`
+        : `Fire weapon (${label.toLowerCase()} active)`;
+    }
   }
 
   function updateHud() {
     const playing = state.mode === "playing" || state.mode === "relaunch";
     const scoreInt = Math.floor(state.score);
     const speedLabel = `${(state.speed / 18).toFixed(1)}x`;
+    syncWeaponHud();
 
     if (playing) {
       if (scoreInt !== state.lastHudScore) {
@@ -3730,15 +4098,6 @@
     hud.speed.textContent = speedLabel;
     if (hud.buff) {
       hud.buff.textContent = activeBuffLabel();
-    }
-    if (hud.mobileFireButton) {
-      const weaponKind = activeWeaponKind();
-      const weaponLabel = activeWeaponLabel();
-      hud.mobileFireButton.textContent = weaponLabel;
-      hud.mobileFireButton.dataset.weapon = weaponKind;
-      hud.mobileFireButton.title = weaponKind === "pulse"
-        ? "Fire weapon"
-        : `Fire weapon (${weaponLabel.toLowerCase()} active)`;
     }
     hud.fps.textContent = state.fps ? Math.round(state.fps).toString() : "--";
     if (hud.pmhScore) {
@@ -3912,49 +4271,27 @@
       return;
     }
     const rapid = player.fireBoostTimer > 0 || (player.buffKind === "overcharge" && player.buffTimer > 0);
-    const w = player.weaponMode || "bolt";
+    const weapon = isWeaponMode(player.weaponMode) ? player.weaponMode : "bolt";
+    const def = WEAPON_DEFS[weapon] || WEAPON_DEFS.bolt;
     const prismBuff = player.buffKind === "prism" && player.buffTimer > 0;
     const triadBuff =
       player.buffKind === "triad" ||
       (player.buffKind === "overcharge" && player.buffTimer > 0);
+    const powerLevel = clamp(Math.round(player.weaponPower || 1), 1, WEAPON_POWER_MAX);
+    const powerScale = 1 + (powerLevel - 1) * 0.34;
+    const damageScale = 1 + (powerLevel - 1) * 0.58;
+    const cooldownScale = 1 - (powerLevel - 1) * 0.04;
+    state.bulletCooldown = (rapid ? def.rapidCooldown : def.cooldown) * cooldownScale;
 
-    let baseCdSlow = 0.16;
-    let baseCdFast = 0.08;
-    const isMidnight = true; // Hackathon mode
-    const finalW = isMidnight ? "phantom" : w;
-
-    if (finalW === "scatter") {
-      baseCdSlow = 0.26;
-      baseCdFast = 0.12;
-    } else if (finalW === "pierce") {
-      baseCdSlow = 0.21;
-      baseCdFast = 0.1;
-    } else if (finalW === "phantom") {
-      baseCdSlow = 0.12;
-      baseCdFast = 0.06;
-    }
-    state.bulletCooldown = rapid ? baseCdFast : baseCdSlow;
-
-    const pierceShot = prismBuff || w === "pierce";
-    let offsets;
-    if (w === "scatter") {
-      offsets = [-0.22, -0.11, 0, 0.11, 0.22];
-    } else if (triadBuff) {
-      offsets = [-0.22, 0, 0.22];
-    } else {
-      offsets = [0];
-    }
-
-    const triadShape = triadBuff && w !== "scatter";
-    let bulletColor = [0.42, 0.96, 1, 1];
+    const fanWeapon = weapon === "scatter" || weapon === "nova";
+    const offsets = fanWeapon
+      ? def.offsets
+      : (triadBuff ? [-0.24, 0, 0.24] : def.offsets);
+    const triadShape = triadBuff && !fanWeapon;
+    const pierceShot = prismBuff || Boolean(def.pierce) || powerLevel >= WEAPON_POWER_MAX;
+    let bulletColor = def.color;
     if (prismBuff) {
       bulletColor = [0.95, 0.48, 1, 1];
-    } else if (finalW === "phantom") {
-      bulletColor = [0.4, 0, 1, 0.4]; // Void Purple
-    } else if (w === "pierce") {
-      bulletColor = [1, 0.72, 0.28, 1];
-    } else if (w === "scatter") {
-      bulletColor = [0.55, 1, 0.62, 1];
     } else if (rapid) {
       bulletColor = [1, 0.88, 0.38, 1];
     }
@@ -3963,26 +4300,32 @@
       if (sparks.length >= sparksMax) {
         return;
       }
-      const spread = triadShape || finalW === "scatter" ? offsetX * 4 : 0;
-      let size = prismBuff ? 0.32 : (finalW === "phantom" ? 0.28 : (w === "scatter" ? 0.15 : (triadShape ? 0.2 : (w === "pierce" ? 0.28 : 0.24))));
+      const spread = (triadShape ? 4.2 : (def.spread || 0)) * offsetX;
+      const baseSize = triadShape ? Math.max(0.18, def.size * 0.86) : def.size;
+      const size = baseSize * powerScale * (prismBuff ? 1.12 : 1);
+      const damage = def.damage * damageScale * (prismBuff ? 1.2 : 1);
       sparks.push({
         kind: "bullet",
         team: "player",
-        weapon: finalW,
+        weapon,
         x: player.x + offsetX,
         y: player.y + 0.18,
         z: player.z + 0.1,
         vx: spread,
         vy: 0,
-        vz: finalW === "phantom" ? -82 : (w === "bolt" ? -76 : -68),
-        life: 2.0,
-        maxLife: 2.0,
-        size: size,
+        vz: def.speed,
+        life: weapon === "rail" ? 1.55 : 2.0,
+        maxLife: weapon === "rail" ? 1.55 : 2.0,
+        size,
+        length: def.length * powerScale * (weapon === "rail" ? 1.12 : 1),
+        damage,
+        powerScale,
+        hitRadius: 0.32 * powerScale,
         color: bulletColor,
-        pierce: pierceShot || finalW === "phantom"
+        pierce: pierceShot
       });
     });
-    logEvent("player_shoot", { triad: triadShape, prism: prismBuff, weapon: w });
+    logEvent("player_shoot", { triad: triadShape, prism: prismBuff, weapon, power: powerLevel });
   }
 
   function spawnBossBullet(boss) {
@@ -4065,6 +4408,8 @@
 
   function resetLaneTurnState() {
     state.cameraYaw = 0;
+    state.viewPitch = 0;
+    state.viewYaw = 0;
     state.turnAnimActive = false;
     state.turnAnimFrom = 0;
     state.turnAnimTo = 0;
@@ -4359,10 +4704,10 @@
               const def = BUFF_DEFS[object.buffKind] || BUFF_DEFS.overcharge;
               spawnSparks(object.x, object.y, object.z, def.color, 24);
             } else if (object.type === "powerOrb") {
-              applyBuff("overcharge");
+              applyWeaponPower(1);
               state.score += 95;
               spawnSparks(object.x, object.y, object.z, [1, 0.62, 0.35, 1], 24);
-              logEvent("power_orb_collected", {});
+              logEvent("power_orb_collected", { power: player.weaponPower || 1 });
             } else if (object.type === "crystal") {
               state.cores += 1;
               state.score += 140;
@@ -4431,7 +4776,8 @@
         for (let j = objects.length - 1; j >= 0; j--) {
           const obj = objects[j];
           if (Math.abs(obj.z - spark.z) > 1.0) continue;
-          if (Math.hypot(obj.x - spark.x, obj.y - spark.y) > obj.radius + 0.32) continue;
+          if (Math.hypot(obj.x - spark.x, obj.y - spark.y) > obj.radius + (spark.hitRadius || 0.32)) continue;
+          const bulletDamage = spark.damage || 1;
           if (obj.type === "debris") {
             state.score += 60;
             spawnSparks(obj.x, obj.y, obj.z, [1, 0.65, 0.22, 0.9], 14);
@@ -4442,7 +4788,7 @@
             break;
           }
           if (obj.type === "rangeTarget") {
-            obj.hp = (obj.hp || 2) - 1;
+            obj.hp = (obj.hp || 2) - bulletDamage;
             spawnSparks(spark.x, spark.y, spark.z, [1, 0.72, 0.2, 1], 10);
             if (obj.hp <= 0) {
               state.score += 150;
@@ -4456,7 +4802,7 @@
             break;
           }
           if (obj.type === "boss") {
-            obj.hp = (obj.hp || 1) - 1;
+            obj.hp = (obj.hp || 1) - bulletDamage;
             spawnSparks(spark.x, spark.y, spark.z, [1, 0.95, 0.32, 1], 8);
             if (obj.hp <= 0) {
               state.score += 320;
@@ -4563,10 +4909,8 @@
   function renderScene(alphaTime) {
     resizeCanvas();
     const aspect = canvas.width / Math.max(1, canvas.height);
-    let renderFov = state.currentFov;
-    if (isTouchCapable && aspect < 0.92) {
-      renderFov *= 1.22;
-    }
+    const frameProfile = getFrameProfile(aspect);
+    const renderFov = state.currentFov * frameProfile.fovScale;
     Mat4.perspective(projectionMatrix, renderFov, aspect, 0.1, 120);
 
     const shakeLife = state.hitShakeTime > 0 ? state.hitShakeTime / 0.42 : 0;
@@ -4574,20 +4918,38 @@
     const shakeX = Math.sin(alphaTime * 82) * shakeAmount;
     const shakeY = Math.cos(alphaTime * 67) * shakeAmount * 0.72;
     const follow = getCameraFollow();
-    const viewBiasY = isTouchCapable ? -1.38 : 0;
-    const camTrackX = isTouchCapable ? 0.42 : follow.x;
-    const targetCamX = shakeX - player.x * camTrackX;
-    const targetCamY = shakeY - player.y * follow.y + viewBiasY;
+    const viewBiasY = frameProfile.viewBiasY;
+    const cameraDepth = frameProfile.cameraDepth;
+    const camTrackX = isTouchCapable ? 0.34 : Math.max(follow.x * 0.72, 0.06);
+    const bendHeading = state.mode === "playing"
+      ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, alphaTime)
+      : 0;
+    const targetViewYaw = clamp(
+      bendHeading * (isTouchCapable ? 3.5 : 3.1),
+      -CORRIDOR_VIEW_YAW_MAX,
+      CORRIDOR_VIEW_YAW_MAX
+    );
+    const targetCamX = shakeX - player.x * camTrackX - targetViewYaw * 0.68;
+    const targetCamY = shakeY - player.y * follow.y + viewBiasY + Math.abs(targetViewYaw) * 0.12;
+    const targetViewPitch = (
+      state.mode === "ready"
+        ? frameProfile.readyPitch
+        : frameProfile.playPitch
+    ) + Math.abs(targetViewYaw) * 0.22;
     const camLerp = 0.1;
     state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
     state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
-    const targetRoll = -player.x * 0.05;
+    state.viewPitch += (targetViewPitch - state.viewPitch) * camLerp;
+    state.viewYaw += (targetViewYaw - state.viewYaw) * Math.min(1, camLerp * 1.15);
+    const appliedViewYaw = state.viewYaw * 0.46;
+    const targetRoll = (-player.x * 0.065) - state.viewYaw * 0.78;
     state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
     Mat4.identity(viewMatrix);
-    Mat4.rotateY(viewMatrix, viewMatrix, state.cameraYaw);
+    Mat4.rotateY(viewMatrix, viewMatrix, state.cameraYaw + appliedViewYaw);
+    Mat4.rotateX(viewMatrix, viewMatrix, -state.viewPitch);
     Mat4.rotateZ(viewMatrix, viewMatrix, state.viewRoll);
     // Apply camera offset (BACK) and dynamic tracking (smoothCamX/Y)
-    Mat4.translate(viewMatrix, viewMatrix, [state.smoothCamX, state.smoothCamY, -8.2]);
+    Mat4.translate(viewMatrix, viewMatrix, [state.smoothCamX, state.smoothCamY, cameraDepth]);
 
     const speedMultiplier = state.lastSpeedMultiplier || 1;
     const speedT = Math.max(0, Math.min(1, (speedMultiplier - 1) / 3.5));
@@ -4613,13 +4975,114 @@
     gl.disable(gl.BLEND);
     gl.depthMask(true);
 
+    renderScreenSpaceSpacefield(alphaTime);
     renderBackdrop(alphaTime);
     renderStars(alphaTime);
+    renderSkySalvage(alphaTime);
     renderTunnel(alphaTime);
+    renderLaneSignals(alphaTime);
     renderSalvageDressing(alphaTime);
     renderObjects(alphaTime);
     renderPlayer(alphaTime);
     renderGlowPass(alphaTime);
+  }
+
+  function renderScreenSpaceSpacefield(alphaTime) {
+    const frameProfile = getFrameProfile();
+    Mat4.identity(screenViewMatrix);
+    Mat4.identity(screenProjectionMatrix);
+    gl.uniformMatrix4fv(locations.view, false, screenViewMatrix);
+    gl.uniformMatrix4fv(locations.projection, false, screenProjectionMatrix);
+    gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(false);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const speedT = speedProgress();
+    drawMesh(meshes.disc, {
+      position: [isTouchCapable ? -0.08 : 0.12, isTouchCapable ? 0.22 : 0.18, 0],
+      rotation: [0, 0, Math.sin(alphaTime * 0.04) * 0.08],
+      scale: [1.58, isTouchCapable ? 0.82 : 0.62, 1],
+      color: [
+        0.04 + speedT * 0.03,
+        0.14 + speedT * 0.04,
+        0.24 + speedT * 0.08,
+        (isTouchCapable ? 0.34 : 0.16) * frameProfile.screenFieldAlpha
+      ],
+      texture: nebulaTexture,
+      textureMix: 1,
+      pulse: 0.03 + speedT * 0.05
+    });
+    drawMesh(meshes.disc, {
+      position: [isTouchCapable ? 0.22 : -0.28, isTouchCapable ? -0.18 : -0.08, 0],
+      rotation: [0, 0, -0.06 + Math.sin(alphaTime * 0.03) * 0.04],
+      scale: [1.26, isTouchCapable ? 0.54 : 0.46, 1],
+      color: [
+        0.03 + speedT * 0.03,
+        0.1 + speedT * 0.03,
+        0.18 + speedT * 0.06,
+        (isTouchCapable ? 0.18 : 0.12) * frameProfile.screenFieldAlpha
+      ],
+      texture: nebulaTexture,
+      textureMix: 1,
+      pulse: 0.02 + speedT * 0.04
+    });
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+    screenSpaceSweepers.forEach((sweeper, index) => {
+      const drift = alphaTime * sweeper.drift + sweeper.phase;
+      const x = sweeper.x + Math.sin(drift) * 0.14 - state.cameraSwayX * 0.06;
+      const y = sweeper.y + Math.cos(drift * 0.72) * sweeper.bob - state.cameraSwayY * 0.04;
+      const alpha = (sweeper.tint > 0.6 ? 0.18 : 0.12) * frameProfile.screenFieldAlpha;
+      drawMesh(meshes.cube, {
+        position: [x, y, 0],
+        rotation: [0, 0, sweeper.roll + Math.sin(drift * 0.4 + index) * 0.06],
+        scale: [sweeper.scaleX, sweeper.scaleY, 0.001],
+        color: sweeper.tint > 0.6
+          ? [0.1, 0.28 + speedT * 0.06, 0.38 + speedT * 0.08, alpha]
+          : [0.06, 0.18 + speedT * 0.04, 0.24 + speedT * 0.06, alpha],
+        texture: colorTexture,
+        textureMix: 0.72,
+        uvScale: [3.2, 1],
+        pulse: 0.01 + speedT * 0.03
+      });
+    });
+    screenSpaceField.forEach((particle) => {
+      const drift = (alphaTime * particle.drift + particle.phase) % (Math.PI * 2);
+      const x = particle.x + Math.sin(drift) * 0.018 - state.cameraSwayX * 0.03;
+      const y = particle.y + Math.cos(drift * 0.7) * 0.012 - state.cameraSwayY * 0.02;
+      if (particle.debris) {
+        drawMesh(meshes.cube, {
+          position: [x, y, 0],
+          rotation: [0, 0, particle.phase + alphaTime * 0.05],
+          scale: [particle.length, particle.size * 0.16, 0.001],
+        color: particle.tint > 0.58
+            ? [0.18, 0.5 + speedT * 0.08, 0.62 + speedT * 0.08, (isTouchCapable ? 0.3 : 0.18) * frameProfile.screenFieldAlpha]
+            : [0.12, 0.28 + speedT * 0.05, 0.36 + speedT * 0.08, (isTouchCapable ? 0.24 : 0.14) * frameProfile.screenFieldAlpha],
+          texture: colorTexture,
+          textureMix: 0.65,
+          uvScale: [2, 1],
+          pulse: 0.01 + speedT * 0.04
+        });
+        return;
+      }
+      const warm = particle.tint > 0.82;
+      const twinkle = 0.05 + Math.sin(alphaTime * 1.6 + particle.phase) * 0.035;
+      drawMesh(meshes.cube, {
+        position: [x, y, 0],
+        rotation: [0, 0, particle.phase],
+        scale: [particle.size, particle.size, 0.001],
+        color: warm
+          ? [1, 0.82, 0.52, (isTouchCapable ? 0.56 : 0.34) * frameProfile.screenFieldAlpha]
+          : [0.68, 0.92, 1, (isTouchCapable ? 0.62 : 0.36) * frameProfile.screenFieldAlpha],
+        texture: starTexture,
+        textureMix: 1,
+        pulse: twinkle
+      });
+    });
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+    gl.enable(gl.DEPTH_TEST);
+    gl.uniformMatrix4fv(locations.view, false, viewMatrix);
+    gl.uniformMatrix4fv(locations.projection, false, projectionMatrix);
   }
 
   function renderGlowPass(alphaTime) {
@@ -4636,34 +5099,58 @@
   }
 
   function renderBackdrop(alphaTime) {
+    const frameProfile = getFrameProfile();
     const speedT = speedProgress();
     const drift = Math.sin(alphaTime * 0.055) * 0.35 + state.cameraSwayX * 0.55;
+    const mobileBoost = isTouchCapable ? 1 : 0;
+    const lift = frameProfile.backdropLift;
+    const scaleBoost = frameProfile.backdropScale;
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     drawMesh(meshes.disc, {
-      position: [-4.2 + drift, 2.1 + state.cameraSwayY * 0.55, -96],
+      position: [0.4 + drift * 0.12, 3.2 + mobileBoost * 1.35 + lift + state.cameraSwayY * 0.12, -66],
+      rotation: [0, 0, 0.05],
+      scale: [(27 + mobileBoost * 8) * scaleBoost, (13.5 + mobileBoost * 5.5) * scaleBoost, 1],
+      color: [0.08 + speedT * 0.04, 0.16 + speedT * 0.05, 0.3 + speedT * 0.08, 0.26 + mobileBoost * 0.1],
+      texture: nebulaTexture,
+      textureMix: 1,
+      pulse: 0.03 + speedT * 0.05
+    });
+    if (isTouchCapable) {
+      drawMesh(meshes.disc, {
+        position: [-1.4 + drift * 0.2, 5.6 + lift * 0.9 + state.cameraSwayY * 0.08, -74],
+        rotation: [0, 0, -0.08],
+        scale: [23 * scaleBoost, 9.2 * scaleBoost, 1],
+        color: [0.08 + speedT * 0.05, 0.24 + speedT * 0.05, 0.4 + speedT * 0.08, 0.26],
+        texture: nebulaTexture,
+        textureMix: 1,
+        pulse: 0.06 + speedT * 0.08
+      });
+    }
+    drawMesh(meshes.disc, {
+      position: [-4.8 + drift, 0.95 + lift * 0.5 + state.cameraSwayY * 0.42, -84],
       rotation: [0, 0, -0.22 + Math.sin(alphaTime * 0.03) * 0.04],
-      scale: [12.5, 7.2, 1],
-      color: [0.18 + speedT * 0.08, 0.38 + speedT * 0.08, 0.72 + speedT * 0.16, 0.36],
+      scale: [16.5 * scaleBoost, 9.8 * scaleBoost, 1],
+      color: [0.18 + speedT * 0.08, 0.38 + speedT * 0.08, 0.72 + speedT * 0.16, 0.48],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.08 + speedT * 0.14
     });
     drawMesh(meshes.disc, {
-      position: [6.2 + drift * 0.35, 2.55 - state.cameraSwayY * 0.3, -92],
+      position: [6.4 + drift * 0.35, 1.5 + lift * 0.36 - state.cameraSwayY * 0.22, -78],
       rotation: [0, 0, -0.18],
-      scale: [5.0, 5.0, 1],
+      scale: [6.2 * Math.max(1, scaleBoost * 0.92), 6.2 * Math.max(1, scaleBoost * 0.92), 1],
       color: [0.55, 0.86, 1, 0.82],
       texture: planetTexture,
       textureMix: 1,
       pulse: 0.08 + Math.sin(alphaTime * 0.18) * 0.04
     });
     drawMesh(meshes.disc, {
-      position: [6.2 + drift * 0.35, 2.55 - state.cameraSwayY * 0.3, -94],
+      position: [6.4 + drift * 0.35, 1.45 + lift * 0.34 - state.cameraSwayY * 0.18, -82],
       rotation: [0, 0, 0],
-      scale: [7.2, 7.2, 1],
-      color: [0.28, 0.78, 1, 0.24],
+      scale: [9.5 * scaleBoost, 9.5 * scaleBoost, 1],
+      color: [0.28, 0.78, 1, 0.34],
       texture: nebulaTexture,
       textureMix: 1,
       pulse: 0.16 + speedT * 0.08
@@ -4673,11 +5160,12 @@
   }
 
   function renderStars(alphaTime) {
+    const frameProfile = getFrameProfile();
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     gl.depthMask(false);
     starLayers.forEach((layer, layerIndex) => {
-      const layerDrift = state.cameraSwayX * (1.4 - layerIndex * 0.34);
+      const layerDrift = state.cameraSwayX * (1.4 - layerIndex * 0.34) * frameProfile.starDrift;
       const horizonDrift = Math.sin(alphaTime * (0.08 + layerIndex * 0.03)) * (0.18 + layerIndex * 0.08);
       layer.stars.forEach((star) => {
         const wrappedZ = wrapLaneZ(star.z, layer.speedFactor, layer.near, layer.depth);
@@ -4687,7 +5175,7 @@
           position: [star.x + layerDrift, star.y + horizonDrift + state.cameraSwayY * 0.5, wrappedZ],
           rotation: [0, 0, star.phase],
           scale: [star.size, star.size, star.size],
-          color: warm ? [1, 0.82, 0.58, layer.alpha] : [0.7, 0.92, 1, layer.alpha],
+          color: warm ? [1, 0.82, 0.58, layer.alpha * 1.04] : [0.7, 0.92, 1, layer.alpha * 1.04],
           texture: starTexture,
           textureMix: 1,
           pulse: twinkle
@@ -4698,19 +5186,113 @@
     gl.disable(gl.BLEND);
   }
 
+  function renderSkySalvage(alphaTime) {
+    const speedT = speedProgress();
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(false);
+    skySalvage.forEach((piece, index) => {
+      const z = wrapLaneZ(piece.z, 0.2 + speedT * 0.08, 24, WORLD_WRAP_DEPTH + 36);
+      const sway = Math.sin(alphaTime * (0.12 + index * 0.003) + piece.phase) * (0.24 + speedT * 0.18);
+      const spin = piece.phase + alphaTime * piece.spin;
+      const s = piece.scale * (isTouchCapable ? 1.06 : 1);
+      const alpha = (piece.tint > 0.68 ? 0.26 : 0.18) + speedT * 0.08;
+      const color = piece.tint > 0.68
+        ? [0.12, 0.36 + speedT * 0.06, 0.48 + speedT * 0.08, alpha]
+        : [0.08, 0.22 + speedT * 0.04, 0.3 + speedT * 0.05, alpha];
+      const x = piece.x + sway + state.cameraSwayX * 0.32;
+      const y = piece.y + Math.cos(alphaTime * 0.1 + piece.phase) * 0.16 + state.cameraSwayY * 0.14;
+
+      if (piece.kind === 0) {
+        drawMesh(meshes.cube, {
+          position: [x, y, z],
+          rotation: [0.08, spin * 0.4, piece.side * 0.28],
+          scale: [1.45 * s, 0.1 * s, 0.72 * s],
+          color,
+          texture: colorTexture,
+          textureMix: 0.72,
+          uvScale: [2.4, 1],
+          pulse: 0.02 + speedT * 0.08
+        });
+      } else if (piece.kind === 1) {
+        drawMesh(meshes.cube, {
+          position: [x, y, z],
+          rotation: [0.18, spin, piece.side * 0.18],
+          scale: [0.34 * s, 0.34 * s, 0.34 * s],
+          color,
+          texture: warningTexture,
+          textureMix: 0.46,
+          uvScale: [1.4, 1.4],
+          pulse: 0.03 + speedT * 0.1
+        });
+      } else if (piece.kind === 2) {
+        [-1, 1].forEach((wing) => {
+          drawMesh(meshes.cube, {
+            position: [x + wing * piece.side * 0.52 * s, y, z],
+            rotation: [0.12, spin * 0.3, wing * piece.side * 0.22],
+            scale: [0.72 * s, 0.06 * s, 0.28 * s],
+            color,
+            texture: colorTexture,
+            textureMix: 0.7,
+            uvScale: [1.8, 1],
+            pulse: 0.02 + speedT * 0.07
+          });
+        });
+      } else {
+        drawMesh(meshes.cube, {
+          position: [x, y, z],
+          rotation: [spin * 0.35, piece.side * 0.24, spin],
+          scale: [0.08 * s, 0.86 * s, 0.08 * s],
+          color,
+          texture: colorTexture,
+          textureMix: 0.58,
+          uvScale: [1, 2.2],
+          pulse: 0.02 + speedT * 0.06
+        });
+      }
+    });
+    gl.depthMask(true);
+    gl.disable(gl.BLEND);
+  }
+
   function renderTunnel(alphaTime) {
+    const frameProfile = getFrameProfile();
     const spacing = 4.8;
     const speedT = speedProgress();
     const budget = getRenderBudgetTier();
     const decorScale = budget.tunnelDecorScale || 1;
     const offset = (state.time * state.speed) % spacing;
+    const canopySlices = isTouchCapable ? [-8.4, -14.8, -22.8, -31.8] : [-1.05, -2.8, -5.4, -9.2];
+    canopySlices.forEach((canopyZ, canopyIndex) => {
+      const canopyPulse = 0.025 + canopyIndex * 0.018 + speedT * 0.06;
+      drawCorridorMesh(meshes.cube, 0, 3.08, canopyZ + frameProfile.canopyZShift, alphaTime, {
+        rotation: [0, 0, 0],
+        scale: [8.8 * frameProfile.canopyScale, 0.14, 0.52],
+        color: [0.07, 0.18 + speedT * 0.04, 0.28 + speedT * 0.08, 1],
+        texture: colorTexture,
+        textureMix: 0.56,
+        uvScale: [8.6, 1],
+        pulse: canopyPulse
+      });
+      [-4.12, 4.12].forEach((postX) => {
+        drawCorridorMesh(meshes.cube, postX, 0.42, canopyZ - 0.14 + frameProfile.canopyZShift, alphaTime, {
+          rotation: [0, 0, 0],
+          scale: [0.18, 3.35 * decorScale, 0.42],
+          color: [0.07, 0.18, 0.24 + speedT * 0.05, 1],
+          texture: colorTexture,
+          textureMix: 0.58,
+          uvScale: [1, 3.2],
+          pulse: canopyPulse * 0.55
+        });
+      });
+    });
     let segmentIndex = 0;
-    for (let z = -9 + offset; z > -84; z -= spacing) {
+    for (let z = -4.8 + offset; z > -88; z -= spacing) {
       const pulse = 0.06 + Math.sin(alphaTime * 2.2 + z * 0.18) * 0.04 + speedT * 0.12;
       const markerColor = speedT > 0.55 ? [1, 0.42, 0.24, 1] : [0.28, 0.95, 1, 1];
       drawCorridorMesh(meshes.cube, 0, -3.18, z, alphaTime, {
         rotation: [0, 0, 0],
-        scale: [5.8, 0.08, 1.2],
+        scale: [6.8, 0.1, 1.5],
         color: [0.055 + speedT * 0.06, 0.2 + speedT * 0.06, 0.24 + speedT * 0.12, 1],
         texture: colorTexture,
         textureMix: 0.78,
@@ -4730,7 +5312,7 @@
       [-3.25, 3.25].forEach((railX) => {
         drawCorridorMesh(meshes.cube, railX, -2.64, z, alphaTime, {
           rotation: [0, 0, 0],
-          scale: [0.12, 0.8, 1.05],
+          scale: [0.15, 1.05, 1.26],
           color: [0.1, 0.42 + speedT * 0.12, 0.5 + speedT * 0.18, 1],
           texture: colorTexture,
           textureMix: 0.68,
@@ -4779,18 +5361,90 @@
     const ribDrift = 0.74 + Math.min(0.22, Math.max(0, (mult - 1) * 0.045));
     const ribSpacing = spacing * 1.2;
     const offsetRibs = (state.time * state.speed * ribDrift + ribSpacing * 0.41) % ribSpacing;
-    for (let z = -9.2 + offsetRibs; z > -76; z -= ribSpacing) {
+    const ribStartZ = isTouchCapable ? -14.4 : -5.2;
+    for (let z = ribStartZ + offsetRibs; z > -80; z -= ribSpacing) {
       const pulse = 0.035 + Math.sin(alphaTime * 1.7 + z * 0.31) * 0.028;
       drawMesh(meshes.cube, {
         position: [0, 2.62, z],
         rotation: [0, 0, 0],
-        scale: [7.35, 0.06, 0.58],
+        scale: [8.2, 0.07, 0.64],
         color: [0.07, 0.2, 0.34, 1],
         texture: colorTexture,
         textureMix: 0.52,
         uvScale: [8, 1],
         pulse
       });
+    }
+  }
+
+  function renderLaneSignals(alphaTime) {
+    const speedT = speedProgress();
+    const pendingBoost = state.pendingCorner ? 0.44 : 0;
+    let markerIndex = 0;
+    for (let z = -16; z > -78; z -= 8.6) {
+      const heading = corridorHeading(z - 2.2, alphaTime, 7.6);
+      const anticipation = clamp(Math.abs(heading) * 17 + pendingBoost, 0, 1);
+      if (anticipation < 0.12) {
+        markerIndex += 1;
+        continue;
+      }
+      const bendSide = heading >= 0 ? 1 : -1;
+      const pulse = 0.03 + anticipation * (0.1 + speedT * 0.08);
+      const outerMass = bendSide * (4.3 + anticipation * 0.78);
+      const rigColor = [
+        0.085 + anticipation * 0.08,
+        0.22 + anticipation * 0.12,
+        0.28 + anticipation * 0.1,
+        1
+      ];
+      drawCorridorMesh(meshes.cube, outerMass, -0.16, z - 0.18, alphaTime, {
+        rotation: [0.03, bendSide * 0.08, bendSide * 0.06],
+        scale: [0.18, 3.05 + anticipation * 0.92, 0.44],
+        color: rigColor,
+        texture: colorTexture,
+        textureMix: 0.62,
+        uvScale: [1, 3.6],
+        pulse
+      });
+      drawCorridorMesh(meshes.cube, bendSide * 3.44, 1.34, z - 0.36, alphaTime, {
+        rotation: [0.08, 0, bendSide * (0.38 + anticipation * 0.16)],
+        scale: [1.95, 0.12, 0.46],
+        color: [0.14 + anticipation * 0.14, 0.2 + anticipation * 0.08, 0.22 + anticipation * 0.06, 1],
+        texture: warningTexture,
+        textureMix: 0.42,
+        uvScale: [2.6, 1],
+        pulse: pulse * 0.7
+      });
+      drawCorridorMesh(meshes.cube, bendSide * 2.78, 0.68, z - 0.72, alphaTime, {
+        rotation: [0.2, bendSide * 0.34, bendSide * 0.12],
+        scale: [1.22, 0.16, 0.84],
+        color: [0.12 + anticipation * 0.12, 0.27 + anticipation * 0.06, 0.3 + anticipation * 0.04, 1],
+        texture: colorTexture,
+        textureMix: 0.74,
+        uvScale: [2.2, 1.2],
+        pulse: pulse * 0.8
+      });
+      drawCorridorMesh(meshes.cube, -bendSide * 4.02, 0.42, z - 0.52, alphaTime, {
+        rotation: [0.14, -bendSide * 0.22, -bendSide * 0.3],
+        scale: [1.28, 0.08, 0.38],
+        color: [0.08, 0.19 + anticipation * 0.04, 0.24 + anticipation * 0.05, 1],
+        texture: colorTexture,
+        textureMix: 0.54,
+        uvScale: [2.4, 1],
+        pulse: pulse * 0.45
+      });
+      if (anticipation > 0.42 || (state.pendingCorner && markerIndex < 3)) {
+        drawCorridorMesh(meshes.cube, 0, 2.14, z - 0.22, alphaTime, {
+          rotation: [0, 0, 0],
+          scale: [4.85, 0.1, 0.32],
+          color: [0.14 + anticipation * 0.06, 0.22 + anticipation * 0.04, 0.24 + anticipation * 0.04, 1],
+          texture: warningTexture,
+          textureMix: 0.54,
+          uvScale: [4.5, 1],
+          pulse: pulse
+        });
+      }
+      markerIndex += 1;
     }
   }
 
@@ -5092,6 +5746,35 @@
   function renderSparks(alphaTime) {
     sparks.forEach((spark) => {
       const lifeRatio = Math.max(0, spark.life / spark.maxLife);
+      if (spark.kind === "bullet") {
+        const playerShot = spark.team === "player";
+        const powerScale = spark.powerScale || 1;
+        const beamLength = (spark.length || (playerShot ? 1.55 : 0.75)) * Math.max(0.42, lifeRatio);
+        const beamRadius = Math.max(0.055, spark.size * (playerShot ? 0.58 : 0.82));
+        const beamAlpha = spark.color[3] * Math.min(1, 0.38 + lifeRatio * 0.72);
+        const position = corridorPoint(spark.x, spark.y, spark.z, alphaTime);
+        drawMesh(meshes.cube, {
+          position,
+          rotation: [0, 0, playerShot ? alphaTime * 0.7 : alphaTime * 1.6],
+          scale: [beamRadius, beamRadius * 0.48, beamLength],
+          color: [spark.color[0], spark.color[1], spark.color[2], beamAlpha],
+          texture: starTexture,
+          textureMix: 0.38,
+          pulse: playerShot ? Math.min(1, 0.56 + powerScale * 0.14) : 0.7
+        });
+        if (playerShot) {
+          drawMesh(meshes.cube, {
+            position,
+            rotation: [0, 0, -alphaTime * 0.45],
+            scale: [beamRadius * 2.15, beamRadius * 0.92, beamLength * 1.06],
+            color: [spark.color[0], spark.color[1], spark.color[2], beamAlpha * 0.28],
+            texture: starTexture,
+            textureMix: 0.16,
+            pulse: 0.95
+          });
+        }
+        return;
+      }
       drawMesh(meshes.cube, {
         position: corridorPoint(spark.x, spark.y, spark.z, alphaTime),
         rotation: [alphaTime * 3, alphaTime * 4, alphaTime * 2],
