@@ -8,6 +8,19 @@ This file is the **local execution pack** for the three MAO lenses applied to **
 | **Business** | What outcome and risk are we trading? | `docs/microsoft-readiness.md`, `DEPLOYMENT.md`, Store checklist rows | PASS/FAIL tables, Partner Center screenshots (external) |
 | **Forensic Sociology** | What does the operator feel, and where does friction hide? | Playing HUD, sovereign pause, flight menu, onboarding | Device capture (C10), manual tap-through notes |
 
+## Reality gate
+
+This lane uses one product rule:
+
+`mobile-primary, device-complete, realism-first`
+
+| Reality check | PASS criterion | FAIL smell |
+|---------------|----------------|------------|
+| WhatsApp distribution truth | Mobile receive path is treated as primary composition and control constraint | Desktop remains the hidden source of truth |
+| Full-screen world occupancy | Canvas and world mass fill the viewport on phone and desktop without dead black zones | Upper or lower screen space goes empty without anticipation value |
+| Aesthetic servitude | Color, motion, glow, and structure strengthen space, speed, salvage, danger, or control | Effect exists only because it looks cool |
+| Cross-device truth | Same ruleset and world logic across devices; only framing density adapts | Mobile and desktop feel like different games |
+
 ## Lane register — multitask + weapons (static)
 
 | Check ID | Assertion | PASS criterion |
@@ -24,6 +37,7 @@ This file is the **local execution pack** for the three MAO lenses applied to **
 | “Effectively done” without gate output | Business lens: no auditable proof | Attach `npm run gate` exit 0 + timestamp |
 | Checkmark drift (UI says shipped, table says FAIL) | Architect + Sociology: dual truth | Align `microsoft-readiness.md` with measured state |
 | Hero metrics (“100% GPU stress”) from static checks only | Architect: category error | Separate **C10b** (static) from **C10** (device p99) |
+| "Looks better" without mobile proof | Forensic Sociology: taste replaces field reality | Attach phone-sized screenshot or device capture before promotion |
 
 ## Evolution hook (next increments)
 

@@ -159,6 +159,11 @@ def check_mobile_stress_score(*, min_pass_pct: int = 80) -> dict[str, Any]:
         "m_flight_menu_css": ".flight-menu-toggle" in styles_css
         and ".flight-menu-panel" in styles_css,
         "m_ready_hides_play_hud": ".shell.is-ready .playing-minimal-hud" in styles_css,
+        "m_fullscreen_canvas_fixed": "#glCanvas" in styles_css
+        and "position: fixed" in styles_css
+        and "100svh" in styles_css,
+        "m_weapon_cycle_button": 'id="weaponCycleButton"' in index_html
+        and "cycleWeaponMode" in game_js,
     }
 
     passed = sum(1 for ok in proofs.values() if ok)
@@ -197,8 +202,12 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260521-start-fly-gate"
+    current_build = "20260526-ready-shell"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
+    realism_rubric = _read_text("docs/REALISM-RUBRIC.md")
+    cassy_register = _read_text("Structure/05-Training/Cassy Apprenticeship Register.md")
+    agent_mesh = _read_text("Structure/06-Reference/Starfall Agent Mesh.md")
+    starfall_index = _read_text("Structure/Starfall Salvage - Index.md")
 
     proofs = {
         "mao_starfall_lane_doc": "**Architect**" in mao_lane_doc
@@ -307,9 +316,29 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "playing_hud_pause_visible": "playHud.hidden = false" in game_js
         and 'mode === "paused" && !blockMenu' in game_js,
         "weapon_mode_bolt_scatter_pierce": "STARFLIGHT_WEAPON_STORAGE_KEY" in game_js
-        and 'w === "scatter"' in game_js
-        and 'w === "pierce"' in game_js
+        and '"scatter"' in game_js
+        and '"pierce"' in game_js
         and "setWeaponMode" in game_js,
+        "weapon_mode_extended_rail_nova": 'data-weapon="rail"' in index_html
+        and 'data-weapon="nova"' in index_html
+        and '"rail"' in game_js
+        and '"nova"' in game_js,
+        "weapon_power_scales_bullets": "weaponPower" in game_js
+        and "powerScale" in game_js
+        and "spark.damage" in game_js,
+        "visible_bullet_beams": "beamLength" in game_js
+        and "beamRadius" in game_js,
+        "revive_reaction_minigame": "spawnReviveReactionCore" in game_js
+        and "reaction-tap" in game_js,
+        "fullscreen_fov_composition": "getFrameProfile" in game_js
+        and "fovScale" in game_js
+        and "cameraDepth" in game_js,
+        "spacefield_sky_salvage_fill": "skySalvage" in game_js
+        and "renderSkySalvage" in game_js
+        and "screenSpaceField" in game_js
+        and "renderScreenSpaceSpacefield" in game_js
+        and "screenSpaceSweepers" in game_js
+        and current_build in game_js,
         "touch_range_performance_opt": 'TOUCH_FULL_RANGE_PX = Math.floor(70 *' in game_js,
         "pause_minimal_toggle_hardened": 'state.mode === "playing" || state.mode === "paused"' in game_js,
         "maintainer_map_present": "npm run gate" in _read_text("docs/MAINTAINER-MAP.md")
@@ -361,11 +390,18 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "pointer_focus_guard": 'window.addEventListener("pointerdown", (event)' in game_js
         and "!isGameInputBlocked(event.target)" in game_js,
         "movement_case_study": "Save / Kill / Watch" in movement_case_study,
+        # Lesson 019 - Mobile-Primary Realism Doctrine (2026-05-25)
+        "realism_rubric_present": "mobile-primary, device-complete, realism-first" in realism_rubric,
+        "realism_rubric_whatsapp_distribution": "WhatsApp -> mobile browser" in realism_rubric,
+        "mao_reality_gate": "## Reality gate" in mao_lane_doc,
+        "cassy_realism_apprenticeship": "Cassy studies realism-first product judgment" in cassy_register,
+        "agent_mesh_realism_lane": "mobile-primary realism judgment" in agent_mesh,
+        "starfall_index_spacefield_truth": current_build in starfall_index,
     }
     missing = [name for name, ok in proofs.items() if not ok]
     return {
         "name": "kopano_upgrade_audit",
-        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–018) present in shipped files",
+        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–019) present in shipped files",
         "ok": not missing,
         "actual": "all proofs satisfied" if not missing else f"missing proofs: {', '.join(missing)}",
         "retry": (

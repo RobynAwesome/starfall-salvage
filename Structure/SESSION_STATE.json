@@ -1,21 +1,22 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-14T15:45:00+02:00",
+  "updated_at": "2026-06-05T15:00:00+02:00",
   "active_track": "STARFALL",
   "blocked_tracks": ["ARENA_FIXTURES"],
   "repo": "Kopano-Labs/starfall-salvage",
-  "branch": "main",
-  "commit": "982932c",
-  "build_tag": "20260514-guest-cta-b",
-  "prior_build_tag": "20260514-guest-cta-a",
+  "branch": "codex/starfall-mobile-weapon-ecosystem",
+  "commit": "9c03735",
+  "build_tag": "20260526-ready-shell",
+  "prior_build_tag": "20260521-curve-anticipation",
   "deploy_url": "https://starfallsalvage.kopanolabs.com",
   "package_id": "com.kopanolabs.starfall.salvage",
   "twa_status": "parked",
-  "next_target": "Verify guest CTA on production after deploy",
+  "next_target": "Owner PR review; physical Redmi field proof on live URL after merge",
   "doctrine_locks": [
     "Commandment VIII — one WebGL flight deck",
     "Protocol 13 — no sub-80% mobile ship",
-    "Commandment IX — offline-first PWA"
+    "Commandment IX — offline-first PWA",
+    "Commandment XI — audit before presentation (KC watcher)"
   ],
   "human_gates": [
     {
@@ -23,6 +24,12 @@
       "status": "parked",
       "owner": "chief_architect",
       "note": "Play App signing SHA-256 to live /.well-known/assetlinks.json"
+    },
+    {
+      "id": "owner_redmi_field_proof",
+      "status": "watch",
+      "owner": "chief_architect",
+      "note": "Physical Redmi capture on starfallsalvage.kopanolabs.com after deploy"
     }
   ],
   "incidents": [
@@ -33,12 +40,14 @@
       "status": "logged"
     }
   ],
-  "session_derivative": "Session 1 shipped engage-swarm (6313b01). Session 2 Target A guest CTA shipped (863cbfa). TWA parked. Production confirmed by Chief Architect on metal.",
-  "kc_seed_command": "python tools/kc_main_brain_scan.py --once --seed-kc",
+  "session_derivative": "KC Lesson 013 education lane rebased onto c6cea06 ready-shell. Watcher green kc-75: 116/116 proofs, 100% mobile stress static. Theory quiz PASS 5/5.",
+  "kc_seed_command": "python tools/kc_starfall_watch.py --once --seed-kc",
+  "kc_last_context_id": "kc-75",
   "tierzero_urls": [],
   "acceptance_gates": [
-    "Guest CTA shows once after first game over (guest mode)",
-    "Core Salvage still once per run",
-    "Hard refresh picks up ?v=20260514-guest-cta-a"
+    "python tools/kc_starfall_watch.py --once --seed-kc → ok true",
+    "116 curriculum proofs Lessons 001–019",
+    "mobile_stress_static >= 80%",
+    "Build stamp 20260526-ready-shell aligned in game.js, index.html, pwa-boot, service-worker"
   ]
 }

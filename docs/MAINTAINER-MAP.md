@@ -12,6 +12,7 @@ One-page index for operators and reviewers. Evidence doctrine: **PASS/FAIL + art
 | Backend (optional) | `backend/starfall_server.py` | SQLite profiles, chat, scores |
 | KC gate | `tools/kc_starfall_watch.py` | `npm run gate` proofs |
 | MAO lane | `docs/MAO-Starfall-Lane.md` | Architect / Business / Forensic Sociology routing |
+| Realism rubric | `docs/REALISM-RUBRIC.md` | Mobile-primary, device-complete, realism-first product law |
 | Store readiness | `docs/microsoft-readiness.md` | Binary commandments + pillars |
 
 ## Run (local)
@@ -33,6 +34,10 @@ npm run gate
 ```
 
 Expect: `{"failures": 0, "mobile_stress_pct": >= 80, "ok": true}`.
+
+## Product rule
+
+Judge every game-facing change against `docs/REALISM-RUBRIC.md` before calling it a win.
 
 ## Optional mobile layout audit (Playwright)
 
