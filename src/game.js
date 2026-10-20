@@ -1423,6 +1423,38 @@
     disc: createDiscMesh(56)
   };
 
+  let mk1FullMesh = null;
+  function initMk1FullMesh() {
+    if (typeof fetch !== "function") return;
+    try {
+      fetch("./hangar/evidence/mk1-gameplay/mk1-triangles.json")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data || !Array.isArray(data.groups)) return;
+          const lit = [];
+          const glow = [];
+          let triCount = 0;
+          for (let i = 0; i < data.groups.length; i++) {
+            const g = data.groups[i];
+            const faces = g.triangles.map((t) => [t.slice(0, 3), t.slice(3, 6), t.slice(6, 9)]);
+            const mesh = createFaceMesh(faces);
+            triCount += mesh.indexCount / 3;
+            const target = g.kind === "glow" ? glow : lit;
+            target.push({
+              mesh,
+              color: g.color || [0.4, 0.9, 0.8, 1],
+              textureMix: typeof g.textureMix === "number" ? g.textureMix : 0.35,
+              label: g.label
+            });
+          }
+          mk1FullMesh = { lit, glow, triCount };
+          meshes.shipMk1Full = mk1FullMesh;
+        })
+        .catch(() => {});
+    } catch {}
+  }
+  initMk1FullMesh();
+
   const keys = new Set();
   const blockingKeys = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "f", "q", "e"]);
   let fireHeld = false;
@@ -5833,15 +5865,35 @@
   function renderPlayer(alphaTime) {
     const dashPulse = player.dash > 0 ? 0.75 : 0.12 + Math.sin(alphaTime * 7) * 0.04;
     const shipZ = player.z + 0.45;
-    const isMk1 = (player.selectedShip || "mk1") === "mk1";
-    const mesh = isMk1 ? (meshes.shipMk1 || meshes.ship) : meshes.ship;
+    const isOriginal = player.selectedShip === "original";
+    const isFaceted = player.selectedShip === "mk1-158" || player.selectedShip === "mk1-low";
+
+    if (!isOriginal && !isFaceted && meshes.shipMk1Full && meshes.shipMk1Full.lit) {
+      const scale = isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88];
+      const rotation = [player.viewPitch || 0, 0, player.viewRoll || 0];
+      for (let i = 0; i < meshes.shipMk1Full.lit.length; i++) {
+        const g = meshes.shipMk1Full.lit[i];
+        drawMesh(g.mesh, {
+          position: [player.x, player.y, shipZ],
+          rotation,
+          scale,
+          color: player.dash > 0 ? [0.35, 0.95, 1, 1] : g.color,
+          texture: crystalTexture,
+          textureMix: g.textureMix,
+          pulse: dashPulse
+        });
+      }
+      return;
+    }
+
+    const mesh = isOriginal ? meshes.ship : (meshes.shipMk1 || meshes.ship);
     drawMesh(mesh, {
       position: [player.x, player.y, shipZ],
       rotation: [player.viewPitch || 0, 0, player.viewRoll || 0],
       scale: isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88],
-      color: player.dash > 0 ? [0.35, 0.95, 1, 1] : (isMk1 ? [0.28, 0.88, 1, 1] : [0.42, 1, 0.72, 1]),
+      color: player.dash > 0 ? [0.35, 0.95, 1, 1] : (isOriginal ? [0.42, 1, 0.72, 1] : [0.28, 0.88, 1, 1]),
       texture: crystalTexture,
-      textureMix: isMk1 ? 0.32 : 0.42,
+      textureMix: isOriginal ? 0.42 : 0.32,
       pulse: dashPulse
     });
   }
@@ -5852,13 +5904,33 @@
     }
     const shipZ = player.z + 0.45;
     const pulse = 0.42 + Math.sin(alphaTime * 6) * 0.14;
-    const isMk1 = (player.selectedShip || "mk1") === "mk1";
-    const mesh = isMk1 ? (meshes.shipMk1 || meshes.ship) : meshes.ship;
+    const isOriginal = player.selectedShip === "original";
+    const isFaceted = player.selectedShip === "mk1-158" || player.selectedShip === "mk1-low";
+
+    if (!isOriginal && !isFaceted && meshes.shipMk1Full && meshes.shipMk1Full.glow) {
+      const scale = isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88];
+      const rotation = [player.vy * -0.02, player.vx * 0.02, player.vx * -0.05];
+      for (let i = 0; i < meshes.shipMk1Full.glow.length; i++) {
+        const g = meshes.shipMk1Full.glow[i];
+        drawMesh(g.mesh, {
+          position: [player.x, player.y, shipZ],
+          rotation,
+          scale,
+          color: g.color,
+          texture: crystalTexture,
+          textureMix: g.textureMix,
+          pulse
+        });
+      }
+      return;
+    }
+
+    const mesh = isOriginal ? meshes.ship : (meshes.shipMk1 || meshes.ship);
     drawMesh(mesh, {
       position: [player.x, player.y, shipZ],
       rotation: [player.vy * -0.02, player.vx * 0.02, player.vx * -0.05],
       scale: isTouchCapable ? [0.98, 0.9, 1.12] : [0.86, 0.78, 1],
-      color: isMk1 ? [0.24, 0.82, 1, isTouchCapable ? 0.44 : 0.3] : [0.35, 0.95, 1, isTouchCapable ? 0.42 : 0.28],
+      color: isOriginal ? [0.35, 0.95, 1, isTouchCapable ? 0.42 : 0.28] : [0.24, 0.82, 1, isTouchCapable ? 0.44 : 0.3],
       texture: crystalTexture,
       textureMix: 0.18,
       pulse

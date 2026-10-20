@@ -88,6 +88,9 @@
          The playable Starfall Salvage game at the site root may still work on this device.</p>
       <p class="fail-hint">Try a current version of Chrome, Edge, Firefox or Safari with hardware
          acceleration enabled, then reload this page.</p>
+      <p class="fail-hint" style="margin-top:16px;">
+        <button id="btn-fallback-launch" type="button" class="ctl-btn ctl-launch">PLAY WITHOUT HANGAR</button>
+      </p>
     </div>
 
     <!-- Context lost -->
@@ -126,6 +129,17 @@
               window.parent.postMessage({ type: 'starfall_launch_flight', ship: ship }, '*');
             } else {
               window.location.href = '../?launch=1&ship=' + encodeURIComponent(ship);
+            }
+          });
+        }
+
+        const fallbackBtn = document.getElementById('btn-fallback-launch');
+        if (fallbackBtn) {
+          fallbackBtn.addEventListener('click', function () {
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'starfall_launch_flight', ship: 'original' }, '*');
+            } else {
+              window.location.href = '../?launch=1&ship=original';
             }
           });
         }

@@ -8,7 +8,11 @@ const ASSETS = [
   "./src/pwa-boot.js",
   "./src/kopano-vault.js",
   "./kopano-flight-mark.svg",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./hangar/index.html",
+  "./hangar/styles.css",
+  "./hangar/app.bundle.js",
+  "./hangar/evidence/mk1-gameplay/mk1-triangles.json"
 ];
 
 self.addEventListener("message", (event) => {
