@@ -541,7 +541,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20261020-sovereign-hangar-mki";
+  const GAME_BUILD = "20261020-sovereign-hangar-mki-rc1";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -821,6 +821,9 @@
 
   const state = {
     mode: "ready",
+    rawDrawCalls: 0,
+    renderSuspended: false,
+    landingSuspendedTicks: 0,
     time: 0,
     score: 0,
     hull: 3,
@@ -2430,7 +2433,8 @@
         startGame();
       }
     } else if (type === "starfall_ship_selected") {
-      if (ship && ALLOWED_SHIPS.has(ship)) {
+      const urlShip = new URLSearchParams(window.location.search).get("ship");
+      if (!urlShip && ship && ALLOWED_SHIPS.has(ship)) {
         player.selectedShip = ship;
         try {
           window.localStorage.setItem("starfallSelectedShip", ship);
@@ -2566,6 +2570,9 @@
     return {
       build: GAME_BUILD,
       mode: state.mode,
+      renderSuspended: Boolean(state.renderSuspended),
+      rawDrawCalls: state.rawDrawCalls,
+      landingSuspendedTicks: state.landingSuspendedTicks,
       player: {
         selectedShip: player.selectedShip,
         x: Number(player.x.toFixed(4)),
@@ -5194,6 +5201,7 @@
   }
 
   function renderScene(alphaTime) {
+    state.rawDrawCalls++;
     resizeCanvas();
     const aspect = canvas.width / Math.max(1, canvas.height);
     const frameProfile = getFrameProfile(aspect);
@@ -6131,6 +6139,20 @@
       requestAnimationFrame(frame);
       return;
     }
+
+    const isHangarOccluding =
+      state.mode === "ready" &&
+      hud.sovereignScrim &&
+      !hud.sovereignScrim.hidden &&
+      !hud.sovereignScrim.classList.contains("sovereign-scrim--backdrop-only");
+
+    if (isHangarOccluding) {
+      state.renderSuspended = true;
+      state.landingSuspendedTicks++;
+      requestAnimationFrame(frame);
+      return;
+    }
+    state.renderSuspended = false;
     if (state.mode === "revive") {
       tickRevive(dt);
     } else if (state.mode === "relaunch") {

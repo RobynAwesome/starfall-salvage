@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <title>Sovereign Hangar — Starfall Salvage</title>
+  <base href="/hangar/">
   <meta name="description" content="Interactive 3D showcase for Starfall Salvage spacecraft. Isolated viewer module — the playable game lives at the site root." />
-  <link rel="stylesheet" href="./styles.css?v=20261020-sovereign-hangar-mki" />
+  <link rel="stylesheet" href="/hangar/styles.css?v=20261020-sovereign-hangar-mki-rc1" />
 </head>
 <body>
   <main id="hangar-stage" class="stage" aria-label="Sovereign Hangar 3D viewport">
@@ -74,17 +75,20 @@
       </div>
     </div>
 
-    <!-- Loading overlay -->
+    <!-- Loading overlay with accessible skip-to-flight action -->
     <div id="boot-overlay" class="overlay boot-overlay" role="status">
       <p class="boot-title">SOVEREIGN HANGAR</p>
       <div class="boot-bar" aria-hidden="true"><span id="boot-bar-fill"></span></div>
       <p id="boot-status" class="boot-status">Initialising renderer…</p>
+      <p style="margin-top:20px;">
+        <button id="btn-boot-skip-launch" type="button" class="ctl-btn" style="font-size:10px; opacity:0.85; border:1px solid rgba(53,224,255,0.4); padding:6px 14px;">PLAY WITHOUT HANGAR</button>
+      </p>
     </div>
 
-    <!-- WebGL unavailable -->
+    <!-- WebGL unavailable / bundle failure fallback -->
     <div id="webgl-fail" class="overlay fail-overlay" role="alert" hidden>
       <h2>3D display unavailable</h2>
-      <p>Your browser could not create a WebGL context, which this hangar needs to draw 3D graphics.
+      <p id="webgl-fail-msg">Your browser could not create a WebGL context, which this hangar needs to draw 3D graphics.
          The playable Starfall Salvage game at the site root may still work on this device.</p>
       <p class="fail-hint">Try a current version of Chrome, Edge, Firefox or Safari with hardware
          acceleration enabled, then reload this page.</p>
@@ -104,29 +108,63 @@
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
     <noscript>
-      <div class="overlay fail-overlay"><h2>JavaScript required</h2>
-      <p>The Sovereign Hangar renders 3D graphics in your browser and needs JavaScript.</p></div>
+      <div class="overlay fail-overlay">
+        <h2>JavaScript required</h2>
+        <p>The Sovereign Hangar renders 3D graphics in your browser and needs JavaScript.</p>
+        <p style="margin-top:16px;">
+          <a href="../?launch=1&ship=original" class="ctl-btn ctl-launch" style="display:inline-block; text-decoration:none; padding:10px 16px;">PLAY WITHOUT HANGAR</a>
+        </p>
+      </div>
     </noscript>
   </main>
 
-  <script src="./app.bundle.js?v=20261020-sovereign-hangar-mki" defer></script>
+  <script src="/hangar/app.bundle.js?v=20261020-sovereign-hangar-mki-rc1" defer onerror="handleHangarBundleError()"></script>
   <script>
-    // Resilient fallback for #btn-fallback-launch if WebGL/bundle fails before initialization
+    function triggerFallbackLaunch() {
+      if (!window.__hangar) {
+        if (window.parent && window.parent !== window) {
+          var targetOrigin = window.location.origin === 'null' ? '*' : window.location.origin;
+          window.parent.postMessage({
+            type: 'starfall_launch_flight',
+            ship: 'original',
+            source: 'sovereign_hangar_fallback',
+            timestamp: Date.now()
+          }, targetOrigin);
+        } else {
+          window.location.href = '../?launch=1&ship=original';
+        }
+      }
+    }
+
+    function handleHangarBundleError() {
+      var bootOverlay = document.getElementById('boot-overlay');
+      var failOverlay = document.getElementById('webgl-fail');
+      if (bootOverlay) bootOverlay.hidden = true;
+      if (failOverlay) {
+        failOverlay.hidden = false;
+        var heading = failOverlay.querySelector('h2');
+        if (heading) heading.textContent = '3D display unavailable';
+        var msg = document.getElementById('webgl-fail-msg');
+        if (msg) msg.textContent = 'Could not load or initialize the 3D Sovereign Hangar. You can launch into the full raw WebGL salvage flight directly.';
+      }
+    }
+
+    // Watchdog: If bundle does not complete initialization within 4s, uncover fallback
+    var bootWatchdog = setTimeout(function () {
+      if (!window.__hangar || !window.__hangar.lifecycle) {
+        handleHangarBundleError();
+      }
+    }, 4000);
+
+    window.__clearHangarWatchdog = function () {
+      clearTimeout(bootWatchdog);
+    };
+
     window.addEventListener('DOMContentLoaded', function () {
       var fb = document.getElementById('btn-fallback-launch');
-      if (fb) {
-        fb.addEventListener('click', function () {
-          // If app.bundle.js is running, it already attached its handler; only run if not initialized
-          if (!window.__hangar) {
-            if (window.parent && window.parent !== window) {
-              var targetOrigin = window.location.origin === 'null' ? '*' : window.location.origin;
-              window.parent.postMessage({ type: 'starfall_launch_flight', ship: 'original', source: 'sovereign_hangar_fallback', timestamp: Date.now() }, targetOrigin);
-            } else {
-              window.location.href = '../?launch=1&ship=original';
-            }
-          }
-        });
-      }
+      if (fb) fb.addEventListener('click', triggerFallbackLaunch);
+      var bootFb = document.getElementById('btn-boot-skip-launch');
+      if (bootFb) bootFb.addEventListener('click', triggerFallbackLaunch);
     });
   </script>
 </body>

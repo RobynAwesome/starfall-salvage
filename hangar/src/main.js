@@ -61,6 +61,9 @@ hud.boot = (pct, msg) => {
   if (msg) hud.bootStatus.textContent = msg;
 };
 hud.bootDone = () => {
+  if (typeof window.__clearHangarWatchdog === "function") {
+    window.__clearHangarWatchdog();
+  }
   hud.bootOverlay.classList.add("dismiss");
   setTimeout(() => { hud.bootOverlay.hidden = true; }, 800);
 };
@@ -440,9 +443,7 @@ function frame() {
 // ---------------------------------------------------------------- boot sequence
 (async function boot() {
   try {
-    hud.boot(0.75, "Fetching repository mesh manifest…");
-    await getDronePayload(); // fail fast if the repo asset is unreadable
-    hud.boot(0.9, "Materialising STARFALL SALVAGER MK-I…");
+    hud.boot(0.85, "Materialising STARFALL SALVAGER MK-I…");
     const initialShip = (function() {
       try {
         const stored = localStorage.getItem("starfallSelectedShip");
