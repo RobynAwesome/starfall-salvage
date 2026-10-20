@@ -1,0 +1,38 @@
+{
+  "audit_date": "2026-10-20",
+  "method": "SHA-256 independently verified by Forge and AG on exact artifact bytes",
+  "source_bundle_ref": "c9d36496dda741194862f160d635408525cb70aa53bc56b96b6842f296b0abe6",
+  "artifacts": [
+    {
+      "name": "0001-feat-hangar-isolated-Sovereign-Hangar-3D-showcase-mo.patch",
+      "bytes": 3782230,
+      "sha256": "c5faf5dd2135807f0a69885c6cb517689e19812c856d0051c56b0f390222c5a7",
+      "status": "admitted_and_integrated"
+    },
+    {
+      "name": "0002-evidence-MK-I-through-the-game-s-raw-WebGL-pipeline-.patch",
+      "bytes": 802843,
+      "sha256": "e3471827700774c35b54d862974907a9cead5de34dafebe19912812014e7aafb",
+      "status": "admitted_and_integrated"
+    },
+    {
+      "name": "sovereign-hangar-and-evidence.bundle",
+      "bytes": 3198931,
+      "sha256": "c9d36496dda741194862f160d635408525cb70aa53bc56b96b6842f296b0abe6",
+      "status": "bundle_recovered_not_clone_safe"
+    },
+    {
+      "name": "MANIFEST.json",
+      "bytes": 1189,
+      "sha256": "5d4894a61f9930f47170ff54c430213d4743c8f02087fdfa2fc96e19b065b337",
+      "status": "superseded_by_this_manifest"
+    },
+    {
+      "name": "MANIFEST.md",
+      "bytes": 956,
+      "sha256": "04373827b5e4ee7b4f86a20eacccfb3b2e0b6edc4e847421d49c132cc038d47e",
+      "status": "superseded_by_this_manifest"
+    }
+  ],
+  "note": "Rebuilt and verified by AG Lead Developer lane on Windows 11 with Node v24.14.1 and Bun 1.4.3. Ported build tooling to hangar-build/build.mjs."
+}

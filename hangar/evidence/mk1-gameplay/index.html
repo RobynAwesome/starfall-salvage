@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starfall Salvage — MK-I Gameplay Renderer Proof (raw WebGL)</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #05070d; color: #cfe9f2; overflow: hidden;
+    font: 12px/1.5 "Courier New", monospace;
+  }
+  #glcanvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .hud { position: fixed; pointer-events: none; }
+  .hud.top {
+    top: 16px; left: 20px;
+  }
+  .hud h1 { font-size: 15px; letter-spacing: 3px; color: #7ef0ff; font-weight: 700; }
+  .hud .sub { color: #5f7d8c; letter-spacing: 2px; font-size: 10px; margin-top: 4px; }
+  .panel {
+    position: fixed; left: 20px; bottom: 20px; max-width: 460px;
+    background: rgba(4, 10, 18, 0.82); border: 1px solid rgba(126, 240, 255, 0.25);
+    padding: 12px 14px; font-size: 11px; line-height: 1.65;
+  }
+  .panel .row { display: flex; gap: 10px; }
+  .panel .k { color: #5f7d8c; min-width: 150px; letter-spacing: 1px; }
+  .panel .v { color: #cfe9f2; }
+  .panel .v.ok { color: #57ffc9; }
+  .panel code {
+    display: block; margin-top: 8px; padding: 7px 9px; color: #8fb9c9;
+    background: rgba(126, 240, 255, 0.06); border-left: 2px solid rgba(126, 240, 255, 0.4);
+    white-space: pre-wrap; font-size: 10px;
+  }
+  .controls {
+    position: fixed; bottom: 20px; right: 20px; display: flex; gap: 10px;
+  }
+  .controls button {
+    background: rgba(4, 10, 18, 0.85); color: #7ef0ff; cursor: pointer;
+    border: 1px solid rgba(126, 240, 255, 0.4); padding: 10px 16px;
+    font: 11px "Courier New", monospace; letter-spacing: 2px;
+  }
+  .controls button:hover { background: rgba(126, 240, 255, 0.12); }
+  #fail {
+    display: none; position: fixed; inset: 0; margin: auto; width: 420px; height: 140px;
+    background: rgba(30, 8, 8, 0.92); border: 1px solid #b3554d; color: #f2c5bf;
+    padding: 22px; font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<canvas id="glcanvas"></canvas>
+
+<div class="hud top">
+  <h1>STARFALL SALVAGE — MK-I GAMEPLAY RENDER PROOF</h1>
+  <div class="sub">RAW WEBGL · GAME SHADER PIPELINE (SRC/GAME.JS @ 2baa88b2) · DRAG TO ORBIT · WHEEL TO ZOOM · SPACE TO SWAP CRAFT</div>
+</div>
+
+<div class="panel">
+  <div class="row"><span class="k">ACTIVE MODEL</span><span class="v" id="st-model">…</span></div>
+  <div class="row"><span class="k">TRIANGLES (MEASURED)</span><span class="v" id="st-tris">…</span></div>
+  <div class="row"><span class="k">DRAW CALLS / FRAME</span><span class="v" id="st-calls">…</span></div>
+  <div class="row"><span class="k">FPS (EMA 30f)</span><span class="v" id="st-fps">…</span></div>
+  <div class="row"><span class="k">GL RENDERER</span><span class="v" id="st-gl">…</span></div>
+  <div class="row"><span class="k">SHADER PARITY CHECK</span><span class="v" id="st-parity">checking…</span></div>
+  <div class="row"><span class="k">COLLISION RECEIPT</span><span class="v ok" id="st-collide">running…</span></div>
+  <code>// gameplay collision test — verbatim src/game.js:4325-4326
+const distance = Math.hypot(object.x - player.x, object.y - player.y);
+if (distance &lt; object.radius + player.radius) { … }
+// player.radius = 0.62 (src/game.js:2072) — mesh geometry never consulted</code>
+</div>
+
+<div class="controls">
+  <button id="btn-swap">SWAP CRAFT [SPACE]</button>
+</div>
+
+<div id="fail"></div>
+
+<script type="module" src="./demo.js"></script>
+</body>
+</html>
