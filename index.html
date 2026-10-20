@@ -26,9 +26,16 @@
   <main class="shell is-ready" data-ui-state="ready">
     <canvas id="glCanvas" tabindex="0" aria-label="Starfall Salvage WebGL game canvas"></canvas>
 
-    <!-- Protocol 13 — Sovereign menu / pause (360° hub lives here, not on the canvas) -->
+    <!-- Protocol 13 / Sovereign Hangar — 3D Showcase & Flight Deck at / -->
     <div class="sovereign-scrim" id="sovereignScrim" aria-hidden="false">
-      <div class="sovereign-scrim-inner">
+      <iframe
+        id="hangarFrame"
+        class="sovereign-hangar-frame"
+        src="hangar/index.html"
+        title="Sovereign Hangar — 3D Spacecraft Showcase & Flight Deck"
+        allow="autoplay; fullscreen"
+      ></iframe>
+      <div class="sovereign-scrim-inner" id="sovereignScrimInner">
         <p class="sovereign-eyebrow">Kopano Labs · WebGL</p>
         <h2 class="sovereign-title">STARFALL SALVAGE</h2>
         <p class="sovereign-sub" id="sovereignSubline">Start Flying — orbital salvage lane</p>
