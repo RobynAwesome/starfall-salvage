@@ -2430,7 +2430,8 @@
         startGame();
       }
     } else if (type === "starfall_ship_selected") {
-      if (ship && ALLOWED_SHIPS.has(ship)) {
+      const urlShip = new URLSearchParams(window.location.search).get("ship");
+      if (!urlShip && ship && ALLOWED_SHIPS.has(ship)) {
         player.selectedShip = ship;
         try {
           window.localStorage.setItem("starfallSelectedShip", ship);

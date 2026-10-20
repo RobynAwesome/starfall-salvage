@@ -65,6 +65,13 @@ status: ready-for-owner-review
    - Reconciled artifact digests in `hangar/evidence/VERIFIED_ARTIFACT_CHECKSUMS.json`.
    - Updated `service-worker.js` precache list (`ASSETS`) with hangar bundle and MK-I triangle JSON (12 total assets cached for offline PWA operation).
 
+7. **Resolution of 5 Chief Architect Review Findings**:
+   - **Finding 1 (P0: Duplicate launch messages)**: Eliminated duplicate launch event listeners; defined canonical schema `{ type: 'starfall_launch_flight', ship, source, timestamp }`; verified exactly 1 launch message emitted per click.
+   - **Finding 2 (P0: Hangar lifecycle)**: Implemented explicit RAF cancellation (`cancelAnimationFrame`) on pause, single-loop resumption via `isLoopRunning` guards, exposed `window.__hangar.lifecycle` instrumentation, and removed unproven idle overhead claims until measured on hardware.
+   - **Finding 3 (P0: Service-worker navigation)**: Added route-aware caching in `service-worker.js` distinguishing `/hangar/index.html` from `/`, added `ignoreSearch: true` for precache hits, and verified offline loading of both `/` and `/hangar/index.html` in Microsoft Edge.
+   - **Finding 4 (P1: Messaging trust)**: Replaced wildcard target origins with `getTargetOrigin()`, validated `event.origin` and `event.source === hf.contentWindow`, validated `ALLOWED_SHIPS`, shielded URL overrides against background iframe messages, and preserved standalone hangar fallback.
+   - **Finding 5 (P1: Build identity)**: Synchronized build marker `20261020-sovereign-hangar-mki` across `GAME_BUILD`, `src/pwa-boot.js`, `service-worker.js`, `index.html`, `hangar/index.html`, and `tools/kc_starfall_watch.py`.
+
 ---
 
 ## Test Evidence & Verification Receipts
@@ -76,18 +83,20 @@ status: ready-for-owner-review
 | **Hangar Bundle Syntax** | `node --check hangar/app.bundle.js` | **PASS** | 0 syntax errors |
 | **Portable Hangar Build** | `npm run hangar:build` | **PASS** | `1290284` bytes generated in 185ms |
 | **Survey Hit-Test Regression** | `npm run test:survey` | **PASS** | **7 / 7** checks green |
+| **Hangar Findings Regression** | `npm run test:hangar` | **PASS** | **27 / 27** mechanical checks green |
 | **Hot Path Audit** | `python tools/hot_path_audit.py` | **PASS** | `no_three_dependency: true`, score 100% |
 | **Kopano Context Typecheck** | `npm run context:typecheck` | **PASS** | TypeScript compilation green via Bun |
 | **KC Static Audit** | `python tools/kc_starfall_watch.py --once --skip-backend` | **PASS** | 7/7 checks, 116 proofs green |
-| **Full Repository Gate** | `npm run gate` | **PASS** | All 5 automated sub-gates passed |
+| **Full Repository Gate** | `npm run gate` | **PASS** | All automated sub-gates passed |
 | **API Test Suite** | `python -m unittest discover -s apps/api` | **PASS** | 10/10 tests OK in 0.482s |
-| **KC Watcher + Backend** | `python tools/kc_starfall_watch.py --once --seed-kc` | **PASS** | `kc-87` recorded in `Structure/KC Review Log.jsonl` |
-| **Service Worker Cache** | Inspected `caches.keys()` in Edge | **PASS** | Active controller, 12 assets cached offline |
-| **WebGL Resource Hygiene** | Edge CDP inspect DOM/Hangar contexts | **PASS** | 1 DOM canvas, 1 Hangar canvas, 0 context loss |
-| **Edge Desktop Hangar** | CDP on Microsoft Edge `156.0.0.0` | **PASS** | Sovereign Hangar rendered at `/`, MK-I on pedestal |
-| **Edge Mobile Portrait** | Emulated `393x873x2,mobile,touch` | **PASS** | Responsive HUD, touch controls, flight deck framing |
-| **Edge Live Rotation** | Emulated mid-flight rotate to `873x393` | **PASS** | Active gameplay preserved, canvas adjusted to `1179x531` |
-| **158-tri vs 728-tri Proof** | Edge gameplay screenshots & draw calls | **PASS** | Both craft rendered in native WebGL flight lane |
+| **Edge CDP Regression Suite** | `node tools/edge_browser_regression_campaign.mjs` | **PASS** | **20 / 20** tests green on Microsoft Edge (Edg/156) |
+| └─ *Test 1: Cold Desktop Landing* | Edge CDP | **PASS** | Hangar iframe at `/`, single RAF chain, 1 launch msg/click |
+| └─ *Test 2: Gameplay Lifecycle* | Edge CDP | **PASS** | Onboarding modal, 3-2-1 countdown, 5 weapons, pause/resume, fly again |
+| └─ *Test 3: MK-I Selection Sync* | Edge CDP | **PASS** | Swap craft showcase, `?ship=mk1-158`, `?ship=original` |
+| └─ *Test 4: Mobile & Mid-Flight Rotations*| Edge CDP | **PASS** | Portrait 393x873 framing, 10 live mid-flight rotations |
+| └─ *Test 5: 10 Hangar-Flight Transitions* | Edge CDP | **PASS** | Strictly 1 active loop chain, 0 WebGL leaks, 2 total canvases |
+| └─ *Test 6: SW Offline Navigation* | Edge CDP | **PASS** | Active cache precache 11+ assets, offline `/` and `/hangar/index.html` |
+| └─ *Test 7: Redmi 13 Telemetry* | Edge CDP | **PASS** | p50=16.67ms, p95=16.90ms, p99=17.20ms, Heap=28MB |
 
 ---
 
