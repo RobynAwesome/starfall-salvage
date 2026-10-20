@@ -2,21 +2,23 @@
   "schema_version": 1,
   "updated_at": "2026-06-05T15:00:00+02:00",
   "active_track": "STARFALL",
-  "blocked_tracks": ["ARENA_FIXTURES"],
+  "blocked_tracks": [
+    "ARENA_FIXTURES"
+  ],
   "repo": "Kopano-Labs/starfall-salvage",
   "branch": "codex/starfall-mobile-weapon-ecosystem",
   "commit": "9c03735",
-  "build_tag": "20260526-ready-shell",
-  "prior_build_tag": "20260521-curve-anticipation",
+  "build_tag": "20261020-sovereign-hangar-mki",
+  "prior_build_tag": "20260526-ready-shell",
   "deploy_url": "https://starfallsalvage.kopanolabs.com",
   "package_id": "com.kopanolabs.starfall.salvage",
   "twa_status": "parked",
   "next_target": "Owner PR review; physical Redmi field proof on live URL after merge",
   "doctrine_locks": [
-    "Commandment VIII — one WebGL flight deck",
-    "Protocol 13 — no sub-80% mobile ship",
-    "Commandment IX — offline-first PWA",
-    "Commandment XI — audit before presentation (KC watcher)"
+    "Commandment VIII \u2014 one WebGL flight deck",
+    "Protocol 13 \u2014 no sub-80% mobile ship",
+    "Commandment IX \u2014 offline-first PWA",
+    "Commandment XI \u2014 audit before presentation (KC watcher)"
   ],
   "human_gates": [
     {
@@ -36,7 +38,7 @@
     {
       "id": "INC-001",
       "date": "2026-05-14",
-      "title": "Copilot cross-contamination (Fixtures → Starfall)",
+      "title": "Copilot cross-contamination (Fixtures \u2192 Starfall)",
       "status": "logged"
     }
   ],
@@ -45,9 +47,9 @@
   "kc_last_context_id": "kc-75",
   "tierzero_urls": [],
   "acceptance_gates": [
-    "python tools/kc_starfall_watch.py --once --seed-kc → ok true",
-    "116 curriculum proofs Lessons 001–019",
+    "python tools/kc_starfall_watch.py --once --seed-kc \u2192 ok true",
+    "116 curriculum proofs Lessons 001\u2013019",
     "mobile_stress_static >= 80%",
-    "Build stamp 20260526-ready-shell aligned in game.js, index.html, pwa-boot, service-worker"
+    "Build stamp 20261020-sovereign-hangar-mki aligned in game.js, index.html, pwa-boot, service-worker"
   ]
 }

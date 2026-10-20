@@ -496,6 +496,43 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 ---
 
+## Lesson 020: Sovereign Hangar & MK-I Flight Evolution (2026-10-20)
+
+**Why:** The landing screen at `/` was previously a nearly blank button-only ready state, and the flight runner suffered from narrow tunnel composition and unoptimized mobile framing. Furthermore, the newly designed MK-I spacecraft existed only as an isolated concept rather than a playable flight asset.
+
+**Spec:**
+1. Replace the root landing experience with the 3D Sovereign Hangar interactive exhibit while preserving the complete **LAUNCH FLIGHT → Onboarding → 3-2-1 Countdown → Flight Runner** pathway.
+2. Maintain strict lifecycle isolation: Three.js render loop is suspended and canceled (`starfall_pause_hangar`, `cancelAnimationFrame`) when flight starts, halting Three.js render loop execution behind the native WebGL engine.
+3. Integrate the MK-I spacecraft into the raw WebGL gameplay renderer as a selectable player asset, scaled ($S=0.44$) to match original hitbox ($r=0.62$) and preserving 100% of flight physics.
+4. Enhance orbital wreck gameplay camera with responsive framing profiles (`getFrameProfile`), deep camera positioning, and dynamic backdrop compensation.
+5. Provide continuous mobile portrait (`393x873`) and landscape (`873x393`) responsiveness, supporting mid-flight live rotation without orientation locks.
+6. Fix pre-existing defect F-1 (invisible discovery survey blocking start button clicks) with `display: none !important;` and a reproducible regression test (`tools/test_survey_hit_test_regression.mjs`).
+7. Make hangar build tooling portable (`hangar-build/build.mjs`) across Node and Bun.
+
+### Required Proofs (Lesson 020)
+
+| # | Proof Key | File | Search String |
+|---|-----------|------|---------------|
+| 117 | `hangar_frame_markup` | `index.html` | `id="hangarFrame"` |
+| 118 | `sovereign_scrim_frame_css` | `styles.css` | `.sovereign-hangar-frame` |
+| 119 | `hangar_launch_control` | `hangar/index.html` | `id="btn-launch"` |
+| 120 | `hangar_lifecycle_bridge` | `src/game.js` | `syncHangarLifecycle` AND `starfall_pause_hangar` |
+| 121 | `ship_mk1_mesh_definition` | `src/game.js` | `createShipMk1Mesh` AND `meshes.shipMk1` |
+| 122 | `ship_mk1_selection_sync` | `src/game.js` | `player.selectedShip` AND `starfall_ship_selected` |
+| 123 | `responsive_frame_profile` | `src/game.js` | `getFrameProfile` AND `fovScale` |
+| 124 | `survey_hit_test_regression_guard` | `styles.css` | `.survey-modal.is-hidden` with `display: none !important` |
+| 125 | `survey_regression_test_script` | `tools/test_survey_hit_test_regression.mjs` | `REGRESSION TEST: Discovery Survey Hit-Testing` |
+| 126 | `hangar_portable_build_script` | `hangar-build/build.mjs` | `hangar/app.bundle.js` |
+
+### Acceptance Criteria
+
+- All 10 new proofs present and verified.
+- `node tools/test_survey_hit_test_regression.mjs` passes 7/7 checks.
+- `npm run verify:syntax`, `npm run hot-path:audit`, `npm run kc:audit` all exit 0.
+- Live Microsoft Edge browser automation captures desktop hangar, mobile portrait, and live rotated flight runner.
+
+---
+
 ## Maintenance
 
 - Every shipped feature spec adds a new lesson and at least one new proof key.

@@ -1,0 +1,66 @@
+{
+  "source": "src/game.js",
+  "checked": [
+    {
+      "name": "vertexShaderSource",
+      "gameLines": "376-397",
+      "gameLineCount": 22,
+      "identical": false
+    },
+    {
+      "name": "fragmentShaderSource",
+      "gameLines": "399-426",
+      "gameLineCount": 28,
+      "identical": false
+    },
+    {
+      "name": "normalFor",
+      "gameLines": "1143-1155",
+      "gameLineCount": 13,
+      "identical": true
+    },
+    {
+      "name": "createFaceMesh",
+      "gameLines": "1157-1172",
+      "gameLineCount": 16,
+      "identical": false
+    },
+    {
+      "name": "createMesh",
+      "gameLines": "1086-1102",
+      "gameLineCount": 17,
+      "identical": false
+    },
+    {
+      "name": "Mat4",
+      "gameLines": "824-938",
+      "gameLineCount": 115,
+      "identical": true
+    },
+    {
+      "name": "makeModel",
+      "gameLines": "950-958",
+      "gameLineCount": 9,
+      "identical": true
+    },
+    {
+      "name": "createShipMesh",
+      "gameLines": "1211-1225",
+      "gameLineCount": 15,
+      "identical": true
+    },
+    {
+      "name": "bindMesh",
+      "gameLines": "4540-4549",
+      "gameLineCount": 10,
+      "identical": true
+    },
+    {
+      "name": "drawMesh",
+      "gameLines": "4551-4561",
+      "gameLineCount": 11,
+      "identical": true
+    }
+  ],
+  "allIdentical": false
+}

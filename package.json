@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "hangar:build": "node hangar-build/build.mjs",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "mobile:dev": "turbo run dev --filter=@starfall/mobile",
@@ -23,10 +24,12 @@
     "kc:audit:full": "python tools/kc_starfall_watch.py --once",
     "kc:audit:seed": "python tools/kc_starfall_watch.py --once --skip-backend --seed-kc",
     "kc:watch": "python tools/kc_starfall_watch.py --interval 60 --skip-backend",
-    "gate": "npm run verify:syntax && python tools/hot_path_audit.py && npm run context:typecheck && npm run kc:audit",
+    "test:survey": "node tools/test_survey_hit_test_regression.mjs",
+    "test:hangar": "node tools/test_hangar_findings_regression.mjs",
+    "gate": "npm run verify:syntax && npm run test:survey && npm run test:hangar && python tools/hot_path_audit.py && npm run context:typecheck && npm run kc:audit",
     "hot-path:audit": "python tools/hot_path_audit.py",
     "mobile:stress:pw": "node tools/playwright_mobile_audit.js",
-    "context:typecheck": "npm run typecheck --workspace=@kopano/context",
+    "context:typecheck": "node tools/typecheck_context.mjs",
     "context:smoke": "npm run context:typecheck && node --experimental-strip-types tools/kopano_context_smoke.mjs"
   },
   "devDependencies": {

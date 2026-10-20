@@ -202,10 +202,12 @@
         scrim.hidden = true;
         scrim.setAttribute("aria-hidden", "true");
         scrim.classList.remove("sovereign-scrim--backdrop-only");
+        syncHangarLifecycle(false);
       } else {
         scrim.hidden = false;
         scrim.setAttribute("aria-hidden", "false");
         scrim.classList.remove("sovereign-scrim--backdrop-only");
+        syncHangarLifecycle(false);
         if (hud.sovereignSubline) {
           hud.sovereignSubline.textContent = "Paused — salvage lane on hold";
         }
@@ -224,11 +226,13 @@
     if (blockMenu) {
       scrim.hidden = true;
       scrim.setAttribute("aria-hidden", "true");
+      syncHangarLifecycle(false);
       return;
     }
     scrim.hidden = false;
     scrim.setAttribute("aria-hidden", "false");
     scrim.classList.remove("sovereign-scrim--backdrop-only");
+    syncHangarLifecycle(true);
     if (hud.sovereignSubline) {
       hud.sovereignSubline.textContent = "Start Flying — orbital salvage lane";
     }
@@ -236,6 +240,22 @@
       hud.sovereignPrimaryCta.textContent = "Start Flying";
     }
     syncEventTicker();
+  }
+
+  let lastHangarState = null;
+  function syncHangarLifecycle(shouldRun) {
+    if (lastHangarState === shouldRun) return;
+    lastHangarState = shouldRun;
+    const hf = document.getElementById("hangarFrame");
+    if (hf && hf.contentWindow) {
+      try {
+        const targetOrigin = window.location.origin === "null" ? "*" : window.location.origin;
+        hf.contentWindow.postMessage(
+          { type: shouldRun ? "starfall_resume_hangar" : "starfall_pause_hangar" },
+          targetOrigin
+        );
+      } catch {}
+    }
   }
 
   function syncEventTicker() {
@@ -521,7 +541,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260526-ready-shell";
+  const GAME_BUILD = "20261020-sovereign-hangar-mki";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -1253,13 +1273,191 @@
     ]);
   }
 
+  function createShipMk1Mesh() {
+    const faces = [];
+    const DEG = Math.PI / 180;
+    const S = 0.44;
+
+    // 1. Fuselage
+    const RINGS = [
+      [-1.55, 0.1, 0.085, 0],
+      [-0.95, 0.225, 0.165, 0.02],
+      [-0.25, 0.305, 0.22, 0.035],
+      [0.45, 0.28, 0.2, 0.02],
+      [1.05, 0.2, 0.145, 0],
+      [1.38, 0.14, 0.1, 0]
+    ];
+    const NOSE_TIP = [0, 0.01 * S, -2.05 * S];
+    const PROF_ANGLES = [0, 60, 120, 180, 240, 300];
+
+    function ringPoint([z, w, h, yOff], deg) {
+      const a = deg * DEG;
+      return [Math.cos(a) * w * S, (Math.sin(a) * h + yOff) * S, z * S];
+    }
+
+    const ringVerts = RINGS.map((r) => PROF_ANGLES.map((deg) => ringPoint(r, deg)));
+
+    // Nose cap
+    for (let i = 0; i < 6; i++) {
+      const next = (i + 1) % 6;
+      faces.push([NOSE_TIP, ringVerts[0][next], ringVerts[0][i]]);
+    }
+
+    // Ring quads
+    for (let s = 0; s < RINGS.length - 1; s++) {
+      const A = ringVerts[s], B = ringVerts[s + 1];
+      for (let i = 0; i < 6; i++) {
+        const j = (i + 1) % 6;
+        faces.push([A[i], A[j], B[j]]);
+        faces.push([A[i], B[j], B[i]]);
+      }
+    }
+
+    // 2. Canopy
+    const CANOPY_STATIONS = [
+      [-1.05, 0.03, 0.03, 0.16],
+      [-0.7, 0.13, 0.115, 0.2],
+      [-0.3, 0.16, 0.135, 0.225],
+      [0.12, 0.045, 0.04, 0.2]
+    ];
+    const ARCH_ANGLES = [0, 45, 90, 135, 180];
+    const canopyVerts = CANOPY_STATIONS.map(([z, w, h, y]) =>
+      ARCH_ANGLES.map((deg) => {
+        const r = deg * DEG;
+        return [Math.cos(r) * w * S, (Math.sin(r) * h + y) * S, z * S];
+      })
+    );
+
+    for (let s = 0; s < CANOPY_STATIONS.length - 1; s++) {
+      const A = canopyVerts[s], B = canopyVerts[s + 1];
+      for (let k = 0; k < ARCH_ANGLES.length - 1; k++) {
+        faces.push([A[k], A[k + 1], B[k + 1]]);
+        faces.push([A[k], B[k + 1], B[k]]);
+      }
+    }
+
+    // 3. Swept Wings (Left and Right)
+    const wingOutline = [
+      [0.24, -0.42],
+      [1.68, 0.38],
+      [1.62, 0.98],
+      [0.62, 1.08],
+      [0.26, 1.18]
+    ];
+    const dihedral = (x) => (0.04 + (x - 0.24) * 0.075);
+    const thick = (x) => Math.max(0.03, 0.075 - (x - 0.24) * 0.03);
+
+    for (const side of [-1, 1]) {
+      const top = [];
+      const bot = [];
+      wingOutline.forEach(([x, z]) => {
+        const y = dihedral(x), t = thick(x) / 2;
+        top.push([x * side * S, (y + t) * S, z * S]);
+        bot.push([x * side * S, (y - t) * S, z * S]);
+      });
+
+      const n = wingOutline.length;
+      for (let i = 1; i < n - 1; i++) {
+        if (side === 1) {
+          faces.push([top[0], top[i + 1], top[i]]);
+          faces.push([bot[0], bot[i], bot[i + 1]]);
+        } else {
+          faces.push([top[0], top[i], top[i + 1]]);
+          faces.push([bot[0], bot[i + 1], bot[i]]);
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        if (side === 1) {
+          faces.push([top[i], bot[j], bot[i]]);
+          faces.push([top[i], top[j], bot[j]]);
+        } else {
+          faces.push([top[i], bot[i], bot[j]]);
+          faces.push([top[i], bot[j], top[j]]);
+        }
+      }
+    }
+
+    // 4. Vertical Stabilizer Fin
+    const finOutline = [[-0.05, 0.16], [0.55, 0.16], [0.98, 0.6], [0.84, 0.6]];
+    const t = 0.014 * S;
+    const finA = finOutline.map(([z, y]) => [-t, y * S, z * S]);
+    const finB = finOutline.map(([z, y]) => [t, y * S, z * S]);
+    for (let i = 1; i < finOutline.length - 1; i++) {
+      faces.push([finA[0], finA[i], finA[i + 1]]);
+      faces.push([finB[0], finB[i + 1], finB[i]]);
+    }
+    for (let i = 0; i < finOutline.length; i++) {
+      const j = (i + 1) % finOutline.length;
+      faces.push([finA[i], finB[j], finA[j]]);
+      faces.push([finA[i], finB[i], finB[j]]);
+    }
+
+    // 5. Twin Ion Nacelles
+    for (const side of [-1, 1]) {
+      const cx = 0.3 * side * S;
+      const cy = -0.01 * S;
+      const z0 = 1.15 * S;
+      const z1 = 1.55 * S;
+      const r = 0.11 * S;
+      const segments = 6;
+      const circle0 = [];
+      const circle1 = [];
+      for (let i = 0; i < segments; i++) {
+        const a = (i / segments) * Math.PI * 2;
+        circle0.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r, z0]);
+        circle1.push([cx + Math.cos(a) * r * 0.9, cy + Math.sin(a) * r * 0.9, z1]);
+      }
+      for (let i = 0; i < segments; i++) {
+        const j = (i + 1) % segments;
+        faces.push([circle0[i], circle1[j], circle1[i]]);
+        faces.push([circle0[i], circle0[j], circle1[j]]);
+      }
+    }
+
+    return createFaceMesh(faces);
+  }
+
   const meshes = {
     cube: createCubeMesh(),
     crystal: createOctahedronMesh(),
     shard: createSalvageMesh(),
     ship: createShipMesh(),
+    shipMk1: createShipMk1Mesh(),
     disc: createDiscMesh(56)
   };
+
+  let mk1FullMesh = null;
+  function initMk1FullMesh() {
+    if (typeof fetch !== "function") return;
+    try {
+      fetch("./hangar/evidence/mk1-gameplay/mk1-triangles.json")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (!data || !Array.isArray(data.groups)) return;
+          const lit = [];
+          const glow = [];
+          let triCount = 0;
+          for (let i = 0; i < data.groups.length; i++) {
+            const g = data.groups[i];
+            const faces = g.triangles.map((t) => [t.slice(0, 3), t.slice(3, 6), t.slice(6, 9)]);
+            const mesh = createFaceMesh(faces);
+            triCount += mesh.indexCount / 3;
+            const target = g.kind === "glow" ? glow : lit;
+            target.push({
+              mesh,
+              color: g.color || [0.4, 0.9, 0.8, 1],
+              textureMix: typeof g.textureMix === "number" ? g.textureMix : 0.35,
+              label: g.label
+            });
+          }
+          mk1FullMesh = { lit, glow, triCount };
+          meshes.shipMk1Full = mk1FullMesh;
+        })
+        .catch(() => {});
+    } catch {}
+  }
+  initMk1FullMesh();
 
   const keys = new Set();
   const blockingKeys = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "w", "a", "s", "d", "f", "q", "e"]);
@@ -1517,6 +1715,7 @@
     if (hud.surveyNeverAgain) {
       hud.surveyNeverAgain.checked = false;
     }
+    hud.surveyModal.removeAttribute("aria-hidden");
     hud.surveyModal.classList.remove("is-hidden");
     attachModalBackTrap(MODAL_TRAP.survey, hideSurvey);
     logEvent("survey_open", { kind: "ecosystem_primary" });
@@ -1525,6 +1724,7 @@
   function hideSurvey() {
     if (hud.surveyModal) {
       hud.surveyModal.classList.add("is-hidden");
+      hud.surveyModal.setAttribute("aria-hidden", "true");
     }
     detachModalBackTrap(MODAL_TRAP.survey, false);
   }
@@ -1877,6 +2077,7 @@
       }
     });
   }
+
   if (hud.pauseMinimalButton) {
     hud.pauseMinimalButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -2173,6 +2374,7 @@
   const POSITION_LERP_DESKTOP = 0.28;
   /** Locked runner lane height on touch devices (paired with camera viewBias — execution ledger baseline). */
   const MOBILE_LANE_TARGET_Y = -0.68;
+  const ALLOWED_SHIPS = new Set(["mk1", "original", "mk1-158", "mk1-low"]);
   const player = {
     x: 0,
     y: isTouchCapable ? MOBILE_LANE_TARGET_Y : -0.45,
@@ -2193,9 +2395,67 @@
     weaponPower: 1,
     weaponPowerTimer: 0,
     weaponMode: readWeaponModeFromStorage(),
+    selectedShip: (function () {
+      try {
+        const urlShip = new URLSearchParams(window.location.search).get("ship");
+        if (urlShip && ALLOWED_SHIPS.has(urlShip)) {
+          window.localStorage.setItem("starfallSelectedShip", urlShip);
+          return urlShip;
+        }
+        return window.localStorage.getItem("starfallSelectedShip") || "mk1";
+      } catch {
+        return "mk1";
+      }
+    })(),
     viewPitch: 0,
     viewRoll: 0
   };
+
+  window.addEventListener("message", (event) => {
+    // Messaging trust: validate origin & source
+    if (window.location.origin !== "null" && event.origin !== window.location.origin) return;
+    const hf = document.getElementById("hangarFrame");
+    if (hf && hf.contentWindow && event.source !== hf.contentWindow) return;
+    if (!event.data || typeof event.data !== "object") return;
+
+    const { type, ship } = event.data;
+    if (type === "starfall_launch_flight") {
+      if (ship && ALLOWED_SHIPS.has(ship)) {
+        player.selectedShip = ship;
+        try {
+          window.localStorage.setItem("starfallSelectedShip", ship);
+        } catch {}
+      }
+      if (state.mode === "ready" || state.mode === "paused") {
+        startGame();
+      }
+    } else if (type === "starfall_ship_selected") {
+      if (ship && ALLOWED_SHIPS.has(ship)) {
+        player.selectedShip = ship;
+        try {
+          window.localStorage.setItem("starfallSelectedShip", ship);
+        } catch {}
+      }
+    }
+  });
+
+  try {
+    const bootParams = new URLSearchParams(window.location.search);
+    const shipParam = bootParams.get("ship");
+    if (shipParam && ALLOWED_SHIPS.has(shipParam)) {
+      player.selectedShip = shipParam;
+      try {
+        window.localStorage.setItem("starfallSelectedShip", shipParam);
+      } catch {}
+    }
+    if (bootParams.get("launch") === "1") {
+      window.setTimeout(() => {
+        if (state.mode === "ready") {
+          startGame();
+        }
+      }, 180);
+    }
+  } catch {}
 
   function setWeaponMode(mode) {
     const next = isWeaponMode(mode) ? mode : "bolt";
@@ -2307,6 +2567,7 @@
       build: GAME_BUILD,
       mode: state.mode,
       player: {
+        selectedShip: player.selectedShip,
         x: Number(player.x.toFixed(4)),
         y: Number(player.y.toFixed(4)),
         targetX: Number(player.targetX.toFixed(4)),
@@ -2340,7 +2601,7 @@
     };
   }
 
-  if (DIAG_ENABLED && typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
     window.__starfallDebug = readDebugState;
   }
 
@@ -2493,26 +2754,44 @@
 
   function getFrameProfile(aspect = canvas.width / Math.max(1, canvas.height)) {
     if (isTouchCapable) {
-      if (aspect < 0.52) {
+      if (aspect > 1.2) {
+        // Mobile Landscape (e.g. Redmi 13 rotated 873x393, aspect ~2.22)
         return {
-          fovScale: 0.72,
-          viewBiasY: 0.12,
-          cameraDepth: -2.7,
+          fovScale: 0.82,
+          viewBiasY: -0.04,
+          cameraDepth: -2.55,
+          readyPitch: 0.22,
+          playPitch: 0.18,
+          backdropLift: -0.8,
+          backdropScale: 1.18,
+          canopyZShift: 0.8,
+          canopyScale: 1.16,
+          screenFieldAlpha: 1.05,
+          starDrift: 1.1
+        };
+      }
+      if (aspect < 0.52) {
+        // Tall Mobile Portrait (e.g. 20:9, 19.5:9, Redmi 13 393x873)
+        return {
+          fovScale: 0.74,
+          viewBiasY: 0.08,
+          cameraDepth: -2.75,
           readyPitch: 0.24,
           playPitch: 0.19,
           backdropLift: -1.15,
           backdropScale: 1.26,
           canopyZShift: 2.4,
-          canopyScale: 1.22,
+          canopyScale: 1.24,
           screenFieldAlpha: 1.18,
           starDrift: 1.2
         };
       }
       if (aspect < 0.82) {
+        // Standard Mobile Portrait (e.g. 9:16)
         return {
           fovScale: 0.78,
-          viewBiasY: 0.18,
-          cameraDepth: -3.0,
+          viewBiasY: 0.12,
+          cameraDepth: -2.9,
           readyPitch: 0.28,
           playPitch: 0.22,
           backdropLift: -0.92,
@@ -2523,10 +2802,11 @@
           starDrift: 1.12
         };
       }
+      // Tablet / squarish touch screen
       return {
         fovScale: 0.82,
-        viewBiasY: 0.22,
-        cameraDepth: -3.18,
+        viewBiasY: 0.14,
+        cameraDepth: -3.05,
         readyPitch: 0.3,
         playPitch: 0.24,
         backdropLift: -0.64,
@@ -2538,45 +2818,48 @@
       };
     }
     if (aspect > 1.85) {
+      // Ultrawide desktop (21:9+)
       return {
-        fovScale: 0.62,
-        viewBiasY: -0.12,
-        cameraDepth: -2.32,
+        fovScale: 0.68,
+        viewBiasY: -0.06,
+        cameraDepth: -2.48,
         readyPitch: 0.22,
         playPitch: 0.18,
         backdropLift: -0.88,
-        backdropScale: 1.14,
+        backdropScale: 1.16,
         canopyZShift: 0.9,
-        canopyScale: 1.18,
+        canopyScale: 1.22,
         screenFieldAlpha: 1.06,
         starDrift: 1.12
       };
     }
     if (aspect > 1.35) {
+      // Standard desktop (16:9, 16:10)
       return {
-        fovScale: 0.7,
-        viewBiasY: -0.02,
-        cameraDepth: -2.58,
+        fovScale: 0.76,
+        viewBiasY: 0.02,
+        cameraDepth: -2.72,
         readyPitch: 0.26,
         playPitch: 0.21,
         backdropLift: -0.56,
         backdropScale: 1.08,
         canopyZShift: 0.45,
-        canopyScale: 1.1,
+        canopyScale: 1.12,
         screenFieldAlpha: 1.02,
         starDrift: 1.06
       };
     }
+    // Desktop squarish or portrait monitor
     return {
-      fovScale: 1,
-      viewBiasY: 0.18,
-      cameraDepth: -3.05,
-      readyPitch: 0.34,
-      playPitch: 0.28,
-      backdropLift: 0,
-      backdropScale: 1,
-      canopyZShift: 0,
-      canopyScale: 1,
+      fovScale: 0.88,
+      viewBiasY: 0.12,
+      cameraDepth: -2.95,
+      readyPitch: 0.32,
+      playPitch: 0.26,
+      backdropLift: -0.2,
+      backdropScale: 1.04,
+      canopyZShift: 0.2,
+      canopyScale: 1.04,
       screenFieldAlpha: 1,
       starDrift: 1
     };
@@ -2880,6 +3163,7 @@
     detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
     closeLeaderboardOverlay();
     state.mode = "ready";
+    syncHangarLifecycle(true);
     state.time = 0;
     state.score = 0;
     state.hull = 3;
@@ -2963,6 +3247,7 @@
     }
 
     state.mode = "countdown";
+    syncShellPlayState();
     hud.countdownOverlay.classList.remove("is-engage");
     hud.countdownOverlay.classList.remove("is-hidden");
     let count = 3;
@@ -2997,6 +3282,8 @@
       showOnboardingModal();
       return;
     }
+
+    syncHangarLifecycle(false);
 
     runCountdown(() => {
       resetLaneTurnState();
@@ -5599,13 +5886,35 @@
   function renderPlayer(alphaTime) {
     const dashPulse = player.dash > 0 ? 0.75 : 0.12 + Math.sin(alphaTime * 7) * 0.04;
     const shipZ = player.z + 0.45;
-    drawMesh(meshes.ship, {
+    const isOriginal = player.selectedShip === "original";
+    const isFaceted = player.selectedShip === "mk1-158" || player.selectedShip === "mk1-low";
+
+    if (!isOriginal && !isFaceted && meshes.shipMk1Full && meshes.shipMk1Full.lit) {
+      const scale = isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88];
+      const rotation = [player.viewPitch || 0, 0, player.viewRoll || 0];
+      for (let i = 0; i < meshes.shipMk1Full.lit.length; i++) {
+        const g = meshes.shipMk1Full.lit[i];
+        drawMesh(g.mesh, {
+          position: [player.x, player.y, shipZ],
+          rotation,
+          scale,
+          color: player.dash > 0 ? [0.35, 0.95, 1, 1] : g.color,
+          texture: crystalTexture,
+          textureMix: g.textureMix,
+          pulse: dashPulse
+        });
+      }
+      return;
+    }
+
+    const mesh = isOriginal ? meshes.ship : (meshes.shipMk1 || meshes.ship);
+    drawMesh(mesh, {
       position: [player.x, player.y, shipZ],
       rotation: [player.viewPitch || 0, 0, player.viewRoll || 0],
       scale: isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88],
-      color: player.dash > 0 ? [0.35, 0.95, 1, 1] : [0.42, 1, 0.72, 1],
+      color: player.dash > 0 ? [0.35, 0.95, 1, 1] : (isOriginal ? [0.42, 1, 0.72, 1] : [0.28, 0.88, 1, 1]),
       texture: crystalTexture,
-      textureMix: 0.42,
+      textureMix: isOriginal ? 0.42 : 0.32,
       pulse: dashPulse
     });
   }
@@ -5616,11 +5925,33 @@
     }
     const shipZ = player.z + 0.45;
     const pulse = 0.42 + Math.sin(alphaTime * 6) * 0.14;
-    drawMesh(meshes.ship, {
+    const isOriginal = player.selectedShip === "original";
+    const isFaceted = player.selectedShip === "mk1-158" || player.selectedShip === "mk1-low";
+
+    if (!isOriginal && !isFaceted && meshes.shipMk1Full && meshes.shipMk1Full.glow) {
+      const scale = isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88];
+      const rotation = [player.vy * -0.02, player.vx * 0.02, player.vx * -0.05];
+      for (let i = 0; i < meshes.shipMk1Full.glow.length; i++) {
+        const g = meshes.shipMk1Full.glow[i];
+        drawMesh(g.mesh, {
+          position: [player.x, player.y, shipZ],
+          rotation,
+          scale,
+          color: g.color,
+          texture: crystalTexture,
+          textureMix: g.textureMix,
+          pulse
+        });
+      }
+      return;
+    }
+
+    const mesh = isOriginal ? meshes.ship : (meshes.shipMk1 || meshes.ship);
+    drawMesh(mesh, {
       position: [player.x, player.y, shipZ],
       rotation: [player.vy * -0.02, player.vx * 0.02, player.vx * -0.05],
       scale: isTouchCapable ? [0.98, 0.9, 1.12] : [0.86, 0.78, 1],
-      color: [0.35, 0.95, 1, isTouchCapable ? 0.42 : 0.28],
+      color: isOriginal ? [0.35, 0.95, 1, isTouchCapable ? 0.42 : 0.28] : [0.24, 0.82, 1, isTouchCapable ? 0.44 : 0.3],
       texture: crystalTexture,
       textureMix: 0.18,
       pulse
@@ -5858,6 +6189,9 @@
     resetGame();
     syncFlightWeaponButtons();
     wireSurveyUi();
+    if (typeof window !== "undefined") {
+      window.__starfallBooted = true;
+    }
     requestAnimationFrame(frame);
   }
 

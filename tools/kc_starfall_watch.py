@@ -202,7 +202,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20260526-ready-shell"
+    current_build = "20261020-sovereign-hangar-mki"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
     realism_rubric = _read_text("docs/REALISM-RUBRIC.md")
     cassy_register = _read_text("Structure/05-Training/Cassy Apprenticeship Register.md")
@@ -397,11 +397,29 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
         "cassy_realism_apprenticeship": "Cassy studies realism-first product judgment" in cassy_register,
         "agent_mesh_realism_lane": "mobile-primary realism judgment" in agent_mesh,
         "starfall_index_spacefield_truth": current_build in starfall_index,
+        # Lesson 020: Sovereign Hangar & MK-I Flight Evolution (2026-10-20)
+        "hangar_frame_markup": 'id="hangarFrame"' in index_html,
+        "sovereign_scrim_frame_css": ".sovereign-hangar-frame" in _read_text("styles.css"),
+        "hangar_launch_control": 'id="btn-launch"' in _read_text("hangar/index.html"),
+        "hangar_lifecycle_bridge": "syncHangarLifecycle" in game_js
+        and "starfall_pause_hangar" in game_js,
+        "ship_mk1_mesh_definition": "createShipMk1Mesh" in game_js
+        and "meshes.shipMk1" in game_js,
+        "ship_mk1_selection_sync": "player.selectedShip" in game_js
+        and "starfall_ship_selected" in game_js,
+        "responsive_frame_profile": "getFrameProfile" in game_js
+        and "fovScale" in game_js,
+        "survey_hit_test_regression_guard": ".survey-modal.is-hidden" in _read_text("styles.css")
+        and "display: none !important" in _read_text("styles.css"),
+        "survey_regression_test_script": (ROOT / "tools/test_survey_hit_test_regression.mjs").exists()
+        and "REGRESSION TEST: Discovery Survey Hit-Testing" in _read_text("tools/test_survey_hit_test_regression.mjs"),
+        "hangar_portable_build_script": (ROOT / "hangar-build/build.mjs").exists()
+        and "hangar/app.bundle.js" in _read_text("hangar-build/build.mjs"),
     }
     missing = [name for name, ok in proofs.items() if not ok]
     return {
         "name": "kopano_upgrade_audit",
-        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–019) present in shipped files",
+        "expected": f"all {len(proofs)} curriculum proofs (Lessons 001–020) present in shipped files",
         "ok": not missing,
         "actual": "all proofs satisfied" if not missing else f"missing proofs: {', '.join(missing)}",
         "retry": (
