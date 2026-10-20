@@ -209,7 +209,7 @@ async function runCampaign() {
     await cdp.send("Page.addScriptToEvaluateOnNewDocument", {
       source: `
         try {
-          sessionStorage.setItem("starfall-sw-refresh:20261020-sovereign-hangar-mki", "1");
+          sessionStorage.setItem("starfall-sw-refresh:20261020-sovereign-hangar-mki-rc1", "1");
         } catch {}
       `
     }, sessionId);
@@ -675,11 +675,13 @@ async function runCampaign() {
     // -------------------------------------------------------------------------
     console.log("\n>>> Test 6: Service Worker Upgrade, Precache Asset Integrity & Offline Flight Experience");
 
-    // 6A: Inject legacy cache version to test upgrade purging on activate
+    // 6A: Inject legacy/broken production cache versions to test upgrade purging on activate
     await evaluate(`
       new Promise(async (resolve) => {
         if (!('caches' in window)) return resolve();
         try {
+          const brokenProdCache = await caches.open("starfall-salvage-v20261020-sovereign-hangar-mki");
+          await brokenProdCache.put(new Request("/broken-prod-test-marker"), new Response("stale-production-payload"));
           const oldCache = await caches.open("starfall-salvage-v20260526-ready-shell");
           await oldCache.put(new Request("/legacy-test-marker"), new Response("stale-version-payload"));
           if ('serviceWorker' in navigator) {
@@ -706,8 +708,9 @@ async function runCampaign() {
             return;
           }
           caches.keys().then((keys) => {
-            const activeKey = keys.find(k => k === "starfall-salvage-v20261020-sovereign-hangar-mki");
-            const legacyPresent = keys.includes("starfall-salvage-v20260526-ready-shell");
+            const activeKey = keys.find(k => k === "starfall-salvage-v20261020-sovereign-hangar-mki-rc1");
+            const legacyPresent = keys.includes("starfall-salvage-v20260526-ready-shell") ||
+                                  keys.includes("starfall-salvage-v20261020-sovereign-hangar-mki");
             if (activeKey) {
               caches.open(activeKey).then(cache => {
                 cache.keys().then(requests => {
@@ -734,9 +737,9 @@ async function runCampaign() {
       await new Promise(r => setTimeout(r, 200));
     }
 
-    record("Service Worker upgrade purges legacy cache (starfall-salvage-v20260526-ready-shell)",
-      legacyCachePurged && swActiveCache === "starfall-salvage-v20261020-sovereign-hangar-mki",
-      `Active cache: ${swActiveCache}, Legacy 20260526 cache purged: ${legacyCachePurged}`
+    record("Service Worker upgrade purges legacy and broken production caches",
+      legacyCachePurged && swActiveCache === "starfall-salvage-v20261020-sovereign-hangar-mki-rc1",
+      `Active cache: ${swActiveCache}, Stale caches purged: ${legacyCachePurged}`
     );
 
     // 6B: Individually verify each of the critical precached assets in active cache
@@ -759,7 +762,7 @@ async function runCampaign() {
           "./assets/runtime/starfall_boss_drone_blockout.mesh.json"
         ];
         try {
-          const cache = await caches.open("starfall-salvage-v20261020-sovereign-hangar-mki");
+          const cache = await caches.open("starfall-salvage-v20261020-sovereign-hangar-mki-rc1");
           const verified = [];
           const missing = [];
           for (const path of expected) {

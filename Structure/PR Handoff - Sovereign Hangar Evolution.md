@@ -5,18 +5,16 @@ reconciled: 2026-10-20
 branch: feat/sovereign-hangar-evolution
 base: 6f260753967be29a6836c98e0b8759e417bc5fd6 (reconciled on current upstream main)
 tip: current-head
-build: 20261020-sovereign-hangar-mki
-status: ready-for-owner-review
+build: 20261020-sovereign-hangar-mki-rc1
+status: release-candidate-owner-review
 ---
 
 # PR Handoff (Owner / Chief Architect)
 
 **Branch:** `feat/sovereign-hangar-evolution`  
-**Reconciled Base:** `6f260753967be29a6836c98e0b8759e417bc5fd6` (preserving all 23 upstream main commits: Turbo overrides, Dependabot updates, Screen Fill Frame Pass, APWA documentation)  
-**Backup Ref:** `backup/feat-sovereign-hangar-evolution-pre-rebase` (preserved before rebase)  
-**Build Marker:** `20261020-sovereign-hangar-mki`  
-**KC Audit:** `kc-87` PASS (7/7 checks, 116/116 proofs + Lesson 020 curriculum); see `Structure/KC Review Log.jsonl`  
-**Open PR:** https://github.com/RobynAwesome/starfall-salvage/pull/new/feat/sovereign-hangar-evolution  
+**Build Marker:** `20261020-sovereign-hangar-mki-rc1`  
+**KC Audit:** `kc-87` PASS (7/7 checks, 126/126 proofs + Lesson 020 curriculum); see `Structure/KC Review Log.jsonl`  
+**Open PR:** https://github.com/RobynAwesome/starfall-salvage/pull/11  
 
 > **STRICT PROHIBITION:** Do not merge to `main` or deploy to production without explicit owner approval.
 

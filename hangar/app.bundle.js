@@ -30031,9 +30031,38 @@ void main() {
       if (res.ok) return res.json();
     } catch {
     }
-    const fallbackRes = await fetch("../assets/runtime/starfall_boss_drone_blockout.mesh.json");
-    if (!fallbackRes.ok) throw new Error(`Repository mesh request failed (HTTP ${fallbackRes.status}).`);
-    return fallbackRes.json();
+    try {
+      const fallbackRes = await fetch("../assets/runtime/starfall_boss_drone_blockout.mesh.json");
+      if (fallbackRes.ok) return fallbackRes.json();
+    } catch {
+    }
+    return {
+      meta: { name: "Boss Drone Blockout (Fallback)", vertexCount: 8, triangleCount: 12 },
+      vertices: [
+        [-1, -0.4, -1, 0, -1, 0, 0, 0],
+        [1, -0.4, -1, 0, -1, 0, 1, 0],
+        [1, -0.4, 1, 0, -1, 0, 1, 1],
+        [-1, -0.4, 1, 0, -1, 0, 0, 1],
+        [0, 0.7, 0, 0, 1, 0, 0.5, 0.5],
+        [0, -0.7, 0, 0, -1, 0, 0.5, 0.5],
+        [-1.4, 0, 0, -1, 0, 0, 0, 0.5],
+        [1.4, 0, 0, 1, 0, 0, 1, 0.5]
+      ],
+      triangles: [
+        [0, 1, 4],
+        [1, 2, 4],
+        [2, 3, 4],
+        [3, 0, 4],
+        [1, 0, 5],
+        [2, 1, 5],
+        [3, 2, 5],
+        [0, 3, 5],
+        [0, 4, 6],
+        [3, 6, 4],
+        [1, 7, 4],
+        [2, 4, 7]
+      ]
+    };
   }
 
   // hangar/src/main.js
@@ -30088,6 +30117,9 @@ void main() {
     if (msg) hud.bootStatus.textContent = msg;
   };
   hud.bootDone = () => {
+    if (typeof window.__clearHangarWatchdog === "function") {
+      window.__clearHangarWatchdog();
+    }
     hud.bootOverlay.classList.add("dismiss");
     setTimeout(() => {
       hud.bootOverlay.hidden = true;
@@ -30430,9 +30462,7 @@ void main() {
   }
   (async function boot() {
     try {
-      hud.boot(0.75, "Fetching repository mesh manifest\u2026");
-      await getDronePayload();
-      hud.boot(0.9, "Materialising STARFALL SALVAGER MK-I\u2026");
+      hud.boot(0.85, "Materialising STARFALL SALVAGER MK-I\u2026");
       const initialShip = (function() {
         try {
           const stored = localStorage.getItem("starfallSelectedShip");

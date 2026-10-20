@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20261020-sovereign-hangar-mki";
+const CACHE_NAME = "starfall-salvage-v20261020-sovereign-hangar-mki-rc1";
 
 const ASSETS = [
   "./",
