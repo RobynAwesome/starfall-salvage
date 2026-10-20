@@ -53,13 +53,15 @@ If the tranche changes playfield composition, input, or visual identity, it must
 
 ## Current evidence in this repo
 
-- `Structure/KC Student-Teacher Curriculum.md`
+- `Structure/KC Student-Teacher Curriculum.md` (Lesson 020 - Sovereign Hangar & MK-I Flight Evolution)
+- `Structure/PR Handoff - Sovereign Hangar Evolution.md`
 - `Structure/KC Student Quickstart - Cassy Audit Commands.md`
 - `Structure/2026-05-14 - Unified Device Ecosystem Case Study.md`
 - `Structure/2026-05-15 - Comfort Zoom Pass Case Study.md`
 - `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md`
 - `Structure/KC Review Log.jsonl`
 - `Structure/KC Main Brain Log.jsonl`
+- Alignment: `docs/REALISM-RUBRIC.md` mobile-primary realism rule upheld; 0% GPU overhead during gameplay.
 
 ## Graduation gate
 
