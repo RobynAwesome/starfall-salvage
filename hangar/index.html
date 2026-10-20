@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Sovereign Hangar — Starfall Salvage</title>
+  <meta name="description" content="Interactive 3D showcase for Starfall Salvage spacecraft. Isolated viewer module — the playable game lives at the site root." />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main id="hangar-stage" class="stage" aria-label="Sovereign Hangar 3D viewport">
+    <div id="canvas-host" class="canvas-host" aria-hidden="false"></div>
+
+    <!-- Top-left brand block -->
+    <header class="hud hud-brand">
+      <p class="brand-line">KOPANO LABS <span class="brand-sep">/</span> STARFALL SALVAGE</p>
+      <h1 class="hangar-title">SOVEREIGN&nbsp;HANGAR</h1>
+      <p id="mode-line" class="mode-line" role="status">CALIBRATING…</p>
+    </header>
+
+    <!-- Top-right: shortcuts -->
+    <button id="help-btn" class="hud hud-icon-btn" type="button" aria-haspopup="dialog"
+            aria-expanded="false" aria-label="Keyboard and touch shortcuts">?</button>
+
+    <!-- Bottom-left metadata -->
+    <aside class="hud hud-meta" aria-label="Current model metadata">
+      <dl class="meta-grid">
+        <dt>Model</dt><dd id="meta-name">—</dd>
+        <dt>Class</dt><dd><span id="meta-class" class="class-chip">—</span></dd>
+        <dt>Source</dt><dd id="meta-source">—</dd>
+        <dt>Triangles</dt><dd id="meta-tris">—</dd>
+        <dt>Vertices</dt><dd id="meta-verts">—</dd>
+        <dt>Mode</dt><dd id="meta-mode">—</dd>
+      </dl>
+      <p class="meta-note" id="meta-note"></p>
+    </aside>
+
+    <!-- Bottom-center controls -->
+    <nav class="hud hud-controls" aria-label="Hangar controls">
+      <button id="btn-launch" type="button" class="ctl-btn ctl-launch" aria-label="Launch flight runner">LAUNCH&nbsp;FLIGHT</button>
+      <span class="ctl-dot" aria-hidden="true"></span>
+      <button id="btn-inspect" type="button" class="ctl-btn" aria-pressed="false">Inspect</button>
+      <span class="ctl-dot" aria-hidden="true"></span>
+      <button id="btn-swap" type="button" class="ctl-btn">Swap Craft</button>
+      <span class="ctl-dot" aria-hidden="true"></span>
+      <button id="btn-load" type="button" class="ctl-btn">Load Model</button>
+      <span class="ctl-dot" aria-hidden="true"></span>
+      <button id="btn-reset" type="button" class="ctl-btn">Reset View</button>
+      <input id="file-input" type="file" accept=".json,application/json" hidden />
+    </nav>
+
+    <!-- Bottom-right motion toggle -->
+    <button id="btn-motion" type="button" class="hud hud-icon-btn motion-btn"
+            aria-pressed="true" aria-label="Toggle automatic motion">MOTION&nbsp;ON</button>
+
+    <!-- Shortcuts dialog -->
+    <div id="help-overlay" class="overlay help-overlay" role="dialog" aria-modal="true"
+         aria-label="Shortcuts" hidden>
+      <div class="help-card">
+        <h2>Navigate the hangar</h2>
+        <dl class="help-grid">
+          <dt>Drag / arrow keys</dt><dd>Orbit the exhibit</dd>
+          <dt>Scroll / pinch</dt><dd>Zoom in and out</dd>
+          <dt>Click the craft</dt><dd>Swap to the next model</dd>
+          <dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Jump to a specific craft</dd>
+          <dt><kbd>I</kbd></dt><dd>Inspect mode</dd>
+          <dt><kbd>R</kbd></dt><dd>Reset view</dd>
+          <dt><kbd>M</kbd></dt><dd>Toggle automatic motion</dd>
+          <dt><kbd>Esc</kbd></dt><dd>Close this panel</dd>
+        </dl>
+        <p class="help-note">Uploaded models are parsed locally in your browser and never leave this device.</p>
+        <button id="help-close" type="button" class="ctl-btn">Close</button>
+      </div>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="boot-overlay" class="overlay boot-overlay" role="status">
+      <p class="boot-title">SOVEREIGN HANGAR</p>
+      <div class="boot-bar" aria-hidden="true"><span id="boot-bar-fill"></span></div>
+      <p id="boot-status" class="boot-status">Initialising renderer…</p>
+    </div>
+
+    <!-- WebGL unavailable -->
+    <div id="webgl-fail" class="overlay fail-overlay" role="alert" hidden>
+      <h2>3D display unavailable</h2>
+      <p>Your browser could not create a WebGL context, which this hangar needs to draw 3D graphics.
+         The playable Starfall Salvage game at the site root may still work on this device.</p>
+      <p class="fail-hint">Try a current version of Chrome, Edge, Firefox or Safari with hardware
+         acceleration enabled, then reload this page.</p>
+    </div>
+
+    <!-- Context lost -->
+    <div id="ctx-lost" class="overlay fail-overlay" role="alert" hidden>
+      <h2>Graphics context lost</h2>
+      <p id="ctx-lost-msg">The GPU released this page's 3D context. Attempting to restore…</p>
+      <p class="fail-hint">If the hangar stays dark for more than a few seconds, reload the page.</p>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <noscript>
+      <div class="overlay fail-overlay"><h2>JavaScript required</h2>
+      <p>The Sovereign Hangar renders 3D graphics in your browser and needs JavaScript.</p></div>
+    </noscript>
+  </main>
+
+  <script src="./app.bundle.js" defer></script>
+  <script>
+    (function () {
+      function syncCurrentShip() {
+        const cur = window.__hangar?.state?.current || 'mk1';
+        try {
+          localStorage.setItem('starfallSelectedShip', cur);
+        } catch {}
+        return cur;
+      }
+
+      function initHangarBridge() {
+        const launchBtn = document.getElementById('btn-launch');
+        if (launchBtn) {
+          launchBtn.addEventListener('click', function () {
+            const ship = syncCurrentShip();
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage({ type: 'starfall_launch_flight', ship: ship }, '*');
+            } else {
+              window.location.href = '../?launch=1&ship=' + encodeURIComponent(ship);
+            }
+          });
+        }
+
+        const swapBtn = document.getElementById('btn-swap');
+        if (swapBtn) {
+          swapBtn.addEventListener('click', function () {
+            setTimeout(function () {
+              const ship = syncCurrentShip();
+              if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'starfall_ship_selected', ship: ship }, '*');
+              }
+            }, 120);
+          });
+        }
+
+        window.addEventListener('message', function (ev) {
+          const data = ev.data;
+          if (!data || typeof data !== 'object') return;
+          if (data.type === 'starfall_pause_hangar') {
+            window.__hangarPaused = true;
+          } else if (data.type === 'starfall_resume_hangar') {
+            window.__hangarPaused = false;
+          } else if (data.type === 'starfall_select_ship') {
+            if (data.ship && window.__hangar?.showcase) {
+              window.__hangar.showcase.show(data.ship);
+            }
+          }
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', initHangarBridge);
+      } else {
+        initHangarBridge();
+      }
+    })();
+  </script>
+</body>
+</html>
