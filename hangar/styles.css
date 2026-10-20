@@ -84,7 +84,7 @@ html, body {
   border-radius: 4px;
   backdrop-filter: var(--hud-blur);
   -webkit-backdrop-filter: var(--hud-blur);
-  max-width: min(320px, 42vw);
+  max-width: min(280px, 26vw);
   transition: border-color 0.4s, box-shadow 0.4s;
 }
 .hud-meta.hover-glow {
@@ -141,12 +141,12 @@ html, body {
 /* ---------- Controls ---------- */
 .hud-controls {
   left: 50%;
-  bottom: max(22px, env(safe-area-inset-bottom));
+  bottom: max(20px, env(safe-area-inset-bottom));
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
+  gap: 6px;
+  padding: 6px 12px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-line);
   border-radius: 999px;
@@ -160,14 +160,14 @@ html, body {
   border: 0;
   background: transparent;
   color: var(--ink);
-  font: 600 11px/1 var(--font);
-  letter-spacing: 0.24em;
+  font: 600 10.5px/1 var(--font);
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border-radius: 999px;
   cursor: pointer;
   transition: color 0.2s, background 0.2s, text-shadow 0.2s;
-  min-height: 34px;
+  min-height: 32px;
 }
 .ctl-btn:hover, .ctl-btn:focus-visible {
   color: var(--cyan);
@@ -187,7 +187,8 @@ html, body {
   border-radius: 2px;
   box-shadow: 0 0 16px rgba(53, 224, 255, 0.45);
   letter-spacing: 0.22em;
-  padding: 10px 16px;
+  padding: 8px 13px;
+  letter-spacing: 0.18em;
 }
 .ctl-btn.ctl-launch:hover, .ctl-btn.ctl-launch:focus-visible {
   color: #04060a;
@@ -373,12 +374,23 @@ html, body {
 .toast.ok { border-color: rgba(87, 255, 201, 0.5); }
 .toast[hidden] { display: none; }
 
-/* ---------- Small screens ---------- */
+/* ---------- Responsive layout: prevent HUD collisions across all form factors ---------- */
+@media (max-width: 1024px) {
+  .hud-meta {
+    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 52px);
+    max-width: min(320px, 86vw);
+  }
+}
+
 @media (max-width: 640px) {
   .hangar-title { font-size: 15px; letter-spacing: 0.3em; }
-  .hud-meta { max-width: 56vw; padding: 10px 12px 8px; }
+  .hud-meta {
+    max-width: 86vw;
+    padding: 10px 12px 8px;
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 54px);
+  }
   .meta-note { display: none; }
-  .hud-controls { gap: 2px; padding: 6px 8px; max-width: 94vw; overflow-x: auto; }
+  .hud-controls { gap: 2px; padding: 6px 8px; max-width: 94vw; overflow-x: auto; bottom: max(16px, env(safe-area-inset-bottom)); }
   .ctl-btn { padding: 9px 8px; letter-spacing: 0.14em; font-size: 10px; }
   .ctl-dot { display: none; }
   .motion-btn { display: none; }

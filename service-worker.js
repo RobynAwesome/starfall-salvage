@@ -12,12 +12,20 @@ const ASSETS = [
   "./hangar/index.html",
   "./hangar/styles.css",
   "./hangar/app.bundle.js",
-  "./hangar/evidence/mk1-gameplay/mk1-triangles.json"
+  "./hangar/evidence/mk1-gameplay/mk1-triangles.json",
+  "./assets/runtime/starfall_boss_drone_blockout.mesh.json"
 ];
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
+  }
+  if (event.data?.type === "PURGE_STALE_CACHES") {
+    event.waitUntil(
+      caches.keys().then((keys) =>
+        Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
+      )
+    );
   }
 });
 
@@ -38,6 +46,8 @@ self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
     const url = new URL(event.request.url);
     const isHangar =
+      url.pathname === "/hangar" ||
+      url.pathname.endsWith("/hangar") ||
       url.pathname.endsWith("/hangar/") ||
       url.pathname.endsWith("/hangar/index.html") ||
       url.pathname.includes("/hangar/");

@@ -89,14 +89,33 @@ status: ready-for-owner-review
 | **KC Static Audit** | `python tools/kc_starfall_watch.py --once --skip-backend` | **PASS** | 7/7 checks, 116 proofs green |
 | **Full Repository Gate** | `npm run gate` | **PASS** | All automated sub-gates passed |
 | **API Test Suite** | `python -m unittest discover -s apps/api` | **PASS** | 10/10 tests OK in 0.482s |
-| **Edge CDP Regression Suite** | `node tools/edge_browser_regression_campaign.mjs` | **PASS** | **20 / 20** tests green on Microsoft Edge (Edg/156) |
+| **Edge CDP Regression Suite** | `node tools/edge_browser_regression_campaign.mjs` | **PASS** | **24 / 24** tests green on Microsoft Edge (Edg/156) |
 | └─ *Test 1: Cold Desktop Landing* | Edge CDP | **PASS** | Hangar iframe at `/`, single RAF chain, 1 launch msg/click |
 | └─ *Test 2: Gameplay Lifecycle* | Edge CDP | **PASS** | Onboarding modal, 3-2-1 countdown, 5 weapons, pause/resume, fly again |
 | └─ *Test 3: MK-I Selection Sync* | Edge CDP | **PASS** | Swap craft showcase, `?ship=mk1-158`, `?ship=original` |
 | └─ *Test 4: Mobile & Mid-Flight Rotations*| Edge CDP | **PASS** | Portrait 393x873 framing, 10 live mid-flight rotations |
-| └─ *Test 5: 10 Hangar-Flight Transitions* | Edge CDP | **PASS** | Strictly 1 active loop chain, 0 WebGL leaks, 2 total canvases |
-| └─ *Test 6: SW Offline Navigation* | Edge CDP | **PASS** | Active cache precache 11+ assets, offline `/` and `/hangar/index.html` |
-| └─ *Test 7: Redmi 13 Telemetry* | Edge CDP | **PASS** | p50=16.67ms, p95=16.90ms, p99=17.20ms, Heap=28MB |
+| └─ *Test 5: 10 Hangar-Flight Transitions* | Edge CDP | **PASS** | Strictly 1 active loop chain, 0 WebGL context loss/errors, 2 canvases, 0MB heap delta |
+| └─ *Test 6: SW Upgrade & Offline Flight* | Edge CDP | **PASS** | Purges legacy cache, precaches 13/13 assets, offline `/`, offline `/hangar`, offline ship swap & flight |
+| └─ *Test 7: Concurrent Render Suspension* | Edge CDP | **PASS** | Raw WebGL draw calls suspended during Hangar landing occlusion (0 draws), instantly resumes on launch |
+| └─ *Test 8: Real Telemetry & Hardware Probe* | Edge CDP & ADB | **PASS** | Valid samples (69 frames), p50=8.30ms, p95=8.60ms, p99=16.60ms, Heap=22MB, ANGLE D3D11 Hardware Accelerated; Physical Redmi 13 truthfully deferred (0 ADB devices connected) |
+| **Vercel Production Routing Suite** | `node tools/test_hangar_production_routing.mjs` | **PASS** | **8 / 8** assertions green under emulated Vercel `cleanUrls: true` |
+
+---
+
+## P0 Incident Resolution: Sovereign Hangar Vercel Routing Repair
+
+### 1. Root Cause Analysis
+- **Routing & Canonicalization:** In production, `vercel.json` defines `cleanUrls: true` and `trailingSlash: false`. When root `index.html` loads `<iframe src="hangar/index.html">`, Vercel issues an HTTP 308 redirect to `/hangar`. Under the `/hangar` baseURI, relative paths `./styles.css` and `./app.bundle.js` degraded to root `/styles.css` (loading the 2D game stylesheet instead of the 3D hangar stylesheet) and `/app.bundle.js` (HTTP 404), preventing Three.js bundle execution and leaving geometry unrendered and metadata unpopulated.
+- **Service Worker Route Check:** `service-worker.js` checked `pathname.includes("/hangar/")`, which failed to match clean `/hangar`, caching root `index.html` over the hangar route.
+- **HUD Horizontal Collision:** Adding "LAUNCH FLIGHT" expanded `.hud-controls` to ~706px, overlapping `.hud-meta` on screens $\le 1024\text{px}$.
+
+### 2. Surgical Remediations
+1. **Canonical Base & Absolute URLs:** Added `<base href="/hangar/">` to `hangar/index.html` and configured explicit root-relative `/hangar/styles.css` and `/hangar/app.bundle.js`.
+2. **Rebuilt Hangar Bundle:** Updated `hangar/src/ships/drone.js` with root-relative `/assets/runtime/...` fallback and recompiled `hangar/app.bundle.js`.
+3. **Collision-Free HUD:** Tuned `.hud-controls` padding/gap to 590px width; added responsive docking for $\le 1024\text{px}$ viewports.
+4. **Service Worker Clean Route Support:** Added `/hangar` pathname matching and `PURGE_STALE_CACHES` support to `service-worker.js`.
+5. **Background Draw Suspension:** Added `state.renderSuspended` to `src/game.js` during Sovereign Hangar occlusion (`isHangarOccluding`).
+6. **Automated Verification:** Added `tools/test_hangar_production_routing.mjs` (8/8) and updated `tools/edge_browser_regression_campaign.mjs` (24/24).
 
 ---
 

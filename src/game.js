@@ -821,6 +821,9 @@
 
   const state = {
     mode: "ready",
+    rawDrawCalls: 0,
+    renderSuspended: false,
+    landingSuspendedTicks: 0,
     time: 0,
     score: 0,
     hull: 3,
@@ -2567,6 +2570,9 @@
     return {
       build: GAME_BUILD,
       mode: state.mode,
+      renderSuspended: Boolean(state.renderSuspended),
+      rawDrawCalls: state.rawDrawCalls,
+      landingSuspendedTicks: state.landingSuspendedTicks,
       player: {
         selectedShip: player.selectedShip,
         x: Number(player.x.toFixed(4)),
@@ -5195,6 +5201,7 @@
   }
 
   function renderScene(alphaTime) {
+    state.rawDrawCalls++;
     resizeCanvas();
     const aspect = canvas.width / Math.max(1, canvas.height);
     const frameProfile = getFrameProfile(aspect);
@@ -6132,6 +6139,20 @@
       requestAnimationFrame(frame);
       return;
     }
+
+    const isHangarOccluding =
+      state.mode === "ready" &&
+      hud.sovereignScrim &&
+      !hud.sovereignScrim.hidden &&
+      !hud.sovereignScrim.classList.contains("sovereign-scrim--backdrop-only");
+
+    if (isHangarOccluding) {
+      state.renderSuspended = true;
+      state.landingSuspendedTicks++;
+      requestAnimationFrame(frame);
+      return;
+    }
+    state.renderSuspended = false;
     if (state.mode === "revive") {
       tickRevive(dt);
     } else if (state.mode === "relaunch") {

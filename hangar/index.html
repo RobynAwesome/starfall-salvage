@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <title>Sovereign Hangar — Starfall Salvage</title>
+  <base href="/hangar/">
   <meta name="description" content="Interactive 3D showcase for Starfall Salvage spacecraft. Isolated viewer module — the playable game lives at the site root." />
-  <link rel="stylesheet" href="./styles.css?v=20261020-sovereign-hangar-mki" />
+  <link rel="stylesheet" href="/hangar/styles.css?v=20261020-sovereign-hangar-mki" />
 </head>
 <body>
   <main id="hangar-stage" class="stage" aria-label="Sovereign Hangar 3D viewport">
@@ -109,7 +110,7 @@
     </noscript>
   </main>
 
-  <script src="./app.bundle.js?v=20261020-sovereign-hangar-mki" defer></script>
+  <script src="/hangar/app.bundle.js?v=20261020-sovereign-hangar-mki" defer></script>
   <script>
     // Resilient fallback for #btn-fallback-launch if WebGL/bundle fails before initialization
     window.addEventListener('DOMContentLoaded', function () {

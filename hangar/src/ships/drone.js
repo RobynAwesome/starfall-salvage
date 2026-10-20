@@ -115,8 +115,12 @@ export function buildDroneFromPayload(payload) {
 }
 
 /** Fetch + validate the repo drone asset. Throws with a readable reason. */
-export async function loadRepoDronePayload(url = "../assets/runtime/starfall_boss_drone_blockout.mesh.json") {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Repository mesh request failed (HTTP ${res.status}).`);
-  return res.json();
+export async function loadRepoDronePayload(url = "/assets/runtime/starfall_boss_drone_blockout.mesh.json") {
+  try {
+    const res = await fetch(url);
+    if (res.ok) return res.json();
+  } catch {}
+  const fallbackRes = await fetch("../assets/runtime/starfall_boss_drone_blockout.mesh.json");
+  if (!fallbackRes.ok) throw new Error(`Repository mesh request failed (HTTP ${fallbackRes.status}).`);
+  return fallbackRes.json();
 }
