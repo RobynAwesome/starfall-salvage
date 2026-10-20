@@ -40,7 +40,7 @@ status: ready-for-owner-review
    - Replaced the nearly blank ready screen at `/` with the interactive 3D **Sovereign Hangar** exhibition on an edge-to-edge pedestal inside `<iframe id="hangarFrame">`.
    - Maintained canonical launch pathway: **LAUNCH FLIGHT → Onboarding Briefing (`#onboardingModal`) → 3-2-1 Countdown (`#countdownOverlay`) → Flight Runner (`is-playing`)**.
    - Added accessible fallback button **PLAY WITHOUT HANGAR** (`#btn-fallback-launch`) ensuring flight is always accessible even if 3D WebGL fails in the iframe.
-   - Lifecycle isolation: Three.js render loop halts (`window.__hangarPaused = true`) the moment gameplay engages, reducing Three.js CPU/GPU utilization to **0% during flight**.
+   - Lifecycle isolation: Three.js render loop halts and cancels animation frame requests (`cancelAnimationFrame`) the moment gameplay engages, eliminating Three.js animation frame execution during flight (pending physical hardware CPU/GPU profiling).
 
 3. **MK-I Spacecraft in Playable Raw WebGL (158-tri vs 728-tri Architecture)**:
    - Implemented dual-fidelity MK-I support:

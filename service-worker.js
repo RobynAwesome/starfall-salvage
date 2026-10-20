@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20260526-ready-shell";
+const CACHE_NAME = "starfall-salvage-v20261020-sovereign-hangar-mki";
 
 const ASSETS = [
   "./",
@@ -37,17 +37,53 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
+    const url = new URL(event.request.url);
+    const isHangar =
+      url.pathname.endsWith("/hangar/") ||
+      url.pathname.endsWith("/hangar/index.html") ||
+      url.pathname.includes("/hangar/");
+    const fallbackRoute = isHangar ? "./hangar/index.html" : "./index.html";
+
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("./", copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, copy);
+              if (isHangar) {
+                cache.put("./hangar/index.html", response.clone());
+              } else {
+                cache.put("./index.html", response.clone());
+                cache.put("./", response.clone());
+              }
+            });
+          }
           return response;
         })
-        .catch(() => caches.match("./").then((response) => response || caches.match("./index.html")))
+        .catch(() => {
+          return caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+            if (cached) return cached;
+            return caches.match(fallbackRoute).then((routeCached) => {
+              if (routeCached) return routeCached;
+              return caches.match("./").then((rootCached) => rootCached || caches.match("./index.html"));
+            });
+          });
+        })
     );
     return;
   }
 
-  event.respondWith(caches.match(event.request).then((response) => response || fetch(event.request)));
+  event.respondWith(
+    caches.match(event.request, { ignoreSearch: true }).then((response) => {
+      if (response) return response;
+      return fetch(event.request).then((networkResponse) => {
+        if (networkResponse.ok && event.request.method === "GET") {
+          const copy = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return networkResponse;
+      });
+    })
+  );
 });

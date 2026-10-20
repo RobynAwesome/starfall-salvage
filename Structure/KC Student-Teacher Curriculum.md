@@ -502,7 +502,7 @@ The teacher reads this, fixes the source, and triggers the next pass. No back-an
 
 **Spec:**
 1. Replace the root landing experience with the 3D Sovereign Hangar interactive exhibit while preserving the complete **LAUNCH FLIGHT → Onboarding → 3-2-1 Countdown → Flight Runner** pathway.
-2. Maintain strict lifecycle isolation: Three.js render loop is suspended (`starfall_pause_hangar`) when flight starts, ensuring zero GPU/CPU cycles behind the native WebGL engine.
+2. Maintain strict lifecycle isolation: Three.js render loop is suspended and canceled (`starfall_pause_hangar`, `cancelAnimationFrame`) when flight starts, halting Three.js render loop execution behind the native WebGL engine.
 3. Integrate the MK-I spacecraft into the raw WebGL gameplay renderer as a selectable player asset, scaled ($S=0.44$) to match original hitbox ($r=0.62$) and preserving 100% of flight physics.
 4. Enhance orbital wreck gameplay camera with responsive framing profiles (`getFrameProfile`), deep camera positioning, and dynamic backdrop compensation.
 5. Provide continuous mobile portrait (`393x873`) and landscape (`873x393`) responsiveness, supporting mid-flight live rotation without orientation locks.

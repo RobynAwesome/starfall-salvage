@@ -30156,12 +30156,35 @@ void main() {
   var btnMotion = $("btn-motion");
   var btnLaunch = $("btn-launch");
   var fileInput = $("file-input");
+  var ALLOWED_SHIPS = /* @__PURE__ */ new Set(["mk1", "original", "mk1-158"]);
+  function getTargetOrigin() {
+    return window.location.origin === "null" ? "*" : window.location.origin;
+  }
+  function launchFlightWithShip(ship) {
+    const chosenShip = ALLOWED_SHIPS.has(ship) ? ship : "mk1";
+    try {
+      localStorage.setItem("starfallSelectedShip", chosenShip);
+    } catch {
+    }
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        { type: "starfall_launch_flight", ship: chosenShip, source: "sovereign_hangar", timestamp: Date.now() },
+        getTargetOrigin()
+      );
+    } else {
+      window.location.href = `../?launch=1&ship=${encodeURIComponent(chosenShip)}`;
+    }
+  }
   if (btnLaunch) {
     btnLaunch.addEventListener("click", () => {
       const currentId = showcase.current && showcase.current.id || "mk1";
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage({ type: "starfall_launch_flight", shipId: currentId }, "*");
-      }
+      launchFlightWithShip(currentId);
+    });
+  }
+  var btnFallbackLaunch = $("btn-fallback-launch");
+  if (btnFallbackLaunch) {
+    btnFallbackLaunch.addEventListener("click", () => {
+      launchFlightWithShip("original");
     });
   }
   function syncMotionBtn() {
@@ -30309,30 +30332,81 @@ void main() {
   var clock = new Clock();
   var running = true;
   var lastModeLabel = "";
+  var rafId = 0;
+  var isLoopRunning = false;
+  var loopChainCount = 0;
+  var pauseCount = 0;
+  var resumeCount = 0;
+  var frameCount = 0;
+  function stopLoop() {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
+    isLoopRunning = false;
+  }
+  function startLoop() {
+    if (isLoopRunning) return;
+    isLoopRunning = true;
+    clock.getDelta();
+    loopChainCount++;
+    rafId = requestAnimationFrame(frame);
+  }
+  function pauseHangar() {
+    window.__hangarPaused = true;
+    running = false;
+    pauseCount++;
+    stopLoop();
+  }
+  function resumeHangar() {
+    window.__hangarPaused = false;
+    running = true;
+    resumeCount++;
+    startLoop();
+  }
   document.addEventListener("visibilitychange", () => {
     running = !document.hidden;
-    if (running && !window.__hangarPaused) clock.getDelta();
-  });
-  window.addEventListener("message", (event) => {
-    if (!event.data) return;
-    if (event.data.type === "starfall_pause_hangar") {
-      window.__hangarPaused = true;
-      running = false;
-    } else if (event.data.type === "starfall_resume_hangar") {
-      window.__hangarPaused = false;
-      running = true;
-      clock.getDelta();
-      requestAnimationFrame(frame);
+    if (!running || window.__hangarPaused) {
+      stopLoop();
+    } else {
+      startLoop();
     }
   });
+  window.addEventListener("message", (event) => {
+    if (window.location.origin !== "null" && event.origin !== window.location.origin) return;
+    if (window.parent && window.parent !== window && event.source !== window.parent) return;
+    if (!event.data || typeof event.data !== "object") return;
+    const { type, ship } = event.data;
+    if (type === "starfall_pause_hangar") {
+      pauseHangar();
+    } else if (type === "starfall_resume_hangar") {
+      resumeHangar();
+    } else if (type === "starfall_select_ship") {
+      if (ship && ALLOWED_SHIPS.has(ship)) {
+        showcase.show(ship);
+      }
+    }
+  });
+  var isInitialBoot = true;
   showcase.onSelect = (id) => {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage({ type: "starfall_ship_selected", shipId: id }, "*");
+    const chosenShip = ALLOWED_SHIPS.has(id) ? id : "mk1";
+    try {
+      localStorage.setItem("starfallSelectedShip", chosenShip);
+    } catch {
+    }
+    if (!isInitialBoot && window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        { type: "starfall_ship_selected", ship: chosenShip, source: "sovereign_hangar", timestamp: Date.now() },
+        getTargetOrigin()
+      );
     }
   };
   function frame() {
-    requestAnimationFrame(frame);
-    if (!running || window.__hangarPaused) return;
+    if (!isLoopRunning || !running || window.__hangarPaused) {
+      stopLoop();
+      return;
+    }
+    frameCount++;
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
     rig.update(dt);
@@ -30343,13 +30417,26 @@ void main() {
       hud.setMode(label);
     }
     renderer.render(scene, camera);
+    if (isLoopRunning && running && !window.__hangarPaused) {
+      rafId = requestAnimationFrame(frame);
+    } else {
+      stopLoop();
+    }
   }
   (async function boot() {
     try {
       hud.boot(0.75, "Fetching repository mesh manifest\u2026");
       await getDronePayload();
       hud.boot(0.9, "Materialising STARFALL SALVAGER MK-I\u2026");
-      const ok = await showcase.show("mk1");
+      const initialShip = (function() {
+        try {
+          const stored = localStorage.getItem("starfallSelectedShip");
+          if (stored === "original") return "original";
+        } catch {
+        }
+        return "mk1";
+      })();
+      const ok = await showcase.show(initialShip);
       if (!ok) throw new Error("first exhibit failed to build");
       hud.boot(1, "Ready");
       hud.bootDone();
@@ -30363,14 +30450,48 @@ void main() {
       hud.boot(1, "Startup problem");
       hud.toast(`Hangar could not finish loading \u2014 ${err.message}`, false);
       hud.bootDone();
+    } finally {
+      isInitialBoot = false;
     }
   })();
-  frame();
+  startLoop();
   window.__hangar = {
     showcase,
     rig,
     renderer,
     scene,
+    get isLoopRunning() {
+      return isLoopRunning;
+    },
+    get rafId() {
+      return rafId;
+    },
+    lifecycle: {
+      get isRunning() {
+        return isLoopRunning;
+      },
+      get isPaused() {
+        return !!window.__hangarPaused;
+      },
+      get pauseCount() {
+        return pauseCount;
+      },
+      get resumeCount() {
+        return resumeCount;
+      },
+      get frameCount() {
+        return frameCount;
+      },
+      get loopChainCount() {
+        return loopChainCount;
+      },
+      get activeRafId() {
+        return rafId;
+      }
+    },
+    pause: pauseHangar,
+    resume: resumeHangar,
+    launch: launchFlightWithShip,
     state: {
       get current() {
         return showcase.current && showcase.current.id;

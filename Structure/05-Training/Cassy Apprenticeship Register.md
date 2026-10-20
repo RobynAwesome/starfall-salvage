@@ -61,7 +61,7 @@ If the tranche changes playfield composition, input, or visual identity, it must
 - `Structure/2026-05-18 - Orbital Wreck Lane Visual Slice Case Study.md`
 - `Structure/KC Review Log.jsonl`
 - `Structure/KC Main Brain Log.jsonl`
-- Alignment: `docs/REALISM-RUBRIC.md` mobile-primary realism rule upheld; 0% GPU overhead during gameplay.
+- Alignment: `docs/REALISM-RUBRIC.md` mobile-primary realism rule upheld; Three.js loop suspended during flight pending physical GPU measurement.
 
 ## Graduation gate
 

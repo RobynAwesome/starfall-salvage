@@ -242,13 +242,17 @@
     syncEventTicker();
   }
 
+  let lastHangarState = null;
   function syncHangarLifecycle(shouldRun) {
+    if (lastHangarState === shouldRun) return;
+    lastHangarState = shouldRun;
     const hf = document.getElementById("hangarFrame");
     if (hf && hf.contentWindow) {
       try {
+        const targetOrigin = window.location.origin === "null" ? "*" : window.location.origin;
         hf.contentWindow.postMessage(
           { type: shouldRun ? "starfall_resume_hangar" : "starfall_pause_hangar" },
-          "*"
+          targetOrigin
         );
       } catch {}
     }
@@ -537,7 +541,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20260526-ready-shell";
+  const GAME_BUILD = "20261020-sovereign-hangar-mki";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -2074,43 +2078,6 @@
     });
   }
 
-  window.addEventListener("message", (event) => {
-    if (!event.data || typeof event.data !== "object") return;
-    if (event.data.type === "starfall_launch_flight") {
-      if (event.data.ship) {
-        player.selectedShip = event.data.ship;
-        try {
-          window.localStorage.setItem("starfallSelectedShip", event.data.ship);
-        } catch {}
-      }
-      if (state.mode === "ready" || state.mode === "paused") {
-        startGame();
-      }
-    } else if (event.data.type === "starfall_ship_selected") {
-      if (event.data.ship) {
-        player.selectedShip = event.data.ship;
-        try {
-          window.localStorage.setItem("starfallSelectedShip", event.data.ship);
-        } catch {}
-      }
-    }
-  });
-
-  try {
-    const bootParams = new URLSearchParams(window.location.search);
-    const shipParam = bootParams.get("ship");
-    if (shipParam) {
-      player.selectedShip = shipParam;
-    }
-    if (bootParams.get("launch") === "1") {
-      window.setTimeout(() => {
-        if (state.mode === "ready") {
-          startGame();
-        }
-      }, 180);
-    }
-  } catch {}
-
   if (hud.pauseMinimalButton) {
     hud.pauseMinimalButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -2407,6 +2374,7 @@
   const POSITION_LERP_DESKTOP = 0.28;
   /** Locked runner lane height on touch devices (paired with camera viewBias — execution ledger baseline). */
   const MOBILE_LANE_TARGET_Y = -0.68;
+  const ALLOWED_SHIPS = new Set(["mk1", "original", "mk1-158", "mk1-low"]);
   const player = {
     x: 0,
     y: isTouchCapable ? MOBILE_LANE_TARGET_Y : -0.45,
@@ -2429,6 +2397,11 @@
     weaponMode: readWeaponModeFromStorage(),
     selectedShip: (function () {
       try {
+        const urlShip = new URLSearchParams(window.location.search).get("ship");
+        if (urlShip && ALLOWED_SHIPS.has(urlShip)) {
+          window.localStorage.setItem("starfallSelectedShip", urlShip);
+          return urlShip;
+        }
         return window.localStorage.getItem("starfallSelectedShip") || "mk1";
       } catch {
         return "mk1";
@@ -2437,6 +2410,52 @@
     viewPitch: 0,
     viewRoll: 0
   };
+
+  window.addEventListener("message", (event) => {
+    // Messaging trust: validate origin & source
+    if (window.location.origin !== "null" && event.origin !== window.location.origin) return;
+    const hf = document.getElementById("hangarFrame");
+    if (hf && hf.contentWindow && event.source !== hf.contentWindow) return;
+    if (!event.data || typeof event.data !== "object") return;
+
+    const { type, ship } = event.data;
+    if (type === "starfall_launch_flight") {
+      if (ship && ALLOWED_SHIPS.has(ship)) {
+        player.selectedShip = ship;
+        try {
+          window.localStorage.setItem("starfallSelectedShip", ship);
+        } catch {}
+      }
+      if (state.mode === "ready" || state.mode === "paused") {
+        startGame();
+      }
+    } else if (type === "starfall_ship_selected") {
+      if (ship && ALLOWED_SHIPS.has(ship)) {
+        player.selectedShip = ship;
+        try {
+          window.localStorage.setItem("starfallSelectedShip", ship);
+        } catch {}
+      }
+    }
+  });
+
+  try {
+    const bootParams = new URLSearchParams(window.location.search);
+    const shipParam = bootParams.get("ship");
+    if (shipParam && ALLOWED_SHIPS.has(shipParam)) {
+      player.selectedShip = shipParam;
+      try {
+        window.localStorage.setItem("starfallSelectedShip", shipParam);
+      } catch {}
+    }
+    if (bootParams.get("launch") === "1") {
+      window.setTimeout(() => {
+        if (state.mode === "ready") {
+          startGame();
+        }
+      }, 180);
+    }
+  } catch {}
 
   function setWeaponMode(mode) {
     const next = isWeaponMode(mode) ? mode : "bolt";
@@ -2548,6 +2567,7 @@
       build: GAME_BUILD,
       mode: state.mode,
       player: {
+        selectedShip: player.selectedShip,
         x: Number(player.x.toFixed(4)),
         y: Number(player.y.toFixed(4)),
         targetX: Number(player.targetX.toFixed(4)),
@@ -2581,7 +2601,7 @@
     };
   }
 
-  if (DIAG_ENABLED && typeof window !== "undefined") {
+  if (typeof window !== "undefined") {
     window.__starfallDebug = readDebugState;
   }
 
@@ -3227,6 +3247,7 @@
     }
 
     state.mode = "countdown";
+    syncShellPlayState();
     hud.countdownOverlay.classList.remove("is-engage");
     hud.countdownOverlay.classList.remove("is-hidden");
     let count = 3;
@@ -6168,6 +6189,9 @@
     resetGame();
     syncFlightWeaponButtons();
     wireSurveyUi();
+    if (typeof window !== "undefined") {
+      window.__starfallBooted = true;
+    }
     requestAnimationFrame(frame);
   }
 
