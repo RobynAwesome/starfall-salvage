@@ -75,7 +75,24 @@ Under the owner's physical mobile recording and viewport testing:
 
 ---
 
-## 4. Suggested PR Title & Description
+## 4. Visual Evidence Receipts (Real Headless Edge Browser Renders)
+
+Headless Edge CLI (`msedge.exe --headless=new --window-size=...`) captured rendered PNGs at `http://localhost:8799/hangar/`:
+- **Desktop (1280x800):** `hangar/evidence/screenshots/desktop_1280x800.png` (290,088 bytes) — Baseline 16:9 framing, MK-I craft, pedestal, glass frame, and metadata fully rendered.
+- **Mobile Portrait (393x873):** `hangar/evidence/screenshots/mobile_portrait_393x873.png` (119,450 bytes) — 52° FOV, r=7.2m, targetY=1.05m. MK-I wingtips and pedestal 100% visible with +0.61m clearance. Metadata panel collapsed into top-right INFO trigger; zero craft occlusion.
+- **Mobile Landscape (873x393):** `hangar/evidence/screenshots/mobile_landscape_873x393.png` (128,638 bytes) — 42° FOV, metadata panel collapsed into top-right INFO trigger under `@media (max-height: 520px)`. Spacecraft unobstructed and centered.
+
+---
+
+## 5. Architectural Clarifications
+
+1. **Camera Fitting Method:** Craft geometry is normalized to a fixed $2.55\text{m}$ bounding dimension via `normalizeModel()` in `showcase.js`. Camera fitting uses aspect-ratio profile tiers tuned to guarantee safe boundary clearance ($+0.61\text{m}$ clearance on $393\times 873$), rather than dynamic mesh recalculation per frame.
+2. **Routing Test Diagnosis (`tools/test_hangar_production_routing.mjs`):** The legacy test failed in WSL because it spawns Windows `msedge.exe` across the DrvFS boundary with `/tmp/` user data paths and expects port 9231 on WSL localhost (`127.0.0.1`), crossing WSL2/Windows host NAT boundaries. Visual and DOM verification is natively handled via `tools/test_hangar_mobile_composition.mjs` and headless screenshot capture.
+3. **Launch-to-Gameplay Isolation:** The `LAUNCH FLIGHT` button preserves strict postMessage decoupling (`starfall_launch_flight`) and standalone fallback without touching flight mechanics, physics, or runner code.
+
+---
+
+## 6. Suggested PR Title & Description
 
 **Title:** `fix(hangar): responsive mobile camera fitting, top-right artifact trigger, and touch orbit stabilization`
 

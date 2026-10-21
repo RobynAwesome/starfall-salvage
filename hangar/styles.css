@@ -440,42 +440,44 @@ html, body {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 640px), (max-height: 520px) {
   .hud-brand {
-    top: max(14px, env(safe-area-inset-top));
+    top: max(12px, env(safe-area-inset-top));
     left: max(16px, env(safe-area-inset-left));
   }
-  .hangar-title { font-size: 14px; letter-spacing: 0.28em; }
-  .brand-line { font-size: 9px; letter-spacing: 0.22em; }
-  .mode-line { font-size: 8.5px; letter-spacing: 0.18em; min-height: 11px; }
+  .hangar-title { font-size: 13.5px; letter-spacing: 0.26em; }
+  .brand-line { font-size: 8.5px; letter-spacing: 0.20em; }
+  .mode-line { font-size: 8px; letter-spacing: 0.16em; min-height: 10px; }
 
   .hud-top-right {
-    top: max(14px, env(safe-area-inset-top));
+    top: max(12px, env(safe-area-inset-top));
     right: max(16px, env(safe-area-inset-right));
     gap: 6px;
   }
   .meta-toggle-btn {
-    height: 32px;
+    height: 30px;
     font-size: 9px;
     padding: 0 10px;
     letter-spacing: 0.14em;
     touch-action: manipulation;
   }
   .hud-icon-btn {
-    width: 32px;
-    height: 32px;
-    font-size: 12px;
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
     touch-action: manipulation;
   }
 
-  /* Mobile: Metadata is an optional card triggered from top-right, leaving the 3D craft completely visible */
+  /* Mobile & short landscape viewports: Metadata is an optional card triggered from top-right */
   .hud-meta {
     left: 50%;
     transform: translateX(-50%) translateY(16px);
-    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 58px);
-    width: min(320px, calc(100vw - 32px));
+    bottom: calc(max(10px, env(safe-area-inset-bottom)) + 52px);
+    width: min(340px, calc(100vw - 32px));
     max-width: calc(100vw - 32px);
-    padding: 12px 14px 10px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    padding: 10px 14px 8px;
     opacity: 0;
     pointer-events: none;
     visibility: hidden;
@@ -500,8 +502,8 @@ html, body {
 
   /* Mobile-first controls dock */
   .hud-controls {
-    bottom: max(12px, env(safe-area-inset-bottom));
-    padding: 4px 6px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+    padding: 3px 6px;
     max-width: calc(100vw - 16px);
     width: auto;
     gap: 3px;
@@ -511,15 +513,15 @@ html, body {
   }
   .hud-controls::-webkit-scrollbar { display: none; }
   .ctl-btn {
-    padding: 9px 8px;
+    padding: 8px 8px;
     letter-spacing: 0.12em;
     font-size: 9px;
-    min-height: 40px;
+    min-height: 38px;
     touch-action: manipulation;
   }
   .ctl-btn.ctl-launch {
-    padding: 10px 14px;
-    font-size: 10px;
+    padding: 9px 14px;
+    font-size: 9.5px;
     letter-spacing: 0.16em;
     box-shadow: 0 0 14px rgba(53, 224, 255, 0.55);
   }
