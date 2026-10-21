@@ -26,7 +26,7 @@ html, body {
 
 .stage { position: fixed; inset: 0; }
 
-.canvas-host { position: absolute; inset: 0; cursor: grab; }
+.canvas-host { position: absolute; inset: 0; cursor: grab; touch-action: none; }
 .canvas-host.dragging { cursor: grabbing; }
 .canvas-host.hover-ship { cursor: pointer; }
 .canvas-host canvas { display: block; }
@@ -204,7 +204,65 @@ html, body {
   flex: none;
 }
 
-/* ---------- Icon buttons ---------- */
+/* ---------- Icon buttons & top actions ---------- */
+.hud-top-right {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(22px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+.hud-top-right .hud-icon-btn {
+  position: static;
+}
+.meta-toggle-btn {
+  width: auto;
+  min-width: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--cyan);
+  border-color: rgba(53, 224, 255, 0.45);
+}
+.meta-toggle-btn[aria-expanded="true"] {
+  background: rgba(53, 224, 255, 0.22);
+  border-color: var(--cyan);
+  color: #fff;
+  box-shadow: 0 0 14px rgba(53, 224, 255, 0.45);
+}
+
+.meta-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--panel-line);
+}
+.meta-card-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--cyan);
+}
+.meta-card-close {
+  display: none;
+  background: transparent;
+  border: 0;
+  color: var(--ink-dim);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.meta-card-close:hover {
+  color: var(--cyan);
+}
+
 .hud-icon-btn {
   top: max(18px, env(safe-area-inset-top));
   right: max(22px, env(safe-area-inset-right));
@@ -383,15 +441,88 @@ html, body {
 }
 
 @media (max-width: 640px) {
-  .hangar-title { font-size: 15px; letter-spacing: 0.3em; }
+  .hud-brand {
+    top: max(14px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+  }
+  .hangar-title { font-size: 14px; letter-spacing: 0.28em; }
+  .brand-line { font-size: 9px; letter-spacing: 0.22em; }
+  .mode-line { font-size: 8.5px; letter-spacing: 0.18em; min-height: 11px; }
+
+  .hud-top-right {
+    top: max(14px, env(safe-area-inset-top));
+    right: max(16px, env(safe-area-inset-right));
+    gap: 6px;
+  }
+  .meta-toggle-btn {
+    height: 32px;
+    font-size: 9px;
+    padding: 0 10px;
+    letter-spacing: 0.14em;
+    touch-action: manipulation;
+  }
+  .hud-icon-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    touch-action: manipulation;
+  }
+
+  /* Mobile: Metadata is an optional card triggered from top-right, leaving the 3D craft completely visible */
   .hud-meta {
-    max-width: 86vw;
-    padding: 10px 12px 8px;
-    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 54px);
+    left: 50%;
+    transform: translateX(-50%) translateY(16px);
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 58px);
+    width: min(320px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    padding: 12px 14px 10px;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.24s ease, transform 0.24s ease, visibility 0.24s ease;
+    z-index: 15;
+    box-shadow: 0 16px 44px rgba(0, 0, 0, 0.75);
+  }
+  .hud-meta.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+  }
+  .meta-card-close {
+    display: block;
+    touch-action: manipulation;
   }
   .meta-note { display: none; }
-  .hud-controls { gap: 2px; padding: 6px 8px; max-width: 94vw; overflow-x: auto; bottom: max(16px, env(safe-area-inset-bottom)); }
-  .ctl-btn { padding: 9px 8px; letter-spacing: 0.14em; font-size: 10px; }
+  .meta-grid { gap: 3px 10px; }
+  .meta-grid dt { font-size: 8.5px; }
+  .meta-grid dd { font-size: 11px; }
+
+  /* Mobile-first controls dock */
+  .hud-controls {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 4px 6px;
+    max-width: calc(100vw - 16px);
+    width: auto;
+    gap: 3px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .hud-controls::-webkit-scrollbar { display: none; }
+  .ctl-btn {
+    padding: 9px 8px;
+    letter-spacing: 0.12em;
+    font-size: 9px;
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+  .ctl-btn.ctl-launch {
+    padding: 10px 14px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    box-shadow: 0 0 14px rgba(53, 224, 255, 0.55);
+  }
   .ctl-dot { display: none; }
   .motion-btn { display: none; }
 }

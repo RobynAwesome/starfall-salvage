@@ -29197,6 +29197,20 @@ void main() {
       this._bind();
       this.apply(0.016);
     }
+    setProfile(profile) {
+      if (!profile) return;
+      this.home.r = profile.orbitDistance;
+      this.minR = profile.minR || 2.6;
+      this.maxR = profile.maxR || 12;
+      this.minPol = profile.minPol || 0.5;
+      this.maxPol = profile.maxPol || 1.85;
+      if (typeof profile.targetY === "number") {
+        this.target.y = profile.targetY;
+      }
+      if (this.mode === "auto") {
+        this.tgt.r = profile.orbitDistance;
+      }
+    }
     _bind() {
       const dom = this.dom;
       dom.addEventListener("pointerdown", (e) => this._down(e));
@@ -29204,12 +29218,18 @@ void main() {
       dom.addEventListener("pointerup", (e) => this._up(e));
       dom.addEventListener("pointercancel", (e) => this._up(e));
       dom.addEventListener("wheel", (e) => this._wheel(e), { passive: false });
-      dom.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+      dom.addEventListener("touchstart", (e) => {
+        if (e.target === dom || dom.contains(e.target)) {
+          e.preventDefault();
+        }
+      }, { passive: false });
     }
     _down(e) {
-      try {
-        this.dom.setPointerCapture?.(e.pointerId);
-      } catch {
+      if (e.pointerType !== "touch" || this.pointers.size === 0) {
+        try {
+          this.dom.setPointerCapture?.(e.pointerId);
+        } catch {
+        }
       }
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       this.moved = 0;
@@ -29228,25 +29248,32 @@ void main() {
       p.y = e.clientY;
       if (this.pointers.size === 1) {
         this.moved += Math.abs(dx) + Math.abs(dy);
-        this.tgt.az -= dx * 52e-4;
-        this.tgt.pol = clamp2(this.tgt.pol - dy * 38e-4, this.minPol, this.maxPol);
+        const sensitivity = e.pointerType === "touch" ? 58e-4 : 52e-4;
+        this.tgt.az -= dx * sensitivity;
+        this.tgt.pol = clamp2(this.tgt.pol - dy * (sensitivity * 0.73), this.minPol, this.maxPol);
         this._poke("manual");
       } else if (this.pointers.size === 2) {
         const [a, b] = [...this.pointers.values()];
         const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (this.lastPinch > 0) {
+        if (this.lastPinch > 0 && d > 12) {
           this.tgt.r = clamp2(this.tgt.r * (this.lastPinch / d), this.minR, this.maxR);
         }
         this.lastPinch = d;
-        this.moved += 3;
+        this.moved += 4;
         this._poke("manual");
       }
     }
     _up(e) {
       const wasSingle = this.pointers.size === 1;
+      try {
+        this.dom.releasePointerCapture?.(e.pointerId);
+      } catch {
+      }
       this.pointers.delete(e.pointerId);
       if (this.pointers.size < 2) this.lastPinch = 0;
-      if (wasSingle && this.moved < 9 && performance.now() - this.downAt < 420) {
+      const tapThreshold = e.pointerType === "touch" ? 18 : 9;
+      const tapTimeLimit = e.pointerType === "touch" ? 500 : 420;
+      if (wasSingle && this.moved < tapThreshold && performance.now() - this.downAt < tapTimeLimit) {
         this.onTap(e);
       }
     }
@@ -30077,6 +30104,8 @@ void main() {
     metaMode: $("meta-mode"),
     metaNote: $("meta-note"),
     metaCard: document.querySelector(".hud-meta"),
+    metaToggleBtn: $("btn-meta-toggle"),
+    metaCloseBtn: $("btn-meta-close"),
     toastEl: $("toast"),
     bootOverlay: $("boot-overlay"),
     bootFill: $("boot-bar-fill"),
@@ -30086,6 +30115,21 @@ void main() {
     helpOverlay: $("help-overlay"),
     helpBtn: $("help-btn")
   };
+  function toggleMeta(force) {
+    if (!hud.metaCard) return;
+    const isCurrentlyOpen = hud.metaCard.classList.contains("is-open");
+    const next = typeof force === "boolean" ? force : !isCurrentlyOpen;
+    hud.metaCard.classList.toggle("is-open", next);
+    if (hud.metaToggleBtn) {
+      hud.metaToggleBtn.setAttribute("aria-expanded", String(next));
+    }
+  }
+  if (hud.metaToggleBtn) {
+    hud.metaToggleBtn.addEventListener("click", () => toggleMeta());
+  }
+  if (hud.metaCloseBtn) {
+    hud.metaCloseBtn.addEventListener("click", () => toggleMeta(false));
+  }
   var toastTimer = 0;
   hud.toast = (msg, ok = true) => {
     hud.toastEl.textContent = msg;
@@ -30244,11 +30288,13 @@ void main() {
     const on = rig.toggleInspect();
     btnInspect.setAttribute("aria-pressed", String(on));
     hud.setMode(rig.modeLabel());
+    if (on) toggleMeta(true);
   });
   btnReset.addEventListener("click", () => {
     rig.resetView();
     btnInspect.setAttribute("aria-pressed", "false");
     hud.setMode(rig.modeLabel());
+    toggleMeta(false);
   });
   btnLoad.addEventListener("click", () => fileInput.click());
   async function handleModelFile(file) {
@@ -30345,12 +30391,68 @@ void main() {
     hud.toast("Graphics restored.", true);
     console.info("[hangar] WebGL context restored");
   });
+  function getHangarFrameProfile(w, h) {
+    const aspect2 = w / Math.max(1, h);
+    if (aspect2 <= 0.55) {
+      return {
+        fov: 52,
+        orbitDistance: 7.2,
+        minR: 3.8,
+        maxR: 12,
+        targetY: 1.05,
+        minPol: 0.52,
+        maxPol: 1.72,
+        aspect: aspect2,
+        mode: "tall-portrait"
+      };
+    }
+    if (aspect2 <= 0.85) {
+      return {
+        fov: 48,
+        orbitDistance: 6.4,
+        minR: 3.2,
+        maxR: 11,
+        targetY: 0.98,
+        minPol: 0.5,
+        maxPol: 1.78,
+        aspect: aspect2,
+        mode: "portrait"
+      };
+    }
+    if (aspect2 <= 1.35) {
+      return {
+        fov: 44,
+        orbitDistance: 5.8,
+        minR: 2.8,
+        maxR: 10,
+        targetY: 0.92,
+        minPol: 0.5,
+        maxPol: 1.82,
+        aspect: aspect2,
+        mode: "compact"
+      };
+    }
+    return {
+      fov: 42,
+      orbitDistance: 5.4,
+      minR: 2.6,
+      maxR: 9.5,
+      targetY: 0.88,
+      minPol: 0.5,
+      maxPol: 1.85,
+      aspect: aspect2,
+      mode: "landscape"
+    };
+  }
   function resize() {
     const w = host.clientWidth || window.innerWidth;
     const h = host.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+    const profile = getHangarFrameProfile(w, h);
+    camera.fov = profile.fov;
     camera.updateProjectionMatrix();
+    rig.setProfile(profile);
   }
   window.addEventListener("resize", resize);
   window.addEventListener("orientationchange", () => setTimeout(resize, 120));
@@ -30527,6 +30629,8 @@ void main() {
     pause: pauseHangar,
     resume: resumeHangar,
     launch: launchFlightWithShip,
+    toggleMeta,
+    getFrameProfile: () => getHangarFrameProfile(host.clientWidth || window.innerWidth, host.clientHeight || window.innerHeight),
     state: {
       get current() {
         return showcase.current && showcase.current.id;

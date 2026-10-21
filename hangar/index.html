@@ -20,12 +20,20 @@
       <p id="mode-line" class="mode-line" role="status">CALIBRATING…</p>
     </header>
 
-    <!-- Top-right: shortcuts -->
-    <button id="help-btn" class="hud hud-icon-btn" type="button" aria-haspopup="dialog"
-            aria-expanded="false" aria-label="Keyboard and touch shortcuts">?</button>
+    <!-- Top-right: actions -->
+    <div class="hud-top-right">
+      <button id="btn-meta-toggle" class="hud hud-icon-btn meta-toggle-btn" type="button"
+              aria-expanded="false" aria-controls="hud-meta" aria-label="Toggle craft specifications and telemetry" title="Craft specifications">INFO</button>
+      <button id="help-btn" class="hud hud-icon-btn" type="button" aria-haspopup="dialog"
+              aria-expanded="false" aria-label="Keyboard and touch shortcuts">?</button>
+    </div>
 
-    <!-- Bottom-left metadata -->
-    <aside class="hud hud-meta" aria-label="Current model metadata">
+    <!-- Bottom-left metadata / optional artifact drawer -->
+    <aside class="hud hud-meta" id="hud-meta" aria-label="Current model metadata">
+      <div class="meta-card-head">
+        <span class="meta-card-title">SPECIFICATIONS</span>
+        <button id="btn-meta-close" class="meta-card-close" type="button" aria-label="Close specifications panel">✕</button>
+      </div>
       <dl class="meta-grid">
         <dt>Model</dt><dd id="meta-name">—</dd>
         <dt>Class</dt><dd><span id="meta-class" class="class-chip">—</span></dd>

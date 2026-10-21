@@ -45,6 +45,21 @@ export class OrbitRig {
     this.apply(0.016);
   }
 
+  setProfile(profile) {
+    if (!profile) return;
+    this.home.r = profile.orbitDistance;
+    this.minR = profile.minR || 2.6;
+    this.maxR = profile.maxR || 12.0;
+    this.minPol = profile.minPol || 0.5;
+    this.maxPol = profile.maxPol || 1.85;
+    if (typeof profile.targetY === "number") {
+      this.target.y = profile.targetY;
+    }
+    if (this.mode === "auto") {
+      this.tgt.r = profile.orbitDistance;
+    }
+  }
+
   _bind() {
     const dom = this.dom;
     dom.addEventListener("pointerdown", (e) => this._down(e));
@@ -52,11 +67,17 @@ export class OrbitRig {
     dom.addEventListener("pointerup", (e) => this._up(e));
     dom.addEventListener("pointercancel", (e) => this._up(e));
     dom.addEventListener("wheel", (e) => this._wheel(e), { passive: false });
-    dom.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+    dom.addEventListener("touchstart", (e) => {
+      if (e.target === dom || dom.contains(e.target)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
   }
 
   _down(e) {
-    try { this.dom.setPointerCapture?.(e.pointerId); } catch { /* synthetic or released pointer */ }
+    if (e.pointerType !== "touch" || this.pointers.size === 0) {
+      try { this.dom.setPointerCapture?.(e.pointerId); } catch { /* synthetic or released pointer */ }
+    }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.moved = 0;
     this.downAt = performance.now();
@@ -75,26 +96,30 @@ export class OrbitRig {
 
     if (this.pointers.size === 1) {
       this.moved += Math.abs(dx) + Math.abs(dy);
-      this.tgt.az -= dx * 0.0052;
-      this.tgt.pol = clamp(this.tgt.pol - dy * 0.0038, this.minPol, this.maxPol);
+      const sensitivity = (e.pointerType === "touch") ? 0.0058 : 0.0052;
+      this.tgt.az -= dx * sensitivity;
+      this.tgt.pol = clamp(this.tgt.pol - dy * (sensitivity * 0.73), this.minPol, this.maxPol);
       this._poke("manual");
     } else if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (this.lastPinch > 0) {
+      if (this.lastPinch > 0 && d > 12) {
         this.tgt.r = clamp(this.tgt.r * (this.lastPinch / d), this.minR, this.maxR);
       }
       this.lastPinch = d;
-      this.moved += 3;
+      this.moved += 4;
       this._poke("manual");
     }
   }
 
   _up(e) {
     const wasSingle = this.pointers.size === 1;
+    try { this.dom.releasePointerCapture?.(e.pointerId); } catch {}
     this.pointers.delete(e.pointerId);
     if (this.pointers.size < 2) this.lastPinch = 0;
-    if (wasSingle && this.moved < 9 && performance.now() - this.downAt < 420) {
+    const tapThreshold = (e.pointerType === "touch") ? 18 : 9;
+    const tapTimeLimit = (e.pointerType === "touch") ? 500 : 420;
+    if (wasSingle && this.moved < tapThreshold && performance.now() - this.downAt < tapTimeLimit) {
       this.onTap(e);
     }
   }

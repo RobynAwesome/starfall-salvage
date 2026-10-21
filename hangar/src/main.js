@@ -24,6 +24,8 @@ const hud = {
   metaMode: $("meta-mode"),
   metaNote: $("meta-note"),
   metaCard: document.querySelector(".hud-meta"),
+  metaToggleBtn: $("btn-meta-toggle"),
+  metaCloseBtn: $("btn-meta-close"),
   toastEl: $("toast"),
   bootOverlay: $("boot-overlay"),
   bootFill: $("boot-bar-fill"),
@@ -33,6 +35,22 @@ const hud = {
   helpOverlay: $("help-overlay"),
   helpBtn: $("help-btn")
 };
+
+function toggleMeta(force) {
+  if (!hud.metaCard) return;
+  const isCurrentlyOpen = hud.metaCard.classList.contains("is-open");
+  const next = typeof force === "boolean" ? force : !isCurrentlyOpen;
+  hud.metaCard.classList.toggle("is-open", next);
+  if (hud.metaToggleBtn) {
+    hud.metaToggleBtn.setAttribute("aria-expanded", String(next));
+  }
+}
+if (hud.metaToggleBtn) {
+  hud.metaToggleBtn.addEventListener("click", () => toggleMeta());
+}
+if (hud.metaCloseBtn) {
+  hud.metaCloseBtn.addEventListener("click", () => toggleMeta(false));
+}
 
 let toastTimer = 0;
 hud.toast = (msg, ok = true) => {
@@ -204,11 +222,13 @@ btnInspect.addEventListener("click", () => {
   const on = rig.toggleInspect();
   btnInspect.setAttribute("aria-pressed", String(on));
   hud.setMode(rig.modeLabel());
+  if (on) toggleMeta(true);
 });
 btnReset.addEventListener("click", () => {
   rig.resetView();
   btnInspect.setAttribute("aria-pressed", "false");
   hud.setMode(rig.modeLabel());
+  toggleMeta(false);
 });
 btnLoad.addEventListener("click", () => fileInput.click());
 
@@ -307,13 +327,75 @@ renderer.domElement.addEventListener("webglcontextrestored", () => {
   console.info("[hangar] WebGL context restored");
 });
 
+// ---------------------------------------------------------------- responsive framing
+function getHangarFrameProfile(w, h) {
+  const aspect = w / Math.max(1, h);
+  if (aspect <= 0.55) {
+    // Tall Mobile Portrait (e.g. Redmi 13 393x873, aspect ~0.45, 9:19.5, 9:20)
+    return {
+      fov: 52,
+      orbitDistance: 7.2,
+      minR: 3.8,
+      maxR: 12.0,
+      targetY: 1.05,
+      minPol: 0.52,
+      maxPol: 1.72,
+      aspect,
+      mode: "tall-portrait"
+    };
+  }
+  if (aspect <= 0.85) {
+    // Standard Mobile / Tablet Portrait
+    return {
+      fov: 48,
+      orbitDistance: 6.4,
+      minR: 3.2,
+      maxR: 11.0,
+      targetY: 0.98,
+      minPol: 0.50,
+      maxPol: 1.78,
+      aspect,
+      mode: "portrait"
+    };
+  }
+  if (aspect <= 1.35) {
+    // Compact Square or Tablet Landscape
+    return {
+      fov: 44,
+      orbitDistance: 5.8,
+      minR: 2.8,
+      maxR: 10.0,
+      targetY: 0.92,
+      minPol: 0.50,
+      maxPol: 1.82,
+      aspect,
+      mode: "compact"
+    };
+  }
+  // Desktop 16:9 / Ultrawide / Mobile Landscape (e.g. Redmi 13 rotated 873x393)
+  return {
+    fov: 42,
+    orbitDistance: 5.4,
+    minR: 2.6,
+    maxR: 9.5,
+    targetY: 0.88,
+    minPol: 0.50,
+    maxPol: 1.85,
+    aspect,
+    mode: "landscape"
+  };
+}
+
 // ---- resize ------------------------------------------------------------------
 function resize() {
   const w = host.clientWidth || window.innerWidth;
   const h = host.clientHeight || window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
+  const profile = getHangarFrameProfile(w, h);
+  camera.fov = profile.fov;
   camera.updateProjectionMatrix();
+  rig.setProfile(profile);
 }
 window.addEventListener("resize", resize);
 window.addEventListener("orientationchange", () => setTimeout(resize, 120));
@@ -489,6 +571,8 @@ window.__hangar = {
   pause: pauseHangar,
   resume: resumeHangar,
   launch: launchFlightWithShip,
+  toggleMeta,
+  getFrameProfile: () => getHangarFrameProfile(host.clientWidth || window.innerWidth, host.clientHeight || window.innerHeight),
   state: {
     get current() { return showcase.current && showcase.current.id; },
     get mode() { return rig.modeLabel(); },
