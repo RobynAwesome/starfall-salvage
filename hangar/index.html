@@ -48,14 +48,17 @@
     <!-- Bottom-center controls -->
     <nav class="hud hud-controls" aria-label="Hangar controls">
       <button id="btn-launch" type="button" class="ctl-btn ctl-launch" aria-label="Launch flight runner">LAUNCH&nbsp;FLIGHT</button>
-      <span class="ctl-dot" aria-hidden="true"></span>
-      <button id="btn-inspect" type="button" class="ctl-btn" aria-pressed="false">Inspect</button>
-      <span class="ctl-dot" aria-hidden="true"></span>
-      <button id="btn-swap" type="button" class="ctl-btn">Swap Craft</button>
-      <span class="ctl-dot" aria-hidden="true"></span>
-      <button id="btn-load" type="button" class="ctl-btn">Load Model</button>
-      <span class="ctl-dot" aria-hidden="true"></span>
-      <button id="btn-reset" type="button" class="ctl-btn">Reset View</button>
+      <button id="btn-actions-toggle" type="button" class="ctl-btn ctl-actions-toggle"
+              aria-expanded="false" aria-controls="actions-menu" aria-label="Secondary actions">ACTIONS&nbsp;▾</button>
+      <div class="actions-menu" id="actions-menu" role="menu" aria-label="Secondary Hangar actions">
+        <button id="btn-inspect" type="button" class="ctl-btn ctl-menu-btn" role="menuitem" aria-pressed="false">Inspect</button>
+        <span class="ctl-dot" aria-hidden="true"></span>
+        <button id="btn-swap" type="button" class="ctl-btn ctl-menu-btn" role="menuitem">Swap Craft</button>
+        <span class="ctl-dot" aria-hidden="true"></span>
+        <button id="btn-load" type="button" class="ctl-btn ctl-menu-btn" role="menuitem">Load Model</button>
+        <span class="ctl-dot" aria-hidden="true"></span>
+        <button id="btn-reset" type="button" class="ctl-btn ctl-menu-btn" role="menuitem">Reset View</button>
+      </div>
       <input id="file-input" type="file" accept=".json,application/json" hidden />
     </nav>
 

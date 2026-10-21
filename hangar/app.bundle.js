@@ -29179,6 +29179,7 @@ void main() {
       this.maxR = 9.5;
       this.minPol = 0.5;
       this.maxPol = 1.85;
+      this.inspectR = 3.1;
       this.autoSpeed = 0.09;
       this.idleDelay = 3.2;
       this.idleTimer = 0;
@@ -29204,12 +29205,19 @@ void main() {
       this.maxR = profile.maxR || 12;
       this.minPol = profile.minPol || 0.5;
       this.maxPol = profile.maxPol || 1.85;
+      this.inspectR = profile.inspectR || Math.max(this.minR + 0.4, 3.1);
       if (typeof profile.targetY === "number") {
         this.target.y = profile.targetY;
       }
       if (this.mode === "auto") {
         this.tgt.r = profile.orbitDistance;
+      } else if (this.mode === "inspect") {
+        this.tgt.r = this.inspectR;
       }
+      this.tgt.r = clamp2(this.tgt.r, this.minR, this.maxR);
+      this.sph.r = clamp2(this.sph.r, this.minR, this.maxR);
+      this.tgt.pol = clamp2(this.tgt.pol, this.minPol, this.maxPol);
+      this.sph.pol = clamp2(this.sph.pol, this.minPol, this.maxPol);
     }
     _bind() {
       const dom = this.dom;
@@ -29306,13 +29314,24 @@ void main() {
     }
     toggleInspect() {
       if (this.mode === "inspect") {
-        if (this.inspectSnapshot) this.tgt = { ...this.inspectSnapshot };
+        if (this.inspectSnapshot) {
+          this.tgt = {
+            az: this.inspectSnapshot.az,
+            pol: clamp2(this.inspectSnapshot.pol, this.minPol, this.maxPol),
+            r: clamp2(this.inspectSnapshot.r, this.minR, this.maxR)
+          };
+        }
         this.inspectSnapshot = null;
         this.mode = "auto";
         return false;
       }
       this.inspectSnapshot = { ...this.tgt };
-      this.tgt = { az: this.sph.az + 0.5, pol: 1.32, r: 3.1 };
+      const targetR = this.inspectR || Math.max(this.minR + 0.4, 3.1);
+      this.tgt = {
+        az: this.sph.az + 0.5,
+        pol: clamp2(1.32, this.minPol, this.maxPol),
+        r: clamp2(targetR, this.minR, this.maxR)
+      };
       this.mode = "inspect";
       return true;
     }
@@ -30236,6 +30255,8 @@ void main() {
   var btnReset = $("btn-reset");
   var btnMotion = $("btn-motion");
   var btnLaunch = $("btn-launch");
+  var btnActionsToggle = $("btn-actions-toggle");
+  var actionsMenu = $("actions-menu");
   var fileInput = $("file-input");
   var ALLOWED_SHIPS = /* @__PURE__ */ new Set(["mk1", "original", "mk1-158"]);
   function getTargetOrigin() {
@@ -30283,7 +30304,38 @@ void main() {
     hud.toast(e.matches ? "Reduced motion detected \u2014 automatic movement disabled." : "Motion preference lifted \u2014 automatic movement restored.");
   });
   syncMotionBtn();
-  btnSwap.addEventListener("click", () => showcase.next());
+  function toggleActionsMenu(force) {
+    if (!actionsMenu) return;
+    const isCurrentlyOpen = actionsMenu.classList.contains("is-open");
+    const next = typeof force === "boolean" ? force : !isCurrentlyOpen;
+    actionsMenu.classList.toggle("is-open", next);
+    if (btnActionsToggle) {
+      btnActionsToggle.setAttribute("aria-expanded", String(next));
+    }
+  }
+  if (btnActionsToggle) {
+    btnActionsToggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleActionsMenu();
+    });
+  }
+  document.addEventListener("click", (e) => {
+    if (actionsMenu && actionsMenu.classList.contains("is-open")) {
+      if (!actionsMenu.contains(e.target) && e.target !== btnActionsToggle) {
+        toggleActionsMenu(false);
+      }
+    }
+  });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      toggleActionsMenu(false);
+      toggleMeta(false);
+    }
+  });
+  btnSwap.addEventListener("click", () => {
+    showcase.next();
+    toggleActionsMenu(false);
+  });
   btnInspect.addEventListener("click", () => {
     const on = rig.toggleInspect();
     btnInspect.setAttribute("aria-pressed", String(on));
@@ -30295,8 +30347,12 @@ void main() {
     btnInspect.setAttribute("aria-pressed", "false");
     hud.setMode(rig.modeLabel());
     toggleMeta(false);
+    toggleActionsMenu(false);
   });
-  btnLoad.addEventListener("click", () => fileInput.click());
+  btnLoad.addEventListener("click", () => {
+    fileInput.click();
+    toggleActionsMenu(false);
+  });
   async function handleModelFile(file) {
     if (!file) return;
     if (file.size > 8 * 1024 * 1024) {
@@ -30399,6 +30455,7 @@ void main() {
         orbitDistance: 7.2,
         minR: 3.8,
         maxR: 12,
+        inspectR: 4.4,
         targetY: 1.05,
         minPol: 0.52,
         maxPol: 1.72,
@@ -30412,6 +30469,7 @@ void main() {
         orbitDistance: 6.4,
         minR: 3.2,
         maxR: 11,
+        inspectR: 3.8,
         targetY: 0.98,
         minPol: 0.5,
         maxPol: 1.78,
@@ -30425,6 +30483,7 @@ void main() {
         orbitDistance: 5.8,
         minR: 2.8,
         maxR: 10,
+        inspectR: 3.4,
         targetY: 0.92,
         minPol: 0.5,
         maxPol: 1.82,
@@ -30437,6 +30496,7 @@ void main() {
       orbitDistance: 5.4,
       minR: 2.6,
       maxR: 9.5,
+      inspectR: 3.1,
       targetY: 0.88,
       minPol: 0.5,
       maxPol: 1.85,
@@ -30630,6 +30690,7 @@ void main() {
     resume: resumeHangar,
     launch: launchFlightWithShip,
     toggleMeta,
+    toggleActionsMenu,
     getFrameProfile: () => getHangarFrameProfile(host.clientWidth || window.innerWidth, host.clientHeight || window.innerHeight),
     state: {
       get current() {
@@ -30646,4 +30707,22 @@ void main() {
       }
     }
   };
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("inspect") === "1" || params.get("inspect") === "true") {
+      setTimeout(() => {
+        const on = rig.toggleInspect();
+        btnInspect.setAttribute("aria-pressed", String(on));
+        hud.setMode(rig.modeLabel());
+        if (on) toggleMeta(true);
+      }, 180);
+    }
+    if (params.get("info") === "1" || params.get("info") === "true") {
+      setTimeout(() => toggleMeta(true), 180);
+    }
+    if (params.get("actions") === "1" || params.get("actions") === "true") {
+      setTimeout(() => toggleActionsMenu(true), 180);
+    }
+  } catch {
+  }
 })();

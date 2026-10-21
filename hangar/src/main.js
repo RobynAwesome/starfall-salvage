@@ -165,6 +165,8 @@ const btnLoad = $("btn-load");
 const btnReset = $("btn-reset");
 const btnMotion = $("btn-motion");
 const btnLaunch = $("btn-launch");
+const btnActionsToggle = $("btn-actions-toggle");
+const actionsMenu = $("actions-menu");
 const fileInput = $("file-input");
 
 const ALLOWED_SHIPS = new Set(["mk1", "original", "mk1-158"]);
@@ -217,7 +219,39 @@ reducedQuery.addEventListener?.("change", (e) => {
 });
 syncMotionBtn();
 
-btnSwap.addEventListener("click", () => showcase.next());
+function toggleActionsMenu(force) {
+  if (!actionsMenu) return;
+  const isCurrentlyOpen = actionsMenu.classList.contains("is-open");
+  const next = typeof force === "boolean" ? force : !isCurrentlyOpen;
+  actionsMenu.classList.toggle("is-open", next);
+  if (btnActionsToggle) {
+    btnActionsToggle.setAttribute("aria-expanded", String(next));
+  }
+}
+if (btnActionsToggle) {
+  btnActionsToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleActionsMenu();
+  });
+}
+document.addEventListener("click", (e) => {
+  if (actionsMenu && actionsMenu.classList.contains("is-open")) {
+    if (!actionsMenu.contains(e.target) && e.target !== btnActionsToggle) {
+      toggleActionsMenu(false);
+    }
+  }
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    toggleActionsMenu(false);
+    toggleMeta(false);
+  }
+});
+
+btnSwap.addEventListener("click", () => {
+  showcase.next();
+  toggleActionsMenu(false);
+});
 btnInspect.addEventListener("click", () => {
   const on = rig.toggleInspect();
   btnInspect.setAttribute("aria-pressed", String(on));
@@ -229,8 +263,12 @@ btnReset.addEventListener("click", () => {
   btnInspect.setAttribute("aria-pressed", "false");
   hud.setMode(rig.modeLabel());
   toggleMeta(false);
+  toggleActionsMenu(false);
 });
-btnLoad.addEventListener("click", () => fileInput.click());
+btnLoad.addEventListener("click", () => {
+  fileInput.click();
+  toggleActionsMenu(false);
+});
 
 // ---- model upload (local parsing only) ----------------------------------
 async function handleModelFile(file) {
@@ -337,6 +375,7 @@ function getHangarFrameProfile(w, h) {
       orbitDistance: 7.2,
       minR: 3.8,
       maxR: 12.0,
+      inspectR: 4.4,
       targetY: 1.05,
       minPol: 0.52,
       maxPol: 1.72,
@@ -351,6 +390,7 @@ function getHangarFrameProfile(w, h) {
       orbitDistance: 6.4,
       minR: 3.2,
       maxR: 11.0,
+      inspectR: 3.8,
       targetY: 0.98,
       minPol: 0.50,
       maxPol: 1.78,
@@ -365,6 +405,7 @@ function getHangarFrameProfile(w, h) {
       orbitDistance: 5.8,
       minR: 2.8,
       maxR: 10.0,
+      inspectR: 3.4,
       targetY: 0.92,
       minPol: 0.50,
       maxPol: 1.82,
@@ -378,6 +419,7 @@ function getHangarFrameProfile(w, h) {
     orbitDistance: 5.4,
     minR: 2.6,
     maxR: 9.5,
+    inspectR: 3.1,
     targetY: 0.88,
     minPol: 0.50,
     maxPol: 1.85,
@@ -572,6 +614,7 @@ window.__hangar = {
   resume: resumeHangar,
   launch: launchFlightWithShip,
   toggleMeta,
+  toggleActionsMenu,
   getFrameProfile: () => getHangarFrameProfile(host.clientWidth || window.innerWidth, host.clientHeight || window.innerHeight),
   state: {
     get current() { return showcase.current && showcase.current.id; },
@@ -580,3 +623,22 @@ window.__hangar = {
     get hover() { return showcase.hover > 0.35; }
   }
 };
+
+// URL parameter handling for automated verification & direct deep-linking
+try {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("inspect") === "1" || params.get("inspect") === "true") {
+    setTimeout(() => {
+      const on = rig.toggleInspect();
+      btnInspect.setAttribute("aria-pressed", String(on));
+      hud.setMode(rig.modeLabel());
+      if (on) toggleMeta(true);
+    }, 180);
+  }
+  if (params.get("info") === "1" || params.get("info") === "true") {
+    setTimeout(() => toggleMeta(true), 180);
+  }
+  if (params.get("actions") === "1" || params.get("actions") === "true") {
+    setTimeout(() => toggleActionsMenu(true), 180);
+  }
+} catch {}

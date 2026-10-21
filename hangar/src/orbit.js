@@ -23,6 +23,7 @@ export class OrbitRig {
     this.maxR = 9.5;
     this.minPol = 0.5;
     this.maxPol = 1.85;
+    this.inspectR = 3.1;
 
     this.autoSpeed = 0.09;           // rad/s, camera idle orbit
     this.idleDelay = 3.2;            // s of inactivity before auto-orbit resumes
@@ -52,12 +53,20 @@ export class OrbitRig {
     this.maxR = profile.maxR || 12.0;
     this.minPol = profile.minPol || 0.5;
     this.maxPol = profile.maxPol || 1.85;
+    this.inspectR = profile.inspectR || Math.max(this.minR + 0.4, 3.1);
     if (typeof profile.targetY === "number") {
       this.target.y = profile.targetY;
     }
     if (this.mode === "auto") {
       this.tgt.r = profile.orbitDistance;
+    } else if (this.mode === "inspect") {
+      this.tgt.r = this.inspectR;
     }
+    // Dynamic boundary safety: enforce new spherical constraints on resize/orientation
+    this.tgt.r = clamp(this.tgt.r, this.minR, this.maxR);
+    this.sph.r = clamp(this.sph.r, this.minR, this.maxR);
+    this.tgt.pol = clamp(this.tgt.pol, this.minPol, this.maxPol);
+    this.sph.pol = clamp(this.sph.pol, this.minPol, this.maxPol);
   }
 
   _bind() {
@@ -158,13 +167,24 @@ export class OrbitRig {
 
   toggleInspect() {
     if (this.mode === "inspect") {
-      if (this.inspectSnapshot) this.tgt = { ...this.inspectSnapshot };
+      if (this.inspectSnapshot) {
+        this.tgt = {
+          az: this.inspectSnapshot.az,
+          pol: clamp(this.inspectSnapshot.pol, this.minPol, this.maxPol),
+          r: clamp(this.inspectSnapshot.r, this.minR, this.maxR)
+        };
+      }
       this.inspectSnapshot = null;
       this.mode = "auto";
       return false;
     }
     this.inspectSnapshot = { ...this.tgt };
-    this.tgt = { az: this.sph.az + 0.5, pol: 1.32, r: 3.1 };
+    const targetR = this.inspectR || Math.max(this.minR + 0.4, 3.1);
+    this.tgt = {
+      az: this.sph.az + 0.5,
+      pol: clamp(1.32, this.minPol, this.maxPol),
+      r: clamp(targetR, this.minR, this.maxR)
+    };
     this.mode = "inspect";
     return true;
   }

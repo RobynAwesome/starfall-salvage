@@ -37,7 +37,7 @@ function requestServiceWorkerUpdate(registration) {
   });
 }
 
-if ("serviceWorker" in navigator) {
+if ("serviceWorker" in navigator && new URLSearchParams(window.location.search).get("noSW") !== "1") {
   window.addEventListener("load", () => {
     let controllerRefreshArmed = false;
 
