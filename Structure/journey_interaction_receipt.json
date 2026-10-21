@@ -1,0 +1,190 @@
+{
+  "harness": "tools/interactive_player_journey_test.html",
+  "timestamp": "2026-10-21T14:26:13.224Z",
+  "verdict": "PASS",
+  "steps": [
+    {
+      "timestamp": "2026-10-21T14:25:56.948Z",
+      "type": "info",
+      "step": "INIT",
+      "desc": "Starting player interaction test under active Service Worker...",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-10-21T14:25:56.955Z",
+      "type": "info",
+      "step": "BOOT",
+      "desc": "Outer game shell loaded",
+      "details": {
+        "url": "http://localhost:8799/index.html"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:25:56.984Z",
+      "type": "pass",
+      "step": "SW_CHECK",
+      "desc": "Service Worker registration verified (controller=true)",
+      "details": {
+        "hasRegistration": true,
+        "scope": "http://localhost:8799/",
+        "controller": true
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:25:59.300Z",
+      "type": "pass",
+      "step": "HANGAR_READY",
+      "desc": "Sovereign Hangar initialized and ready",
+      "details": {
+        "ship": "mk1",
+        "frameCount": 7,
+        "profile": null
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:25:59.304Z",
+      "type": "pass",
+      "step": "STEP_1",
+      "desc": "Initial DOM State: Metadata collapsed by default, actions menu closed",
+      "details": {
+        "metaIsOpen": false,
+        "btnInfoAriaExpanded": "false",
+        "actionsMenuIsOpen": false,
+        "ship": "mk1",
+        "triangles": "728"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:25:59.490Z",
+      "type": "pass",
+      "step": "STEP_2",
+      "desc": "Physical Click: INFO button revealed metadata card",
+      "details": {
+        "btnInfoClicked": true,
+        "metaIsOpen": true,
+        "ariaExpanded": "true"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:25:59.656Z",
+      "type": "pass",
+      "step": "STEP_3",
+      "desc": "Physical Click: Close button (\u2715) dismissed metadata card",
+      "details": {
+        "btnCloseClicked": true,
+        "metaIsOpen": false,
+        "ariaExpanded": "false"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:25:59.823Z",
+      "type": "pass",
+      "step": "STEP_4",
+      "desc": "Physical Click: ACTIONS \u25be toggle opened responsive actions menu",
+      "details": {
+        "btnActionsClicked": true,
+        "actionsIsOpen": true,
+        "ariaExpanded": "true"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:00.116Z",
+      "type": "pass",
+      "step": "STEP_5",
+      "desc": "Physical Click: Inspect button activated detail inspection mode",
+      "details": {
+        "btnInspectClicked": true,
+        "rigMode": "inspect",
+        "ariaPressed": "true",
+        "modeLine": "EXHIBIT 1 / 3 \u2014 CLICK CRAFT OR PRESS 1\u00b72\u00b73 TO SWAP",
+        "metaCardRevealed": true
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:00.416Z",
+      "type": "pass",
+      "step": "STEP_6",
+      "desc": "Physical Click: Reset View restored default orbit & closed menus",
+      "details": {
+        "btnResetClicked": true,
+        "rigMode": "auto",
+        "ariaPressed": "false",
+        "actionsOpen": false,
+        "metaOpen": false
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:05.548Z",
+      "type": "pass",
+      "step": "STEP_7",
+      "desc": "Physical Click: Swap Craft successfully swapped to Original Player Ship (6 tris)",
+      "details": {
+        "btnSwapClicked": true,
+        "ship": "original",
+        "name": "ORIGINAL PLAYER SHIP",
+        "tris": "6"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:07.207Z",
+      "type": "info",
+      "step": "STEP_8A",
+      "desc": "Cycled to Boss Drone exhibit",
+      "details": {
+        "ship": "drone",
+        "name": "BOSS DRONE (BLOCKOUT)"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:08.823Z",
+      "type": "pass",
+      "step": "STEP_8",
+      "desc": "Physical Click: Swap Craft cycled back to Sovereign MK-I (728 tris)",
+      "details": {
+        "ship": "mk1",
+        "name": "STARFALL SALVAGER MK-I",
+        "tris": "728"
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:09.328Z",
+      "type": "pass",
+      "step": "STEP_9",
+      "desc": "Physical Click: LAUNCH FLIGHT triggered parent scrim dismissal & onboarding",
+      "details": {
+        "btnLaunchClicked": true,
+        "scrimHidden": false,
+        "onboardingVisible": true
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:09.330Z",
+      "type": "info",
+      "step": "STEP_10",
+      "desc": "Clicked Onboarding Continue Button; awaiting flight countdown...",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-10-21T14:26:13.221Z",
+      "type": "pass",
+      "step": "STEP_10",
+      "desc": "Flight runner entered PLAYING mode with Three.js loop suspended",
+      "details": {
+        "gameMode": "playing",
+        "selectedShip": "mk1",
+        "hangarLoopRunning": false,
+        "activeRafId": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-21T14:26:13.223Z",
+      "type": "pass",
+      "step": "VERDICT",
+      "desc": "Player Journey Verification Complete: PASS",
+      "details": {
+        "totalSteps": 16,
+        "verdict": "PASS"
+      }
+    }
+  ]
+}

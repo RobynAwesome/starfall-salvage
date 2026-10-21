@@ -623,22 +623,3 @@ window.__hangar = {
     get hover() { return showcase.hover > 0.35; }
   }
 };
-
-// URL parameter handling for automated verification & direct deep-linking
-try {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("inspect") === "1" || params.get("inspect") === "true") {
-    setTimeout(() => {
-      const on = rig.toggleInspect();
-      btnInspect.setAttribute("aria-pressed", String(on));
-      hud.setMode(rig.modeLabel());
-      if (on) toggleMeta(true);
-    }, 180);
-  }
-  if (params.get("info") === "1" || params.get("info") === "true") {
-    setTimeout(() => toggleMeta(true), 180);
-  }
-  if (params.get("actions") === "1" || params.get("actions") === "true") {
-    setTimeout(() => toggleActionsMenu(true), 180);
-  }
-} catch {}
