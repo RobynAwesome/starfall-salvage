@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Starfall Salvage — RC1 to RC2 Release Cache Upgrade & Integrity Audit</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #07080e;
+      color: #e6edf3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+    h1 { font-size: 16px; margin: 0 0 12px 0; color: #58a6ff; }
+    .layout { display: flex; gap: 16px; height: calc(100vh - 60px); }
+    .viewport-box { flex: 0 0 420px; display: flex; flex-direction: column; }
+    iframe { width: 393px; height: 873px; border: 1px solid #30363d; border-radius: 8px; background: #000; }
+    .console-box { flex: 1; overflow-y: auto; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; }
+    .log-entry { margin: 6px 0; padding: 6px; border-radius: 4px; border-left: 3px solid #30363d; }
+    .log-pass { border-left-color: #238636; background: rgba(35, 134, 54, 0.1); }
+    .log-fail { border-left-color: #da3633; background: rgba(218, 54, 51, 0.1); }
+    .log-info { border-left-color: #58a6ff; background: rgba(88, 166, 255, 0.05); }
+    .status-badge { display: inline-block; padding: 2px 6px; font-weight: bold; border-radius: 3px; margin-right: 6px; }
+    .pass-badge { background: #238636; color: #fff; }
+    .fail-badge { background: #da3633; color: #fff; }
+    .info-badge { background: #1f6feb; color: #fff; }
+    pre { margin: 4px 0 0 0; font-size: 11px; color: #8b949e; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Starfall Salvage — Release Cache Upgrade Audit (RC1 &rarr; RC2 Candidate)</h1>
+  <div class="layout">
+    <div class="viewport-box">
+      <iframe id="gameFrame" src="about:blank"></iframe>
+    </div>
+    <div class="console-box" id="console"></div>
+  </div>
+
+  <script>
+    const OLD_BUILD = "20261020-sovereign-hangar-mki-rc1";
+    const OLD_CACHE = `starfall-salvage-v${OLD_BUILD}`;
+    const LEGACY_CACHE = "starfall-salvage-v20260526-ready-shell";
+
+    const NEW_BUILD = "20261022-sovereign-hangar-mki-rc2";
+    const NEW_CACHE = `starfall-salvage-v${NEW_BUILD}`;
+
+    const logBox = document.getElementById('console');
+    const receipts = [];
+
+    function log(type, step, desc, details) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const badge = `<span class="status-badge ${type}-badge">${type.toUpperCase()}</span>`;
+      entry.innerHTML = `${badge} <strong>[${step}]</strong> ${desc}`;
+      if (details) {
+        const pre = document.createElement('pre');
+        pre.textContent = typeof details === 'object' ? JSON.stringify(details, null, 2) : details;
+        entry.appendChild(pre);
+      }
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+      receipts.push({ timestamp: new Date().toISOString(), type, step, desc, details });
+    }
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    async function runUpgradeAudit() {
+      log('info', 'START', `Beginning persistent storage upgrade audit: ${OLD_BUILD} -> ${NEW_BUILD}`, {});
+
+      if (!('caches' in window) || !('serviceWorker' in navigator)) {
+        log('fail', 'ENV', 'Browser does not support CacheStorage or ServiceWorker APIs');
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      // =======================================================================
+      // PHASE 1: Seed Persistent Storage with Stale RC1 & Legacy Caches
+      // =======================================================================
+      try {
+        log('info', 'SEED_INIT', `Seeding persistent origin storage with baseline RC1 cache (${OLD_CACHE})...`);
+        const rc1Cache = await caches.open(OLD_CACHE);
+        await rc1Cache.put(
+          new Request("/index.html"),
+          new Response(`<!DOCTYPE html><html><body><p class="mobile-lockdown-meta">Build: ${OLD_BUILD}</p></body></html>`, {
+            headers: { "Content-Type": "text/html; charset=utf-8" }
+          })
+        );
+        await rc1Cache.put(
+          new Request("/src/pwa-boot.js"),
+          new Response(`const BUILD = "${OLD_BUILD}";`, {
+            headers: { "Content-Type": "application/javascript; charset=utf-8" }
+          })
+        );
+        await rc1Cache.put(
+          new Request("/rc1-stale-sentinel.json"),
+          new Response(JSON.stringify({ stale: true, build: OLD_BUILD }), {
+            headers: { "Content-Type": "application/json" }
+          })
+        );
+
+        // Also seed an older legacy cache to prove multi-cache eviction
+        const legCache = await caches.open(LEGACY_CACHE);
+        await legCache.put(
+          new Request("/legacy-sentinel.json"),
+          new Response(JSON.stringify({ legacy: true }), {
+            headers: { "Content-Type": "application/json" }
+          })
+        );
+
+        const keysBefore = await caches.keys();
+        const rc1Present = keysBefore.includes(OLD_CACHE);
+        const legacyPresent = keysBefore.includes(LEGACY_CACHE);
+
+        if (rc1Present && legacyPresent) {
+          log('pass', 'SEED_PROVEN', `Successfully seeded RC1 and legacy caches on origin storage`, {
+            existingKeys: keysBefore,
+            rc1Present,
+            legacyPresent
+          });
+        } else {
+          throw new Error(`Failed to seed caches: keys=${JSON.stringify(keysBefore)}`);
+        }
+      } catch (err) {
+        log('fail', 'SEED_FAIL', `Could not seed baseline RC1 cache: ${err.message}`);
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      // =======================================================================
+      // PHASE 2: Register New Candidate Service Worker (RC2) & Trigger Upgrade
+      // =======================================================================
+      log('info', 'SW_REGISTER', `Registering candidate RC2 Service Worker (/service-worker.js?v=${NEW_BUILD})...`);
+      let registration;
+      try {
+        registration = await navigator.serviceWorker.register(`/service-worker.js?v=${NEW_BUILD}`, {
+          updateViaCache: "none"
+        });
+        await registration.update();
+        log('pass', 'SW_REG_OK', `Service Worker registration initiated for candidate ${NEW_BUILD}`, {
+          scope: registration.scope
+        });
+      } catch (err) {
+        log('fail', 'SW_REG_FAIL', `Service worker registration failed: ${err.message}`);
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      // Wait for the new Service Worker to activate and purge old caches
+      log('info', 'AWAIT_ACTIVATION', 'Awaiting candidate service worker activation & cache purge cycle...');
+      let upgradeActivated = false;
+      for (let i = 0; i < 60; i++) {
+        const keys = await caches.keys();
+        const hasNew = keys.includes(NEW_CACHE);
+        const hasOld = keys.includes(OLD_CACHE);
+        const hasLegacy = keys.includes(LEGACY_CACHE);
+
+        if (hasNew && !hasOld && !hasLegacy) {
+          upgradeActivated = true;
+          break;
+        }
+        await sleep(200);
+      }
+
+      const keysAfter = await caches.keys();
+      const oldPurged = !keysAfter.includes(OLD_CACHE);
+      const legacyPurged = !keysAfter.includes(LEGACY_CACHE);
+      const newActive = keysAfter.includes(NEW_CACHE);
+
+      if (upgradeActivated && oldPurged && legacyPurged && newActive) {
+        log('pass', 'CACHE_EVICTION', `Stale RC1 and legacy caches purged; candidate RC2 cache established`, {
+          activeCaches: keysAfter,
+          oldPurged,
+          legacyPurged,
+          newActive
+        });
+      } else {
+        log('fail', 'CACHE_EVICTION', `Cache eviction failed or timed out`, {
+          activeCaches: keysAfter,
+          oldPurged,
+          legacyPurged,
+          newActive
+        });
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      // =======================================================================
+      // PHASE 3: Verify Precached Asset Replacement & Integrity in New Cache
+      // =======================================================================
+      try {
+        const candidateCache = await caches.open(NEW_CACHE);
+        const cachedRequests = await candidateCache.keys();
+        const cachedUrls = cachedRequests.map(r => new URL(r.url).pathname);
+
+        const getEntry = (p) => candidateCache.match(new URL(p, window.location.origin).href);
+
+        // 1. Verify index.html contains the new build string
+        const indexRes = await getEntry("/index.html") || await candidateCache.match("./index.html");
+        const indexText = indexRes ? await indexRes.text() : "";
+        const indexHasNewBuild = indexText.includes(`Build: ${NEW_BUILD}`) && indexText.includes(`?v=${NEW_BUILD}`);
+        const indexHasOldBuild = indexText.includes(OLD_BUILD);
+
+        // 2. Verify pwa-boot.js contains the new build string
+        const bootRes = await getEntry("/src/pwa-boot.js") || await candidateCache.match("./src/pwa-boot.js");
+        const bootText = bootRes ? await bootRes.text() : "";
+        const bootHasNewBuild = bootText.includes(`const BUILD = "${NEW_BUILD}";`);
+
+        // 3. Verify game.js contains the new build string
+        const gameRes = await getEntry("/src/game.js") || await candidateCache.match("./src/game.js");
+        const gameText = gameRes ? await gameRes.text() : "";
+        const gameHasNewBuild = gameText.includes(`const GAME_BUILD = "${NEW_BUILD}";`);
+
+        // 4. Verify hangar/index.html references the new build string
+        const hangarRes = await getEntry("/hangar/index.html") || await candidateCache.match("./hangar/index.html");
+        const hangarText = hangarRes ? await hangarRes.text() : "";
+        const hangarHasNewBuild = hangarText.includes(`?v=${NEW_BUILD}`);
+
+        // 5. Verify hangar bundle is present and populated
+        const bundleRes = await getEntry("/hangar/app.bundle.js") || await candidateCache.match("./hangar/app.bundle.js");
+        const bundleSize = bundleRes ? (await bundleRes.arrayBuffer()).byteLength : 0;
+        const bundleOk = bundleSize > 100000;
+
+        // 6. Verify stale sentinel is NOT present in candidate cache
+        const sentinelRes = await getEntry("/rc1-stale-sentinel.json");
+        const sentinelAbsent = sentinelRes === undefined;
+
+        if (indexHasNewBuild && !indexHasOldBuild && bootHasNewBuild && gameHasNewBuild && hangarHasNewBuild && bundleOk && sentinelAbsent) {
+          log('pass', 'ASSET_INTEGRITY', `Verified precached assets in candidate cache (${NEW_CACHE}): all replaced cleanly`, {
+            totalCachedAssets: cachedUrls.length,
+            indexHasNewBuild,
+            indexHasOldBuild,
+            bootHasNewBuild,
+            gameHasNewBuild,
+            hangarHasNewBuild,
+            bundleByteLength: bundleSize,
+            staleSentinelPurged: sentinelAbsent
+          });
+        } else {
+          log('fail', 'ASSET_INTEGRITY', `Precached asset verification failed`, {
+            indexHasNewBuild,
+            indexHasOldBuild,
+            bootHasNewBuild,
+            gameHasNewBuild,
+            hangarHasNewBuild,
+            bundleOk,
+            sentinelAbsent
+          });
+          await reportReceipts('FAIL');
+          return;
+        }
+      } catch (err) {
+        log('fail', 'ASSET_INTEGRITY', `Exception during asset integrity check: ${err.message}`);
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      // =======================================================================
+      // PHASE 4: Mount Upgraded Application in Live Iframe & Verify Player Journey
+      // =======================================================================
+      log('info', 'MOUNT_APP', `Loading root application (../index.html) under candidate service worker controller...`);
+      const gameFrame = document.getElementById('gameFrame');
+      gameFrame.src = "../index.html";
+
+      await new Promise(resolve => {
+        gameFrame.addEventListener('load', resolve, { once: true });
+      });
+
+      // Allow runtime controller settlement
+      await sleep(1500);
+
+      const curWin = gameFrame.contentWindow;
+      const curDoc = gameFrame.contentDocument;
+
+      // Verify Service Worker controller on live page
+      const liveController = curWin.navigator.serviceWorker.controller;
+      const controllerScript = liveController ? liveController.scriptURL : "";
+      const controllerHasNewBuild = controllerScript.includes(NEW_BUILD);
+
+      // Verify DOM lockdown meta text
+      const lockdownEl = curDoc.querySelector('.mobile-lockdown-meta');
+      const lockdownText = lockdownEl ? lockdownEl.textContent : "";
+      const lockdownHasNewBuild = lockdownText.includes(NEW_BUILD);
+
+      if (liveController && controllerHasNewBuild && lockdownHasNewBuild) {
+        log('pass', 'LIVE_UPGRADE_READY', `Upgraded application running with candidate controller & DOM build identity`, {
+          controllerURL: controllerScript,
+          buildText: lockdownText
+        });
+      } else {
+        log('fail', 'LIVE_UPGRADE_READY', `Upgraded application controller or build identity check failed`, {
+          hasController: Boolean(liveController),
+          controllerScript,
+          lockdownText
+        });
+      }
+
+      // =======================================================================
+      // PHASE 5: Verify Full Hangar Interaction Suite Post-Upgrade
+      // =======================================================================
+      log('info', 'HANGAR_AWAIT', 'Waiting for Sovereign Hangar initialization inside upgraded shell...');
+      let hWin = null;
+      let hDoc = null;
+      let h = null;
+
+      for (let i = 0; i < 150; i++) {
+        try {
+          const doc = gameFrame.contentDocument;
+          if (doc) {
+            const hFrame = doc.getElementById('hangarFrame');
+            if (hFrame && hFrame.contentWindow && hFrame.contentDocument) {
+              const hangarObj = hFrame.contentWindow.__hangar;
+              if (hangarObj && hangarObj.lifecycle && hangarObj.lifecycle.isRunning && hangarObj.lifecycle.frameCount >= 5) {
+                hWin = hFrame.contentWindow;
+                hDoc = hFrame.contentDocument;
+                h = hangarObj;
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+        await sleep(100);
+      }
+
+      if (!h || !hWin || !hDoc) {
+        log('fail', 'HANGAR_READY', 'Sovereign Hangar failed to initialize in upgraded application');
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      log('pass', 'HANGAR_READY', 'Sovereign Hangar running in upgraded runtime', {
+        ship: h.state.current,
+        frameCount: h.lifecycle.frameCount
+      });
+
+      // Verify Initial State: Metadata collapsed, actions menu closed
+      const metaCard = hDoc.querySelector('.hud-meta');
+      const btnInfo = hDoc.getElementById('btn-meta-toggle');
+      const actionsMenu = hDoc.getElementById('actions-menu');
+      const btnActions = hDoc.getElementById('btn-actions-toggle');
+      const btnInspect = hDoc.getElementById('btn-inspect');
+
+      const initialOpen = metaCard ? metaCard.classList.contains('is-open') : false;
+      const initialActionsOpen = actionsMenu ? actionsMenu.classList.contains('is-open') : false;
+
+      if (!initialOpen && !initialActionsOpen) {
+        log('pass', 'INT_INITIAL', 'Initial post-upgrade DOM: metadata collapsed, actions menu closed');
+      } else {
+        log('fail', 'INT_INITIAL', 'Initial post-upgrade DOM check failed', { initialOpen, initialActionsOpen });
+      }
+
+      // 1. INFO Toggle & Close
+      btnInfo.click();
+      await sleep(150);
+      const infoOpened = metaCard.classList.contains('is-open');
+
+      const btnCloseMeta = hDoc.getElementById('btn-meta-close');
+      btnCloseMeta.click();
+      await sleep(150);
+      const infoClosed = !metaCard.classList.contains('is-open');
+
+      if (infoOpened && infoClosed) {
+        log('pass', 'INT_INFO', 'INFO open & close interactions verified');
+      } else {
+        log('fail', 'INT_INFO', 'INFO interaction failed', { infoOpened, infoClosed });
+      }
+
+      // 2. ACTIONS Menu Toggle
+      btnActions.click();
+      await sleep(150);
+      const actionsOpened = actionsMenu.classList.contains('is-open');
+      if (actionsOpened) {
+        log('pass', 'INT_ACTIONS', 'ACTIONS ▾ menu opened cleanly');
+      } else {
+        log('fail', 'INT_ACTIONS', 'ACTIONS ▾ menu failed to open');
+      }
+
+      // 3. Inspect Mode & Reset View
+      btnInspect.click();
+      await sleep(250);
+      const inspectActive = h.rig.mode === 'inspect';
+
+      const btnReset = hDoc.getElementById('btn-reset');
+      btnReset.click();
+      await sleep(250);
+      const resetActive = h.rig.mode === 'auto' && !actionsMenu.classList.contains('is-open');
+
+      if (inspectActive && resetActive) {
+        log('pass', 'INT_INSPECT_RESET', 'Inspect mode activated and Reset View restored auto orbit');
+      } else {
+        log('fail', 'INT_INSPECT_RESET', 'Inspect/Reset interaction failed', { inspectActive, resetActive });
+      }
+
+      // 4. Model Swap Cycle
+      async function waitForSwap() {
+        await sleep(200);
+        for (let i = 0; i < 40; i++) {
+          if (!h.showcase.busy && h.showcase.swapT < 0) break;
+          await sleep(100);
+        }
+        await sleep(150);
+      }
+
+      const btnSwap = hDoc.getElementById('btn-swap');
+      btnActions.click();
+      await sleep(150);
+      btnSwap.click();
+      await waitForSwap();
+      const swappedToOriginal = h.state.current === 'original';
+
+      // Cycle to Drone
+      btnActions.click();
+      await sleep(150);
+      btnSwap.click();
+      await waitForSwap();
+
+      // Cycle back to MK-I
+      btnActions.click();
+      await sleep(150);
+      btnSwap.click();
+      await waitForSwap();
+      const swappedBackMk1 = h.state.current === 'mk1';
+
+      if (swappedToOriginal && swappedBackMk1) {
+        log('pass', 'INT_MODEL_SWAP', 'Craft model swap cycle (MK-I -> Original -> Drone -> MK-I) verified');
+      } else {
+        log('fail', 'INT_MODEL_SWAP', 'Model swap cycle failed', { swappedToOriginal, swappedBackMk1 });
+      }
+
+      // Ensure actions menu closed
+      if (actionsMenu.classList.contains('is-open')) {
+        btnActions.click();
+        await sleep(150);
+      }
+
+      // 5. LAUNCH FLIGHT & Onboarding
+      const btnLaunch = hDoc.getElementById('btn-launch');
+      btnLaunch.click();
+      await sleep(500);
+
+      const scrim = curDoc.getElementById('sovereignScrim');
+      const scrimHidden = scrim ? (scrim.style.display === 'none' || scrim.classList.contains('is-hidden')) : false;
+      const onboardingModal = curDoc.getElementById('onboardingModal');
+      const onboardingVisible = Boolean(onboardingModal && !onboardingModal.classList.contains('is-hidden'));
+
+      if (scrimHidden || onboardingVisible) {
+        log('pass', 'INT_LAUNCH', 'LAUNCH FLIGHT triggered parent scrim dismissal & onboarding briefing');
+      } else {
+        log('fail', 'INT_LAUNCH', 'LAUNCH FLIGHT trigger failed', { scrimHidden, onboardingVisible });
+      }
+
+      // 6. Complete Onboarding & Enter Playing Lane
+      const btnContinue = curDoc.getElementById('onboardingContinueButton');
+      if (btnContinue) {
+        btnContinue.click();
+      }
+
+      let reachedPlaying = false;
+      for (let i = 0; i < 40; i++) {
+        const dbg = curWin.__starfallDebug ? curWin.__starfallDebug() : null;
+        if (dbg && dbg.mode === 'playing') {
+          reachedPlaying = true;
+          break;
+        }
+        await sleep(150);
+      }
+
+      const hangarLoopStopped = Boolean(h.lifecycle && !h.lifecycle.isRunning);
+      const gameDebug = curWin.__starfallDebug ? curWin.__starfallDebug() : null;
+
+      if (reachedPlaying && hangarLoopStopped) {
+        log('pass', 'INT_GAMEPLAY_TRANSITION', 'Flight runner active in PLAYING mode with Three.js Hangar loop suspended', {
+          gameMode: gameDebug ? gameDebug.mode : null,
+          selectedShip: gameDebug ? gameDebug.player.selectedShip : null,
+          hangarLoopRunning: h.lifecycle.isRunning,
+          activeRafId: h.lifecycle.activeRafId
+        });
+      } else {
+        log('fail', 'INT_GAMEPLAY_TRANSITION', 'Transition to playing lane failed', {
+          reachedPlaying,
+          hangarLoopStopped
+        });
+      }
+
+      // =======================================================================
+      // Final Verdict & Reporting
+      // =======================================================================
+      const anyFails = receipts.some(r => r.type === 'fail');
+      const finalVerdict = anyFails ? 'FAIL' : 'PASS';
+      log(anyFails ? 'fail' : 'pass', 'VERDICT', `Release Cache Upgrade Audit Complete: ${finalVerdict}`, {
+        oldBuild: OLD_BUILD,
+        newBuild: NEW_BUILD,
+        totalSteps: receipts.length,
+        verdict: finalVerdict
+      });
+
+      await reportReceipts(finalVerdict);
+    }
+
+    async function reportReceipts(verdict) {
+      const payload = {
+        harness: "tools/test_release_cache_upgrade.html",
+        timestamp: new Date().toISOString(),
+        oldBuild: OLD_BUILD,
+        newBuild: NEW_BUILD,
+        oldCacheName: OLD_CACHE,
+        newCacheName: NEW_CACHE,
+        verdict,
+        steps: receipts
+      };
+      try {
+        const res = await fetch("/api/record_upgrade", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        log('info', 'SERVER_SYNC', `Server sync response: ${JSON.stringify(json)}`);
+      } catch(e) {
+        log('fail', 'SERVER_SYNC', `Failed to sync receipt to server: ${e.message}`);
+      }
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(runUpgradeAudit, 300);
+    });
+  </script>
+</body>
+</html>

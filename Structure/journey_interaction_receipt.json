@@ -1,17 +1,17 @@
 {
   "harness": "tools/interactive_player_journey_test.html",
-  "timestamp": "2026-10-21T14:26:13.224Z",
+  "timestamp": "2026-10-22T16:04:26.138Z",
   "verdict": "PASS",
   "steps": [
     {
-      "timestamp": "2026-10-21T14:25:56.948Z",
+      "timestamp": "2026-10-22T16:04:14.506Z",
       "type": "info",
       "step": "INIT",
       "desc": "Starting player interaction test under active Service Worker...",
       "details": {}
     },
     {
-      "timestamp": "2026-10-21T14:25:56.955Z",
+      "timestamp": "2026-10-22T16:04:14.512Z",
       "type": "info",
       "step": "BOOT",
       "desc": "Outer game shell loaded",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:25:56.984Z",
+      "timestamp": "2026-10-22T16:04:14.537Z",
       "type": "pass",
       "step": "SW_CHECK",
       "desc": "Service Worker registration verified (controller=true)",
@@ -31,18 +31,18 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:25:59.300Z",
+      "timestamp": "2026-10-22T16:04:16.048Z",
       "type": "pass",
       "step": "HANGAR_READY",
       "desc": "Sovereign Hangar initialized and ready",
       "details": {
         "ship": "mk1",
-        "frameCount": 7,
+        "frameCount": 45,
         "profile": null
       }
     },
     {
-      "timestamp": "2026-10-21T14:25:59.304Z",
+      "timestamp": "2026-10-22T16:04:16.050Z",
       "type": "pass",
       "step": "STEP_1",
       "desc": "Initial DOM State: Metadata collapsed by default, actions menu closed",
@@ -55,7 +55,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:25:59.490Z",
+      "timestamp": "2026-10-22T16:04:16.217Z",
       "type": "pass",
       "step": "STEP_2",
       "desc": "Physical Click: INFO button revealed metadata card",
@@ -66,7 +66,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:25:59.656Z",
+      "timestamp": "2026-10-22T16:04:16.373Z",
       "type": "pass",
       "step": "STEP_3",
       "desc": "Physical Click: Close button (\u2715) dismissed metadata card",
@@ -77,7 +77,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:25:59.823Z",
+      "timestamp": "2026-10-22T16:04:16.529Z",
       "type": "pass",
       "step": "STEP_4",
       "desc": "Physical Click: ACTIONS \u25be toggle opened responsive actions menu",
@@ -88,7 +88,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:00.116Z",
+      "timestamp": "2026-10-22T16:04:16.786Z",
       "type": "pass",
       "step": "STEP_5",
       "desc": "Physical Click: Inspect button activated detail inspection mode",
@@ -101,7 +101,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:00.416Z",
+      "timestamp": "2026-10-22T16:04:17.040Z",
       "type": "pass",
       "step": "STEP_6",
       "desc": "Physical Click: Reset View restored default orbit & closed menus",
@@ -114,7 +114,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:05.548Z",
+      "timestamp": "2026-10-22T16:04:19.371Z",
       "type": "pass",
       "step": "STEP_7",
       "desc": "Physical Click: Swap Craft successfully swapped to Original Player Ship (6 tris)",
@@ -126,7 +126,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:07.207Z",
+      "timestamp": "2026-10-22T16:04:20.601Z",
       "type": "info",
       "step": "STEP_8A",
       "desc": "Cycled to Boss Drone exhibit",
@@ -136,7 +136,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:08.823Z",
+      "timestamp": "2026-10-22T16:04:21.702Z",
       "type": "pass",
       "step": "STEP_8",
       "desc": "Physical Click: Swap Craft cycled back to Sovereign MK-I (728 tris)",
@@ -147,7 +147,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:09.328Z",
+      "timestamp": "2026-10-22T16:04:22.256Z",
       "type": "pass",
       "step": "STEP_9",
       "desc": "Physical Click: LAUNCH FLIGHT triggered parent scrim dismissal & onboarding",
@@ -158,14 +158,14 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:09.330Z",
+      "timestamp": "2026-10-22T16:04:22.257Z",
       "type": "info",
       "step": "STEP_10",
       "desc": "Clicked Onboarding Continue Button; awaiting flight countdown...",
       "details": {}
     },
     {
-      "timestamp": "2026-10-21T14:26:13.221Z",
+      "timestamp": "2026-10-22T16:04:26.137Z",
       "type": "pass",
       "step": "STEP_10",
       "desc": "Flight runner entered PLAYING mode with Three.js loop suspended",
@@ -177,7 +177,7 @@
       }
     },
     {
-      "timestamp": "2026-10-21T14:26:13.223Z",
+      "timestamp": "2026-10-22T16:04:26.138Z",
       "type": "pass",
       "step": "VERDICT",
       "desc": "Player Journey Verification Complete: PASS",

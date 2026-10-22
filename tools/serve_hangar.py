@@ -4,6 +4,7 @@ import os
 import sys
 
 JOURNEY_RECEIPT_PATH = os.path.join(os.path.dirname(__file__), "..", "Structure", "journey_interaction_receipt.json")
+UPGRADE_RECEIPT_PATH = os.path.join(os.path.dirname(__file__), "..", "Structure", "release_upgrade_receipt.json")
 
 class HangarHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
@@ -18,14 +19,15 @@ class HangarHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        if self.path == "/api/record_journey":
+        if self.path in ("/api/record_journey", "/api/record_upgrade"):
+            dest_path = UPGRADE_RECEIPT_PATH if self.path == "/api/record_upgrade" else JOURNEY_RECEIPT_PATH
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length).decode("utf-8")
             try:
                 data = json.loads(body)
-                with open(JOURNEY_RECEIPT_PATH, "w") as f:
+                with open(dest_path, "w") as f:
                     json.dump(data, f, indent=2)
-                print(f"\n[RECEIPT SAVED] Wrote {len(body)} bytes to {JOURNEY_RECEIPT_PATH}", flush=True)
+                print(f"\n[RECEIPT SAVED] Wrote {len(body)} bytes to {dest_path}", flush=True)
                 print(f"[RECEIPT SUMMARY] Total steps: {len(data.get('steps', []))}, Status: {data.get('verdict')}", flush=True)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")

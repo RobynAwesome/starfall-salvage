@@ -3,7 +3,7 @@ title: PR Handoff - Mobile Sovereign Hangar Framing & Responsive Touch Evolution
 created: 2026-10-21
 branch: fix/mobile-sovereign-hangar-framing
 base: 2383bcb508029a8581a1950c395c186009b80371 (origin/main)
-build: 20261020-sovereign-hangar-mki-rc1
+build: 20261022-sovereign-hangar-mki-rc2
 status: ready-for-owner-review
 ---
 
@@ -124,7 +124,32 @@ Execution receipt recorded at `Structure/journey_interaction_receipt.json` via `
 
 ---
 
-### 3.4 Mathematical Re-Evaluation of Portrait Inspect Framing
+### 3.4 Persistent Storage Release Cache Upgrade Audit (RC1 &rarr; Candidate RC2)
+Execution receipt recorded at `Structure/release_upgrade_receipt.json` via `tools/run_release_cache_upgrade.py` driving `tools/test_release_cache_upgrade.html` in Microsoft Edge with persistent storage on the live origin:
+
+- **Baseline Seed (RC1):** Origin storage seeded with `starfall-salvage-v20261020-sovereign-hangar-mki-rc1` and legacy `starfall-salvage-v20260526-ready-shell`.
+- **Candidate Registration (RC2):** Registered candidate service worker `/service-worker.js?v=20261022-sovereign-hangar-mki-rc2`.
+- **Cache Eviction Proof:**
+  - `starfall-salvage-v20261020-sovereign-hangar-mki-rc1`: **PURGED** (`oldPurged === true`).
+  - `starfall-salvage-v20260526-ready-shell`: **PURGED** (`legacyPurged === true`).
+  - `starfall-salvage-v20261022-sovereign-hangar-mki-rc2`: **ACTIVE** (`newActive === true`).
+- **Asset Replacement Integrity (13 Precached Assets):**
+  - `./index.html`: Contains `Build: 20261022-sovereign-hangar-mki-rc2` (contains 0 RC1 tokens).
+  - `./src/pwa-boot.js`: Contains `const BUILD = "20261022-sovereign-hangar-mki-rc2";`.
+  - `./src/game.js`: Contains `const GAME_BUILD = "20261022-sovereign-hangar-mki-rc2";`.
+  - `./hangar/index.html`: References `?v=20261022-sovereign-hangar-mki-rc2`.
+  - `./hangar/app.bundle.js`: Precached bundle verified ($1,299,325\text{ bytes}$).
+  - `./rc1-stale-sentinel.json`: Completely purged from storage.
+- **Post-Upgrade In-Browser Player Journey:**
+  - Live controller active: `service-worker.js?v=20261022-sovereign-hangar-mki-rc2`.
+  - DOM lockdown meta reflects candidate build identity.
+  - Hangar boots with collapsed metadata and closed actions menu.
+  - INFO toggle/close, ACTIONS ▾ toggle, Inspect/Reset View, Model Swap cycle (MK-I &rarr; Original &rarr; Drone &rarr; MK-I), and LAUNCH FLIGHT transition to active flight lane (`mode: "playing"`) all pass.
+- **Verdict: 14 passed, 0 failed. PASS.**
+
+---
+
+### 3.5 Mathematical Re-Evaluation of Portrait Inspect Framing
 Mathematical evaluation of projected vertices into Normalized Device Coordinates (NDC $[-1, 1]$) across representative camera azimuth angles in tall portrait mode ($393\times 873$, aspect $0.450$, $52^\circ$ FOV, target $y = 1.05\text{m}$, elevation $pol = 1.32\text{ rad}$):
 
 | Azimuth Angle | Default Home ($r = 7.2\text{m}$) MK-I NDC X | Home Frame | Home Pedestal | Inspect Mode ($r = 4.4\text{m}$) MK-I NDC X | Inspect Frame | Inspect Pedestal |
