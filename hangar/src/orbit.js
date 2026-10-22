@@ -23,6 +23,7 @@ export class OrbitRig {
     this.maxR = 9.5;
     this.minPol = 0.5;
     this.maxPol = 1.85;
+    this.inspectR = 3.1;
 
     this.autoSpeed = 0.09;           // rad/s, camera idle orbit
     this.idleDelay = 3.2;            // s of inactivity before auto-orbit resumes
@@ -45,6 +46,29 @@ export class OrbitRig {
     this.apply(0.016);
   }
 
+  setProfile(profile) {
+    if (!profile) return;
+    this.home.r = profile.orbitDistance;
+    this.minR = profile.minR || 2.6;
+    this.maxR = profile.maxR || 12.0;
+    this.minPol = profile.minPol || 0.5;
+    this.maxPol = profile.maxPol || 1.85;
+    this.inspectR = profile.inspectR || Math.max(this.minR + 0.4, 3.1);
+    if (typeof profile.targetY === "number") {
+      this.target.y = profile.targetY;
+    }
+    if (this.mode === "auto") {
+      this.tgt.r = profile.orbitDistance;
+    } else if (this.mode === "inspect") {
+      this.tgt.r = this.inspectR;
+    }
+    // Dynamic boundary safety: enforce new spherical constraints on resize/orientation
+    this.tgt.r = clamp(this.tgt.r, this.minR, this.maxR);
+    this.sph.r = clamp(this.sph.r, this.minR, this.maxR);
+    this.tgt.pol = clamp(this.tgt.pol, this.minPol, this.maxPol);
+    this.sph.pol = clamp(this.sph.pol, this.minPol, this.maxPol);
+  }
+
   _bind() {
     const dom = this.dom;
     dom.addEventListener("pointerdown", (e) => this._down(e));
@@ -52,11 +76,17 @@ export class OrbitRig {
     dom.addEventListener("pointerup", (e) => this._up(e));
     dom.addEventListener("pointercancel", (e) => this._up(e));
     dom.addEventListener("wheel", (e) => this._wheel(e), { passive: false });
-    dom.addEventListener("touchstart", (e) => e.preventDefault(), { passive: false });
+    dom.addEventListener("touchstart", (e) => {
+      if (e.target === dom || dom.contains(e.target)) {
+        e.preventDefault();
+      }
+    }, { passive: false });
   }
 
   _down(e) {
-    try { this.dom.setPointerCapture?.(e.pointerId); } catch { /* synthetic or released pointer */ }
+    if (e.pointerType !== "touch" || this.pointers.size === 0) {
+      try { this.dom.setPointerCapture?.(e.pointerId); } catch { /* synthetic or released pointer */ }
+    }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.moved = 0;
     this.downAt = performance.now();
@@ -75,26 +105,30 @@ export class OrbitRig {
 
     if (this.pointers.size === 1) {
       this.moved += Math.abs(dx) + Math.abs(dy);
-      this.tgt.az -= dx * 0.0052;
-      this.tgt.pol = clamp(this.tgt.pol - dy * 0.0038, this.minPol, this.maxPol);
+      const sensitivity = (e.pointerType === "touch") ? 0.0058 : 0.0052;
+      this.tgt.az -= dx * sensitivity;
+      this.tgt.pol = clamp(this.tgt.pol - dy * (sensitivity * 0.73), this.minPol, this.maxPol);
       this._poke("manual");
     } else if (this.pointers.size === 2) {
       const [a, b] = [...this.pointers.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (this.lastPinch > 0) {
+      if (this.lastPinch > 0 && d > 12) {
         this.tgt.r = clamp(this.tgt.r * (this.lastPinch / d), this.minR, this.maxR);
       }
       this.lastPinch = d;
-      this.moved += 3;
+      this.moved += 4;
       this._poke("manual");
     }
   }
 
   _up(e) {
     const wasSingle = this.pointers.size === 1;
+    try { this.dom.releasePointerCapture?.(e.pointerId); } catch {}
     this.pointers.delete(e.pointerId);
     if (this.pointers.size < 2) this.lastPinch = 0;
-    if (wasSingle && this.moved < 9 && performance.now() - this.downAt < 420) {
+    const tapThreshold = (e.pointerType === "touch") ? 18 : 9;
+    const tapTimeLimit = (e.pointerType === "touch") ? 500 : 420;
+    if (wasSingle && this.moved < tapThreshold && performance.now() - this.downAt < tapTimeLimit) {
       this.onTap(e);
     }
   }
@@ -133,13 +167,24 @@ export class OrbitRig {
 
   toggleInspect() {
     if (this.mode === "inspect") {
-      if (this.inspectSnapshot) this.tgt = { ...this.inspectSnapshot };
+      if (this.inspectSnapshot) {
+        this.tgt = {
+          az: this.inspectSnapshot.az,
+          pol: clamp(this.inspectSnapshot.pol, this.minPol, this.maxPol),
+          r: clamp(this.inspectSnapshot.r, this.minR, this.maxR)
+        };
+      }
       this.inspectSnapshot = null;
       this.mode = "auto";
       return false;
     }
     this.inspectSnapshot = { ...this.tgt };
-    this.tgt = { az: this.sph.az + 0.5, pol: 1.32, r: 3.1 };
+    const targetR = this.inspectR || Math.max(this.minR + 0.4, 3.1);
+    this.tgt = {
+      az: this.sph.az + 0.5,
+      pol: clamp(1.32, this.minPol, this.maxPol),
+      r: clamp(targetR, this.minR, this.maxR)
+    };
     this.mode = "inspect";
     return true;
   }

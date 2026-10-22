@@ -1,0 +1,181 @@
+{
+  "harness": "tools/test_release_cache_upgrade.html",
+  "timestamp": "2026-10-22T16:03:41.786Z",
+  "oldBuild": "20261020-sovereign-hangar-mki-rc1",
+  "newBuild": "20261022-sovereign-hangar-mki-rc2",
+  "oldCacheName": "starfall-salvage-v20261020-sovereign-hangar-mki-rc1",
+  "newCacheName": "starfall-salvage-v20261022-sovereign-hangar-mki-rc2",
+  "verdict": "PASS",
+  "steps": [
+    {
+      "timestamp": "2026-10-22T16:03:28.395Z",
+      "type": "info",
+      "step": "START",
+      "desc": "Beginning persistent storage upgrade audit: 20261020-sovereign-hangar-mki-rc1 -> 20261022-sovereign-hangar-mki-rc2",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-10-22T16:03:28.396Z",
+      "type": "info",
+      "step": "SEED_INIT",
+      "desc": "Seeding persistent origin storage with baseline RC1 cache (starfall-salvage-v20261020-sovereign-hangar-mki-rc1)..."
+    },
+    {
+      "timestamp": "2026-10-22T16:03:28.572Z",
+      "type": "pass",
+      "step": "SEED_PROVEN",
+      "desc": "Successfully seeded RC1 and legacy caches on origin storage",
+      "details": {
+        "existingKeys": [
+          "starfall-salvage-v20261020-sovereign-hangar-mki-rc1",
+          "starfall-salvage-v20260526-ready-shell"
+        ],
+        "rc1Present": true,
+        "legacyPresent": true
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:28.572Z",
+      "type": "info",
+      "step": "SW_REGISTER",
+      "desc": "Registering candidate RC2 Service Worker (/service-worker.js?v=20261022-sovereign-hangar-mki-rc2)..."
+    },
+    {
+      "timestamp": "2026-10-22T16:03:29.547Z",
+      "type": "pass",
+      "step": "SW_REG_OK",
+      "desc": "Service Worker registration initiated for candidate 20261022-sovereign-hangar-mki-rc2",
+      "details": {
+        "scope": "http://localhost:8799/"
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:29.548Z",
+      "type": "info",
+      "step": "AWAIT_ACTIVATION",
+      "desc": "Awaiting candidate service worker activation & cache purge cycle..."
+    },
+    {
+      "timestamp": "2026-10-22T16:03:29.549Z",
+      "type": "pass",
+      "step": "CACHE_EVICTION",
+      "desc": "Stale RC1 and legacy caches purged; candidate RC2 cache established",
+      "details": {
+        "activeCaches": [
+          "starfall-salvage-v20261022-sovereign-hangar-mki-rc2"
+        ],
+        "oldPurged": true,
+        "legacyPurged": true,
+        "newActive": true
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:29.568Z",
+      "type": "pass",
+      "step": "ASSET_INTEGRITY",
+      "desc": "Verified precached assets in candidate cache (starfall-salvage-v20261022-sovereign-hangar-mki-rc2): all replaced cleanly",
+      "details": {
+        "totalCachedAssets": 13,
+        "indexHasNewBuild": true,
+        "indexHasOldBuild": false,
+        "bootHasNewBuild": true,
+        "gameHasNewBuild": true,
+        "hangarHasNewBuild": true,
+        "bundleByteLength": 1299325,
+        "staleSentinelPurged": true
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:29.568Z",
+      "type": "info",
+      "step": "MOUNT_APP",
+      "desc": "Loading root application (../index.html) under candidate service worker controller..."
+    },
+    {
+      "timestamp": "2026-10-22T16:03:32.487Z",
+      "type": "pass",
+      "step": "LIVE_UPGRADE_READY",
+      "desc": "Upgraded application running with candidate controller & DOM build identity",
+      "details": {
+        "controllerURL": "http://localhost:8799/service-worker.js?v=20261022-sovereign-hangar-mki-rc2",
+        "buildText": "Build: 20261022-sovereign-hangar-mki-rc2 \u00b7 Gate: KC Protocol 13 / C12 audit hold \u00b7 Started: 2026-05-06 \u00b7 Repo: github.com/Kopano-Labs/starfall-salvage"
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:32.487Z",
+      "type": "info",
+      "step": "HANGAR_AWAIT",
+      "desc": "Waiting for Sovereign Hangar initialization inside upgraded shell..."
+    },
+    {
+      "timestamp": "2026-10-22T16:03:32.487Z",
+      "type": "pass",
+      "step": "HANGAR_READY",
+      "desc": "Sovereign Hangar running in upgraded runtime",
+      "details": {
+        "ship": "mk1",
+        "frameCount": 9
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:32.488Z",
+      "type": "pass",
+      "step": "INT_INITIAL",
+      "desc": "Initial post-upgrade DOM: metadata collapsed, actions menu closed"
+    },
+    {
+      "timestamp": "2026-10-22T16:03:32.790Z",
+      "type": "pass",
+      "step": "INT_INFO",
+      "desc": "INFO open & close interactions verified"
+    },
+    {
+      "timestamp": "2026-10-22T16:03:32.942Z",
+      "type": "pass",
+      "step": "INT_ACTIONS",
+      "desc": "ACTIONS \u25be menu opened cleanly"
+    },
+    {
+      "timestamp": "2026-10-22T16:03:33.456Z",
+      "type": "pass",
+      "step": "INT_INSPECT_RESET",
+      "desc": "Inspect mode activated and Reset View restored auto orbit"
+    },
+    {
+      "timestamp": "2026-10-22T16:03:37.423Z",
+      "type": "pass",
+      "step": "INT_MODEL_SWAP",
+      "desc": "Craft model swap cycle (MK-I -> Original -> Drone -> MK-I) verified"
+    },
+    {
+      "timestamp": "2026-10-22T16:03:37.925Z",
+      "type": "pass",
+      "step": "INT_LAUNCH",
+      "desc": "LAUNCH FLIGHT triggered parent scrim dismissal & onboarding briefing"
+    },
+    {
+      "timestamp": "2026-10-22T16:03:41.785Z",
+      "type": "pass",
+      "step": "INT_GAMEPLAY_TRANSITION",
+      "desc": "Flight runner active in PLAYING mode with Three.js Hangar loop suspended",
+      "details": {
+        "gameMode": "playing",
+        "selectedShip": "mk1",
+        "hangarLoopRunning": false,
+        "activeRafId": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-22T16:03:41.786Z",
+      "type": "pass",
+      "step": "VERDICT",
+      "desc": "Release Cache Upgrade Audit Complete: PASS",
+      "details": {
+        "oldBuild": "20261020-sovereign-hangar-mki-rc1",
+        "newBuild": "20261022-sovereign-hangar-mki-rc2",
+        "totalSteps": 19,
+        "verdict": "PASS"
+      }
+    }
+  ]
+}

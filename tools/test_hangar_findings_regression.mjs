@@ -169,7 +169,7 @@ check("hangar preserves standalone fallback navigation behavior when window.pare
 // ============================================================================
 console.log("\n--- Checking Finding 5: Build identity reconciliation ---");
 
-const EXPECTED_BUILD = "20261020-sovereign-hangar-mki-rc1";
+const EXPECTED_BUILD = "20261022-sovereign-hangar-mki-rc2";
 
 check(`src/game.js GAME_BUILD is exactly ${EXPECTED_BUILD}`, () => {
   return gameJs.includes(`const GAME_BUILD = "${EXPECTED_BUILD}";`);
