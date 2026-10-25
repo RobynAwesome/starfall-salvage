@@ -39,6 +39,10 @@ Compatibility rule: these folders organize access without moving the legacy root
 
 ## Current Truth
 
+- Sovereign Hangar RC2 milestone: **OWNER ACCEPTED & MERGED** on 2026-10-25 via PR #13 (`8df8b320dccae9f890f23e05c4542fdd86236269`).
+- Production observed at commit `128dca4bb1e092b9a1aaa904d38bc9d95771d8fd` (READY on Vercel).
+- Build marker `20261022-sovereign-hangar-mki-rc2` is live and verified across manifests, service worker cache, and bundle.
+- Further Sovereign Hangar implementation is frozen/parked. Active lane transitions to **gameplay discovery and evaluation** (awaiting owner diagnostic assessment of footage).
 - The game is live on the public Kopano Labs GitHub repo (public 2026-05-06 per Sovereign Tech / CONTRIBUTING.md doctrine).
 - The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; the current runtime branch build is `20261022-sovereign-hangar-mki-rc2`.
 - The older mobile-lockdown notes are historical context, not the current branch truth. Current work unifies PC, Android, Xiaomi, and Apple browser gameplay under one ruleset and adapts only presentation density, safe-area, and touch affordances.

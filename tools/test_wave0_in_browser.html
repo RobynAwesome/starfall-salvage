@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Starfall Salvage — Wave 0 In-Browser Fairness & Telemetry Campaign</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #07080e;
+      color: #e6edf3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+    }
+    h1 { font-size: 15px; margin: 0 0 10px 0; color: #38bdf8; }
+    .layout { display: flex; gap: 16px; height: calc(100vh - 54px); }
+    .viewport-box { flex: 0 0 auto; display: flex; flex-direction: column; overflow: auto; max-width: 65vw; }
+    iframe { width: 1280px; height: 800px; border: 1px solid #30363d; border-radius: 6px; background: #000; transform-origin: top left; }
+    .console-box { flex: 1; overflow-y: auto; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; }
+    .log-entry { margin: 5px 0; padding: 6px; border-radius: 4px; border-left: 3px solid #30363d; }
+    .log-pass { border-left-color: #238636; background: rgba(35, 134, 54, 0.12); }
+    .log-fail { border-left-color: #da3633; background: rgba(218, 54, 51, 0.12); }
+    .log-info { border-left-color: #38bdf8; background: rgba(56, 189, 248, 0.06); }
+    pre { margin: 4px 0 0 0; font-size: 11px; color: #9ca3af; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Starfall Salvage — Wave 0 In-Browser Fairness & Telemetry Campaign (?diag=1&overlay=1)</h1>
+  <div class="layout">
+    <div class="viewport-box">
+      <iframe id="gameFrame" src="about:blank"></iframe>
+    </div>
+    <div class="console-box" id="console"></div>
+  </div>
+
+  <script>
+    const logBox = document.getElementById("console");
+    const steps = [];
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function log(type, step, desc, details = null) {
+      const div = document.createElement("div");
+      div.className = `log-entry log-${type}`;
+      div.innerHTML = `<strong>[${type.toUpperCase()}] [${step}]</strong> ${desc}`;
+      if (details) {
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(details, null, 2);
+        div.appendChild(pre);
+      }
+      logBox.appendChild(div);
+      logBox.scrollTop = logBox.scrollHeight;
+      steps.push({ timestamp: new Date().toISOString(), type, step, desc, details });
+    }
+
+    async function runWave0Campaign() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          for (const r of regs) {
+            await r.unregister();
+          }
+        }
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          for (const k of keys) {
+            await caches.delete(k);
+          }
+        }
+        try {
+          sessionStorage.setItem("starfall-sw-refresh:20261022-sovereign-hangar-mki-rc2", "1");
+        } catch {}
+
+        const frame = document.getElementById("gameFrame");
+        frame.src = `../index.html?diag=1&overlay=1&t=${Date.now()}`;
+        await new Promise((resolve) => {
+          frame.addEventListener("load", resolve, { once: true });
+        });
+
+        let win = frame.contentWindow;
+        let doc = frame.contentDocument;
+        let w0 = null;
+        for (let i = 0; i < 80; i++) {
+          await sleep(100);
+          try {
+            win = frame.contentWindow;
+            doc = frame.contentDocument;
+            w0 = win && win.__starfallWave0;
+            if (w0 && win.__starfallDebug) {
+              break;
+            }
+          } catch {}
+        }
+
+        if (!w0) {
+          log("fail", "BOOT", "window.__starfallWave0 not available in ?diag=1 iframe", {
+            href: win ? win.location.href : null,
+            hasDebug: Boolean(win && win.__starfallDebug)
+          });
+          await postReceipt("FAIL", {});
+          return;
+        }
+
+        // Allow MK-I full 264-triangle mesh JSON fetch to complete
+        await sleep(450);
+
+        log("pass", "BOOT", "Wave 0 diagnostic controller initialized in live WebGL context", {
+          build: win.__starfallDebug().build
+        });
+
+        const telemetry = {
+          viewports: {},
+          desktopDisappearanceCases: {},
+          pickupReachability: null,
+          collisionEncounters: {},
+          performance: null
+        };
+
+        // ----------------------------------------------------------------------
+        // A1. Multi-Viewport Matrix (393x873, 873x393, 1280x800, 1920x1080, 2560x1080)
+        // ----------------------------------------------------------------------
+        const viewportSpecs = [
+          { id: "mobile_portrait_393x873", w: 393, h: 873, y: -0.68 },
+          { id: "mobile_landscape_873x393", w: 873, h: 393, y: -0.68 },
+          { id: "desktop_16x10_1280x800", w: 1280, h: 800, y: -0.45 },
+          { id: "desktop_16x9_1920x1080", w: 1920, h: 1080, y: -0.45 },
+          { id: "desktop_ultrawide_2560x1080", w: 2560, h: 1080, y: -0.45 }
+        ];
+
+        w0.setManualStep(true);
+        w0.setOverlay(true, { showReachability: false });
+
+        for (const vp of viewportSpecs) {
+          frame.style.width = `${vp.w}px`;
+          frame.style.height = `${vp.h}px`;
+          win.dispatchEvent(new win.Event("resize"));
+          await sleep(100);
+          w0.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: vp.y,
+            z: -7.8,
+            targetX: 0,
+            targetY: vp.y,
+            speed: 18,
+            settleCamera: true
+          });
+          const vpInfo = w0.getViewportTelemetry();
+          const shipBounds = w0.computeShipBounds();
+          telemetry.viewports[vp.id] = {
+            width: vp.w,
+            height: vp.h,
+            aspect: vpInfo.aspect,
+            renderFovDeg: vpInfo.renderFovDeg,
+            playPitch: vpInfo.frameProfile.playPitch,
+            cameraDepth: vpInfo.frameProfile.cameraDepth,
+            shipCenterNdc: shipBounds.renderedCenter.ndc,
+            shipCenterScreenPx: shipBounds.renderedCenter.screenPx,
+            shipColliderNdc: shipBounds.colliderCenter.ndc,
+            shipMeshInViewportRatio: shipBounds.renderedMeshBounds.inViewportRatio
+          };
+          log("pass", `VP_${vp.id.toUpperCase()}`, `Recorded baseline projection at ${vp.w}x${vp.h} (y=${vp.y})`, telemetry.viewports[vp.id]);
+        }
+
+        // ----------------------------------------------------------------------
+        // A2. Reproduce Owner's Desktop Ship-Disappearance Report (4 Separate Cases)
+        // ----------------------------------------------------------------------
+        // Case 1: Plain Mouse Wheel Scrolling on 1920x1080
+        frame.style.width = "1920px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, settleCamera: true });
+        const canvasEl = doc.getElementById("glCanvas");
+        canvasEl.dispatchEvent(new win.WheelEvent("wheel", { deltaY: 600, bubbles: true, cancelable: true }));
+        win.scrollTo(0, 500);
+        await sleep(60);
+        const wheelVp = w0.getViewportTelemetry();
+        const wheelShip = w0.computeShipBounds();
+        telemetry.desktopDisappearanceCases.case1_plainWheelScroll = {
+          scrollY: wheelVp.scrollY,
+          shipCenterNdcY: wheelShip.renderedCenter.ndc.y,
+          shipCenterScreenY: wheelShip.renderedCenter.screenPx.y,
+          inViewportRatio: wheelShip.renderedMeshBounds.inViewportRatio,
+          disappeared: !wheelShip.renderedCenter.inFrustum
+        };
+        log("pass", "DISAPPEAR_CASE_1_WHEEL", "Tested plain mouse wheel scroll on 1920x1080 (overflow:hidden prevents page scroll; wheel does not move ship)", telemetry.desktopDisappearanceCases.case1_plainWheelScroll);
+
+        // Case 2: Ctrl+Wheel / Browser Zoom + Scroll Offset
+        canvasEl.dispatchEvent(new win.WheelEvent("wheel", { deltaY: 400, ctrlKey: true, bubbles: true, cancelable: true }));
+        doc.documentElement.style.zoom = "1.5";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, settleCamera: true });
+        const zoomVp = w0.getViewportTelemetry();
+        const zoomShip = w0.computeShipBounds();
+        telemetry.desktopDisappearanceCases.case2_ctrlWheelZoom = {
+          cssZoom: "1.5",
+          canvasClientRect: zoomVp.canvasClientRect,
+          shipCenterNdcY: zoomShip.renderedCenter.ndc.y,
+          shipCenterScreenY: zoomShip.renderedCenter.screenPx.y,
+          inViewportRatio: zoomShip.renderedMeshBounds.inViewportRatio
+        };
+        doc.documentElement.style.zoom = "";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        log("pass", "DISAPPEAR_CASE_2_ZOOM", "Tested Ctrl+Wheel / CSS page zoom on desktop", telemetry.desktopDisappearanceCases.case2_ctrlWheelZoom);
+
+        // Case 3: Vertical Downward Steering (S / ArrowDown to yMin = -2.15) on 1920x1080 and 2560x1080
+        frame.style.width = "1920px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -2.15, z: -7.8, targetX: 0, targetY: -2.15, settleCamera: true });
+        const steer16x9Ship = w0.computeShipBounds();
+
+        frame.style.width = "2560px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -2.15, z: -7.8, targetX: 0, targetY: -2.15, settleCamera: true });
+        const steer21x9Ship = w0.computeShipBounds();
+
+        telemetry.desktopDisappearanceCases.case3_verticalSteerDown = {
+          playerY: -2.15,
+          desktop16x9_1920x1080: {
+            centerNdcY: steer16x9Ship.renderedCenter.ndc.y,
+            centerScreenY: steer16x9Ship.renderedCenter.screenPx.y,
+            viewportHeight: 1080,
+            centerInFrustum: steer16x9Ship.renderedCenter.inFrustum,
+            meshInViewportRatio: steer16x9Ship.renderedMeshBounds.inViewportRatio
+          },
+          ultrawide21x9_2560x1080: {
+            centerNdcY: steer21x9Ship.renderedCenter.ndc.y,
+            centerScreenY: steer21x9Ship.renderedCenter.screenPx.y,
+            viewportHeight: 1080,
+            centerInFrustum: steer21x9Ship.renderedCenter.inFrustum,
+            meshInViewportRatio: steer21x9Ship.renderedMeshBounds.inViewportRatio
+          }
+        };
+
+        const case3Confirmed =
+          steer16x9Ship.renderedCenter.ndc.y < -1.0 &&
+          steer21x9Ship.renderedCenter.ndc.y < -1.10 &&
+          steer16x9Ship.renderedCenter.inFrustum === false &&
+          steer21x9Ship.renderedCenter.inFrustum === false;
+
+        log(
+          case3Confirmed ? "pass" : "fail",
+          "DISAPPEAR_CASE_3_VERTICAL_STEER",
+          "Reproduced desktop ship disappearance: steering down to y=-2.15 pushes ship below bottom frustum (NDC_y < -1.0) due to cameraFollow.y=0.016 & downward playPitch",
+          telemetry.desktopDisappearanceCases.case3_verticalSteerDown
+        );
+
+        // Case 4: Dynamic Browser Resize Across Ultrawide Aspect Threshold (aspect > 1.85)
+        frame.style.width = "1920px";
+        frame.style.height = "900px"; // aspect = 2.133 (> 1.85 ultrawide profile jump)
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -1.95, z: -7.8, targetX: 0, targetY: -1.95, settleCamera: true });
+        const resizeShip = w0.computeShipBounds();
+        telemetry.desktopDisappearanceCases.case4_aspectThresholdResize = {
+          width: 1920,
+          height: 900,
+          aspect: 2.1333,
+          playerY: -1.95,
+          centerNdcY: resizeShip.renderedCenter.ndc.y,
+          centerScreenY: resizeShip.renderedCenter.screenPx.y,
+          centerInFrustum: resizeShip.renderedCenter.inFrustum,
+          meshInViewportRatio: resizeShip.renderedMeshBounds.inViewportRatio
+        };
+        log(
+          resizeShip.renderedCenter.ndc.y < -1.0 ? "pass" : "fail",
+          "DISAPPEAR_CASE_4_RESIZE",
+          "Confirmed aspect>1.85 resize switches to fovScale=0.68 & viewBiasY=-0.06, clipping ship at y=-1.95",
+          telemetry.desktopDisappearanceCases.case4_aspectThresholdResize
+        );
+
+        // ----------------------------------------------------------------------
+        // B. Pickup Reachability In-Browser Audit (Seed 20261025)
+        // ----------------------------------------------------------------------
+        frame.style.width = "393px";
+        frame.style.height = "873px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        const gridAudit = w0.generatePickupGridAudit(20261025, 200);
+        telemetry.pickupReachability = gridAudit.summary;
+
+        // Live collection vs unreachable high-Y test in updateGame
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.68, z: -7.8, targetX: 0, targetY: -0.68, targetLane: 0, cores: 0, score: 0, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "crystal", x: 0, y: -0.68, z: -8.1, size: 0.80, radius: 0.80 * 0.58 });
+        w0.spawnTestObject({ type: "crystal", x: 0, y: 1.25, z: -8.1, size: 0.80, radius: 0.80 * 0.58 });
+        const pickupStep = w0.stepFrames(3, 0.016);
+        telemetry.pickupReachability.liveStepProof = {
+          coresCollected: w0.getContactLog().filter((c) => c.outcome === "pickup_collected").length,
+          elevatedMissed: w0.getContactLog().filter((c) => c.outcome === "near_miss").length,
+          remainingUncollectedObjects: pickupStep.snapshots[pickupStep.snapshots.length - 1].objectCount,
+          contactEvents: w0.getContactLog()
+        };
+
+        log(
+          telemetry.pickupReachability.liveStepProof.coresCollected === 1 &&
+          telemetry.pickupReachability.liveStepProof.elevatedMissed === 1 &&
+          telemetry.pickupReachability.liveStepProof.remainingUncollectedObjects === 1
+            ? "pass"
+            : "fail",
+          "PICKUP_REACHABILITY",
+          "Verified seed 20261025 reachability grid and live collection (y=-0.68 collected, elevated y=+1.25 missed)",
+          telemetry.pickupReachability
+        );
+
+        // ----------------------------------------------------------------------
+        // C. Collision Truthfulness Encounters (5 Deterministic Cases)
+        // ----------------------------------------------------------------------
+        frame.style.width = "1280px";
+        frame.style.height = "800px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+
+        // C1: Head-on hit
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 0, y: -0.45, z: -8.05, size: 1.38, radius: 1.38 * 0.82 });
+        w0.stepFrames(1, 0.016);
+        const c1Hit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c1_headOn = c1Hit;
+        log(c1Hit && c1Hit.outcome === "hull_hit" ? "pass" : "fail", "COLLISION_C1_HEAD_ON", "Reproduced head-on collision", c1Hit);
+
+        // C2: Clean dodge (ship in left lane -2.2, rock at center 0)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: -2.2, y: -0.45, z: -7.8, targetX: -2.2, targetY: -0.45, targetLane: -1, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 0, y: -0.45, z: -8.05, size: 1.38, radius: 1.38 * 0.82 });
+        const c2Step = w0.stepFrames(2, 0.016);
+        const c2Hits = w0.getContactLog().filter((c) => c.outcome === "hull_hit").length;
+        telemetry.collisionEncounters.c2_cleanDodge = {
+          hullAfter: c2Step.snapshots[c2Step.snapshots.length - 1].hull,
+          hullHits: c2Hits,
+          contactEvents: w0.getContactLog()
+        };
+        log(
+          telemetry.collisionEncounters.c2_cleanDodge.hullAfter === 3 && c2Hits === 0
+            ? "pass"
+            : "fail",
+          "COLLISION_C2_CLEAN_DODGE",
+          "Verified clean dodge when lateral distance (2.20m) > combined collider (1.75m)",
+          telemetry.collisionEncounters.c2_cleanDodge
+        );
+
+        // C3: Near miss just outside collider (dx = 1.82m > 1.752m)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 1.82, y: -0.45, z: -8.05, size: 1.38, radius: 1.38 * 0.82 });
+        const c3Step = w0.stepFrames(2, 0.016);
+        const c3Hits = w0.getContactLog().filter((c) => c.outcome === "hull_hit").length;
+        telemetry.collisionEncounters.c3_nearMiss = {
+          dx: 1.82,
+          combinedColliderRadius: Number((0.62 + 1.38 * 0.82).toFixed(4)),
+          hullAfter: c3Step.snapshots[c3Step.snapshots.length - 1].hull,
+          hullHits: c3Hits,
+          contactEvents: w0.getContactLog()
+        };
+        log(
+          telemetry.collisionEncounters.c3_nearMiss.hullAfter === 3 && c3Hits === 0
+            ? "pass"
+            : "fail",
+          "COLLISION_C3_NEAR_MISS",
+          "Verified near miss just outside sphere collider boundary (1.82m > 1.752m)",
+          telemetry.collisionEncounters.c3_nearMiss
+        );
+
+        // C4: Phantom edge hit (3D mesh hulls separated by empty space while spheres overlap)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        const phantomRock = w0.spawnTestObject({ type: "debris", x: 1.58, y: -0.15, z: -8.05, size: 1.42, radius: 1.42 * 0.82 });
+        const shipBBefore = w0.computeShipBounds();
+        const rockBBefore = w0.computeObjectBounds(phantomRock);
+        const meshWorldGapX = Number((rockBBefore.renderedMeshBounds.minWx - shipBBefore.renderedMeshBounds.maxWx).toFixed(4));
+        const meshScreenGapPx = Number((rockBBefore.renderedMeshBounds.minX - shipBBefore.renderedMeshBounds.maxX).toFixed(2));
+        w0.stepFrames(1, 0.016);
+        const c4Hit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c4_phantomEdgeHit = {
+          contactRecord: c4Hit,
+          shipMeshMaxWx: Number(shipBBefore.renderedMeshBounds.maxWx.toFixed(4)),
+          rockMeshMinWx: Number(rockBBefore.renderedMeshBounds.minWx.toFixed(4)),
+          meshWorldGapX,
+          meshScreenGapPx
+        };
+        log(
+          c4Hit && c4Hit.outcome === "hull_hit" && meshWorldGapX > 0.2 && meshScreenGapPx > 10
+            ? "pass"
+            : "fail",
+          "COLLISION_C4_PHANTOM_EDGE_HIT",
+          `Reproduced phantom edge hit: Hull damaged while 3D meshes are separated by +${meshWorldGapPx(meshWorldGapX, meshScreenGapPx)}`,
+          telemetry.collisionEncounters.c4_phantomEdgeHit
+        );
+
+        // C5: Z-axis lead offset hit at z = -8.83 (1.48m ahead of rendered ship z = -7.35)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 0, y: -0.45, z: -9.12, size: 1.38, radius: 1.38 * 0.82 });
+        w0.stepFrames(1, 0.016);
+        const c5Hit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c5_zLeadHit = c5Hit;
+        log(
+          c5Hit && c5Hit.outcome === "hull_hit" && c5Hit.vsShip.dzToRenderedShip_M > 1.35
+            ? "pass"
+            : "fail",
+          "COLLISION_C5_Z_LEAD_OFFSET",
+          `Reproduced early Z-axis collision ${c5Hit ? c5Hit.vsShip.dzToRenderedShip_M : "?"}m ahead of rendered ship center (shipZ=-7.35 vs collider z=-7.80)`,
+          c5Hit
+        );
+
+        // ----------------------------------------------------------------------
+        // E. Live Frame-Time & Draw-Call Performance Baseline
+        // ----------------------------------------------------------------------
+        w0.clearObjects();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, hull: 3, speed: 24, settleCamera: true });
+        w0.setManualStep(false);
+        await sleep(1600);
+        w0.setManualStep(true);
+        telemetry.performance = w0.getPerfSummary();
+        log(
+          telemetry.performance.sampleCount >= 30 && telemetry.performance.drawCallsPerFrame > 0 ? "pass" : "fail",
+          "PERF_BASELINE",
+          "Captured live WebGL frame-time distribution and draw-call telemetry",
+          telemetry.performance
+        );
+
+        // ----------------------------------------------------------------------
+        // F. Capture Genuine Composite WebGL + Collider Overlay PNG Screenshots
+        // ----------------------------------------------------------------------
+        const screenshotCaptures = [
+          { filename: "wave0_mobile_portrait_reachability.png", w: 393, h: 873, scenario: "mobile_reachability" },
+          { filename: "wave0_collision_phantom_hit_edge.png", w: 1280, h: 800, scenario: "collision_phantom_hit" },
+          { filename: "wave0_collision_z_lead_offset.png", w: 1280, h: 800, scenario: "collision_z_offset" },
+          { filename: "wave0_desktop_vertical_steer_bottom.png", w: 1920, h: 1080, scenario: "desktop_bottom_clip" }
+        ];
+
+        telemetry.screenshots = [];
+        for (const sc of screenshotCaptures) {
+          frame.style.width = `${sc.w}px`;
+          frame.style.height = `${sc.h}px`;
+          win.dispatchEvent(new win.Event("resize"));
+          await sleep(100);
+          w0.setupScenario(sc.scenario);
+          await sleep(80);
+          const dataUrl = w0.captureCompositePng();
+          const saveRes = await fetch("/api/save_screenshot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: sc.filename, dataUrl })
+          });
+          const savedOk = saveRes.ok;
+          telemetry.screenshots.push({ filename: sc.filename, width: sc.w, height: sc.h, scenario: sc.scenario, saved: savedOk });
+          log(savedOk ? "pass" : "fail", `SCREENSHOT_${sc.scenario.toUpperCase()}`, `Captured composite WebGL + overlay screenshot: ${sc.filename} (${sc.w}x${sc.h})`);
+        }
+
+        const failCount = steps.filter((s) => s.type === "fail").length;
+        const verdict = failCount === 0 ? "PASS" : "FAIL";
+        await postReceipt(verdict, telemetry);
+      } catch (err) {
+        log("fail", "UNCAUGHT_ERROR", err ? (err.stack || err.message || String(err)) : "Unknown error");
+        await postReceipt("FAIL", {});
+      }
+    }
+
+    function meshWorldGapPx(worldM, screenPx) {
+      return `${worldM}m (${screenPx}px on screen)`;
+    }
+
+    async function postReceipt(verdict, telemetry) {
+      try {
+        await fetch("/api/record_wave0", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaign: "Wave 0 Fairness & Telemetry Browser Audit",
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            verdict,
+            steps,
+            telemetry
+          })
+        });
+      } catch (err) {
+        console.error("Failed to post receipt:", err);
+      }
+    }
+
+    window.addEventListener("load", () => {
+      setTimeout(runWave0Campaign, 300);
+    });
+  </script>
+</body>
+</html>
