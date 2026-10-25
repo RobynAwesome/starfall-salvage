@@ -118,10 +118,23 @@
     typeof window !== "undefined" &&
     window.location &&
     new URLSearchParams(window.location.search).get("strictMobile") === "1";
+  function isLocalDiagHost(hostname) {
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]"
+    );
+  }
   const DIAG_PARAM = (typeof window !== "undefined" && window.location && window.location.search)
     ? new URLSearchParams(window.location.search).get("diag")
     : null;
-  const DIAG_ENABLED = DIAG_PARAM === "1";
+  const DIAG_ENABLED =
+    DIAG_PARAM === "1" &&
+    typeof window !== "undefined" &&
+    Boolean(window.location && isLocalDiagHost(window.location.hostname));
+  let diagSeedState = null;
+  let diagGlDrawElementsCount = 0;
 
   if (!gl) {
     hud.statusTitle.textContent = "WebGL unavailable";
@@ -1156,12 +1169,21 @@
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
+    let rawPositions = null;
+    if (DIAG_ENABLED) {
+      rawPositions = [];
+      for (let i = 0; i < vertices.length; i += 8) {
+        rawPositions.push([vertices[i], vertices[i + 1], vertices[i + 2]]);
+      }
+    }
+
     return {
       vertexBuffer,
       indexBuffer,
       indexCount: indices.length,
       stride,
-      rawVertices: new Float32Array(vertices)
+      rawVertices: new Float32Array(vertices),
+      rawPositions
     };
   }
 
@@ -1523,7 +1545,7 @@
   let TOUCH_FULL_RANGE_PX = 70;
   const TOUCH_TAP_MAX_PX = 14;
   const TOUCH_TAP_MAX_MS = 260;
-  const isTouchCapable = (typeof window !== "undefined") && (
+  let isTouchCapable = (typeof window !== "undefined") && (
     "ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
   );
   const supportsPointerEvents = (typeof window !== "undefined") && "PointerEvent" in window;
@@ -2897,6 +2919,13 @@
   }
 
   function randomRange(min, max) {
+    if (DIAG_ENABLED && diagSeedState !== null) {
+      diagSeedState = (diagSeedState + 0x6D2B79F5) | 0;
+      let t = Math.imul(diagSeedState ^ (diagSeedState >>> 15), 1 | diagSeedState);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      const u = ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      return min + u * (max - min);
+    }
     return min + Math.random() * (max - min);
   }
 
@@ -5579,6 +5608,9 @@
     }
     state.frameDrawElementsCount++;
     gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
+    if (DIAG_ENABLED) {
+      diagGlDrawElementsCount++;
+    }
   }
 
   function renderScene(alphaTime) {
@@ -6604,6 +6636,1174 @@
     return projectMeshListBounds(meshEntries, [player.x, player.y, shipZ], rotation, scale);
   }
 
+
+  // =========================================================================
+  // WAVE 0 OPT-IN DIAGNOSTIC TELEMETRY & COLLIDER OVERLAY (?diag=1 ONLY)
+  // Zero runtime execution or mutation when DIAG_ENABLED is false.
+  // =========================================================================
+  let diagManualStep = false;
+  let diagOverlayEnabled =
+    DIAG_ENABLED &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("overlay") === "1";
+  let diagOverlayOpts = { showReachability: false, bannerTitle: "WAVE 0 DIAGNOSTIC TELEMETRY" };
+  let diagOverlayCanvas = null;
+  let diagOverlayCtx = null;
+  const diagContactLog = [];
+  const diagPreObjects = [];
+  const diagFrameTimesMs = [];
+  const diagRawRafIntervalsMs = [];
+  const diagCpuRenderTimesMs = [];
+  let diagLastDrawCalls = 0;
+  let diagLastFrameDrawCalls = 0;
+  let diagLastGlDrawElements = 0;
+  let diagLastFrameGlDrawCalls = 0;
+  let diagLastRawRafMs = 0;
+  let diagCpuStartMs = 0;
+
+  function diagProjectWorldPoint(wx, wy, wz) {
+    const cssSize = getViewportCssSize();
+    const vx = viewMatrix[0] * wx + viewMatrix[4] * wy + viewMatrix[8] * wz + viewMatrix[12];
+    const vy = viewMatrix[1] * wx + viewMatrix[5] * wy + viewMatrix[9] * wz + viewMatrix[13];
+    const vz = viewMatrix[2] * wx + viewMatrix[6] * wy + viewMatrix[10] * wz + viewMatrix[14];
+    const vw = viewMatrix[3] * wx + viewMatrix[7] * wy + viewMatrix[11] * wz + viewMatrix[15];
+
+    const cx = projectionMatrix[0] * vx + projectionMatrix[4] * vy + projectionMatrix[8] * vz + projectionMatrix[12] * vw;
+    const cy = projectionMatrix[1] * vx + projectionMatrix[5] * vy + projectionMatrix[9] * vz + projectionMatrix[13] * vw;
+    const cz = projectionMatrix[2] * vx + projectionMatrix[6] * vy + projectionMatrix[10] * vz + projectionMatrix[14] * vw;
+    const cw = projectionMatrix[3] * vx + projectionMatrix[7] * vy + projectionMatrix[11] * vz + projectionMatrix[15] * vw;
+
+    const wSafe = Math.abs(cw) < 1e-6 ? 1e-6 : cw;
+    const ndcX = cx / wSafe;
+    const ndcY = cy / wSafe;
+    const ndcZ = cz / wSafe;
+    const screenX = (ndcX * 0.5 + 0.5) * cssSize.width;
+    const screenY = (0.5 - ndcY * 0.5) * cssSize.height;
+    const inFrustum = cw > 0.1 && ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1 && ndcZ >= -1 && ndcZ <= 1;
+
+    return {
+      world: [Number(wx.toFixed(4)), Number(wy.toFixed(4)), Number(wz.toFixed(4))],
+      view: [Number(vx.toFixed(4)), Number(vy.toFixed(4)), Number(vz.toFixed(4))],
+      ndc: { x: Number(ndcX.toFixed(4)), y: Number(ndcY.toFixed(4)), z: Number(ndcZ.toFixed(4)), w: Number(cw.toFixed(4)) },
+      screenPx: { x: Number(screenX.toFixed(2)), y: Number(screenY.toFixed(2)) },
+      inFrustum
+    };
+  }
+
+  function diagTransformMeshVertices(rawPositions, position, rotation, scale) {
+    if (!rawPositions || !rawPositions.length) return [];
+    const m = Mat4.create();
+    Mat4.identity(m);
+    Mat4.translate(m, m, position);
+    Mat4.rotateX(m, m, rotation[0] || 0);
+    Mat4.rotateY(m, m, rotation[1] || 0);
+    Mat4.rotateZ(m, m, rotation[2] || 0);
+    Mat4.scale(m, m, scale);
+    const out = [];
+    for (let i = 0; i < rawPositions.length; i++) {
+      const p = rawPositions[i];
+      const wx = m[0] * p[0] + m[4] * p[1] + m[8] * p[2] + m[12];
+      const wy = m[1] * p[0] + m[5] * p[1] + m[9] * p[2] + m[13];
+      const wz = m[2] * p[0] + m[6] * p[1] + m[10] * p[2] + m[14];
+      const proj = diagProjectWorldPoint(wx, wy, wz);
+      out.push({ wx, wy, wz, screenX: proj.screenPx.x, screenY: proj.screenPx.y, ndcX: proj.ndc.x, ndcY: proj.ndc.y, inFrustum: proj.inFrustum });
+    }
+    return out;
+  }
+
+  function diagSummarizeProjectedPoints(pts, cssSize) {
+    if (!pts || !pts.length) {
+      return { minX: 0, maxX: 0, minY: 0, maxY: 0, width: 0, height: 0, minNdcX: 0, maxNdcX: 0, minNdcY: 0, maxNdcY: 0, minWx: 0, maxWx: 0, minWy: 0, maxWy: 0, minWz: 0, maxWz: 0, inViewportRatio: 0, fullyInViewport: false, partiallyInViewport: false };
+    }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let minNdcX = Infinity, maxNdcX = -Infinity, minNdcY = Infinity, maxNdcY = -Infinity;
+    let minWx = Infinity, maxWx = -Infinity, minWy = Infinity, maxWy = -Infinity, minWz = Infinity, maxWz = -Infinity;
+    let insideCount = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.screenX < minX) minX = p.screenX;
+      if (p.screenX > maxX) maxX = p.screenX;
+      if (p.screenY < minY) minY = p.screenY;
+      if (p.screenY > maxY) maxY = p.screenY;
+      if (p.ndcX < minNdcX) minNdcX = p.ndcX;
+      if (p.ndcX > maxNdcX) maxNdcX = p.ndcX;
+      if (p.ndcY < minNdcY) minNdcY = p.ndcY;
+      if (p.ndcY > maxNdcY) maxNdcY = p.ndcY;
+      if (p.wx < minWx) minWx = p.wx;
+      if (p.wx > maxWx) maxWx = p.wx;
+      if (p.wy < minWy) minWy = p.wy;
+      if (p.wy > maxWy) maxWy = p.wy;
+      if (p.wz < minWz) minWz = p.wz;
+      if (p.wz > maxWz) maxWz = p.wz;
+      if (p.screenX >= 0 && p.screenX <= cssSize.width && p.screenY >= 0 && p.screenY <= cssSize.height && p.inFrustum) {
+        insideCount++;
+      }
+    }
+    const ratio = insideCount / pts.length;
+    return {
+      minX: Number(minX.toFixed(2)),
+      maxX: Number(maxX.toFixed(2)),
+      minY: Number(minY.toFixed(2)),
+      maxY: Number(maxY.toFixed(2)),
+      width: Number((maxX - minX).toFixed(2)),
+      height: Number((maxY - minY).toFixed(2)),
+      minNdcX: Number(minNdcX.toFixed(4)),
+      maxNdcX: Number(maxNdcX.toFixed(4)),
+      minNdcY: Number(minNdcY.toFixed(4)),
+      maxNdcY: Number(maxNdcY.toFixed(4)),
+      minWx: Number(minWx.toFixed(4)),
+      maxWx: Number(maxWx.toFixed(4)),
+      minWy: Number(minWy.toFixed(4)),
+      maxWy: Number(maxWy.toFixed(4)),
+      minWz: Number(minWz.toFixed(4)),
+      maxWz: Number(maxWz.toFixed(4)),
+      inViewportRatio: Number(ratio.toFixed(4)),
+      fullyInViewport: insideCount === pts.length,
+      partiallyInViewport: insideCount > 0
+    };
+  }
+
+  function diagSampleCircleProjected(cx, cy, cz, radius, segments = 24) {
+    const pts = [];
+    for (let i = 0; i < segments; i++) {
+      const a = (i / segments) * Math.PI * 2;
+      const wx = cx + Math.cos(a) * radius;
+      const wy = cy + Math.sin(a) * radius;
+      const proj = diagProjectWorldPoint(wx, wy, cz);
+      pts.push({ wx, wy, wz: cz, screenX: proj.screenPx.x, screenY: proj.screenPx.y, ndcX: proj.ndc.x, ndcY: proj.ndc.y, inFrustum: proj.inFrustum });
+    }
+    return pts;
+  }
+
+  function diagComputeShipBounds() {
+    const cssSize = getViewportCssSize();
+    const shipZ = player.z + 0.45;
+    const isOriginal = player.selectedShip === "original";
+    const mesh = isOriginal ? meshes.ship : (meshes.shipMk1 || meshes.ship);
+    const scale = isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88];
+    const rotation = [player.viewPitch || 0, 0, player.viewRoll || 0];
+
+    const renderedCenter = diagProjectWorldPoint(player.x, player.y, shipZ);
+    const colliderCenter = diagProjectWorldPoint(player.x, player.y, player.z);
+    const meshVerts = diagTransformMeshVertices(mesh ? mesh.rawPositions : null, [player.x, player.y, shipZ], rotation, scale);
+    const colliderPts = diagSampleCircleProjected(player.x, player.y, player.z, player.radius, 24);
+
+    const renderedBounds = diagSummarizeProjectedPoints(meshVerts, cssSize);
+    const colliderBounds = diagSummarizeProjectedPoints(colliderPts, cssSize);
+
+    const dxPx = renderedCenter.screenPx.x - colliderCenter.screenPx.x;
+    const dyPx = renderedCenter.screenPx.y - colliderCenter.screenPx.y;
+
+    return {
+      renderedCenter,
+      colliderCenter,
+      centerDisplacement: {
+        dzWorldM: 0.45,
+        dxPx: Number(dxPx.toFixed(2)),
+        dyPx: Number(dyPx.toFixed(2)),
+        distPx: Number(Math.hypot(dxPx, dyPx).toFixed(2)),
+        dNdcY: Number((renderedCenter.ndc.y - colliderCenter.ndc.y).toFixed(4))
+      },
+      renderedMeshBounds: renderedBounds,
+      colliderSphereBounds: colliderBounds,
+      meshVerts,
+      colliderPts
+    };
+  }
+
+  function diagComputeObjectBounds(obj, alphaTime = state.time) {
+    const cssSize = getViewportCssSize();
+    const renderedWorld = corridorPoint(obj.x, obj.y, obj.z, alphaTime);
+    const collisionWorld = [obj.x, obj.y, obj.z];
+
+    let mesh = meshes.shard;
+    let scale = [obj.size, obj.size, obj.size];
+    let rotation = [obj.rotX || 0, obj.rotY || 0, obj.rotZ || 0];
+    if (obj.type === "crystal") {
+      mesh = meshes.crystal;
+      rotation = [obj.rotX || 0, (obj.rotY || 0) + alphaTime * 0.8, obj.rotZ || 0];
+    } else if (obj.type === "powerOrb") {
+      mesh = meshes.crystal;
+      scale = [obj.size * 1.1, obj.size * 1.1, obj.size * 1.1];
+      rotation = [obj.rotX || 0, (obj.rotY || 0) + alphaTime * 1.1, obj.rotZ || 0];
+    } else if (obj.type === "buffOrb") {
+      mesh = meshes.crystal;
+      scale = [obj.size * 1.15, obj.size * 1.15, obj.size * 1.15];
+      rotation = [obj.rotX || 0, (obj.rotY || 0) + alphaTime * 1.35, obj.rotZ || 0];
+    } else if (obj.type === "boss") {
+      mesh = meshes.shard;
+      scale = [obj.size * 1.2, obj.size, obj.size];
+      rotation = [(obj.rotX || 0) + alphaTime * 0.4, (obj.rotY || 0) + alphaTime * 0.5, obj.rotZ || 0];
+    }
+
+    const renderedCenter = diagProjectWorldPoint(renderedWorld[0], renderedWorld[1], renderedWorld[2]);
+    const colliderCenter = diagProjectWorldPoint(collisionWorld[0], collisionWorld[1], collisionWorld[2]);
+    const meshVerts = diagTransformMeshVertices(mesh ? mesh.rawPositions : null, renderedWorld, rotation, scale);
+    const colliderPts = diagSampleCircleProjected(collisionWorld[0], collisionWorld[1], collisionWorld[2], obj.radius || 0.5, 24);
+
+    const renderedBounds = diagSummarizeProjectedPoints(meshVerts, cssSize);
+    const colliderBounds = diagSummarizeProjectedPoints(colliderPts, cssSize);
+
+    const shipInfo = diagComputeShipBounds();
+    let minMeshDist2D_M = Infinity;
+    let minMeshDist3D_M = Infinity;
+    let minMeshDistPx = Infinity;
+
+    for (let i = 0; i < shipInfo.meshVerts.length; i++) {
+      const sv = shipInfo.meshVerts[i];
+      for (let j = 0; j < meshVerts.length; j++) {
+        const ov = meshVerts[j];
+        const d2 = Math.hypot(sv.wx - ov.wx, sv.wy - ov.wy);
+        const d3 = Math.hypot(sv.wx - ov.wx, sv.wy - ov.wy, sv.wz - ov.wz);
+        const dPx = Math.hypot(sv.screenX - ov.screenX, sv.screenY - ov.screenY);
+        if (d2 < minMeshDist2D_M) minMeshDist2D_M = d2;
+        if (d3 < minMeshDist3D_M) minMeshDist3D_M = d3;
+        if (dPx < minMeshDistPx) minMeshDistPx = dPx;
+      }
+    }
+
+    const bboxOverlap2D_Px =
+      !(shipInfo.renderedMeshBounds.maxX < renderedBounds.minX ||
+        shipInfo.renderedMeshBounds.minX > renderedBounds.maxX ||
+        shipInfo.renderedMeshBounds.maxY < renderedBounds.minY ||
+        shipInfo.renderedMeshBounds.minY > renderedBounds.maxY);
+
+    const colliderCenterDist2D = Math.hypot(obj.x - player.x, obj.y - player.y);
+    const combinedRadius = player.radius + (obj.radius || 0);
+    const colliderMarginM = colliderCenterDist2D - combinedRadius;
+    const dzToCollider = Math.abs(obj.z - player.z);
+    const dzToRenderedShip = Math.abs(obj.z - (player.z + 0.45));
+
+    return {
+      type: obj.type,
+      size: obj.size,
+      radius: obj.radius,
+      collisionWorld: collisionWorld.map((n) => Number(n.toFixed(4))),
+      renderedWorld: renderedWorld.map((n) => Number(n.toFixed(4))),
+      corridorDisplacement: {
+        dxM: Number((renderedWorld[0] - obj.x).toFixed(4)),
+        dyM: Number((renderedWorld[1] - obj.y).toFixed(4)),
+        dist2D_M: Number(Math.hypot(renderedWorld[0] - obj.x, renderedWorld[1] - obj.y).toFixed(4))
+      },
+      renderedCenter,
+      colliderCenter,
+      renderedMeshBounds: renderedBounds,
+      colliderSphereBounds: colliderBounds,
+      vsShip: {
+        colliderCenterDist2D_M: Number(colliderCenterDist2D.toFixed(4)),
+        combinedColliderRadius_M: Number(combinedRadius.toFixed(4)),
+        colliderMargin_M: Number(colliderMarginM.toFixed(4)),
+        colliderTriggersHit: dzToCollider < 1.1 && colliderMarginM < 0,
+        dzToCollider_M: Number(dzToCollider.toFixed(4)),
+        dzToRenderedShip_M: Number(dzToRenderedShip.toFixed(4)),
+        minMeshVertexDist2D_M: Number(minMeshDist2D_M.toFixed(4)),
+        minMeshVertexDist3D_M: Number(minMeshDist3D_M.toFixed(4)),
+        minMeshVertexDistScreen_Px: Number(minMeshDistPx.toFixed(2)),
+        renderedScreenBboxOverlap: bboxOverlap2D_Px
+      },
+      meshVerts,
+      colliderPts
+    };
+  }
+
+  function diagEvaluatePickupReachability(x, y, radius) {
+    const rTotal = player.radius + radius;
+    const lanes = [-2.2, 0, 2.2];
+    const mobileY = MOBILE_LANE_TARGET_Y; // -0.68
+    const dyMobile = Math.abs(y - mobileY);
+
+    // 1. Mobile stationary in one of the 3 lanes (-2.2, 0, +2.2) at fixed y = -0.68
+    let minMobileLaneDist = Infinity;
+    let bestMobileLane = 0;
+    for (let i = 0; i < lanes.length; i++) {
+      const d = Math.hypot(x - lanes[i], y - mobileY);
+      if (d < minMobileLaneDist) {
+        minMobileLaneDist = d;
+        bestMobileLane = i - 1;
+      }
+    }
+    const reachableMobileStationary = minMobileLaneDist < rTotal;
+
+    // 2. Mobile including transient X lerping across [-2.2, +2.2] while y remains fixed at -0.68
+    const clampedMobileX = clamp(x, -2.2, 2.2);
+    const minMobileLerpDist = Math.hypot(x - clampedMobileX, y - mobileY);
+    const reachableMobileLerp = minMobileLerpDist < rTotal;
+
+    // 3. Desktop current steering: discrete X lanes {-2.2, 0, +2.2} (or transient lerp [-2.2, 2.2]) + vertical y in [-2.15, +1.55]
+    const desktopBounds = SIM_LAW_DEFAULT.lanes.playerBounds;
+    const clampedDesktopY = clamp(y, desktopBounds.yMin, desktopBounds.yMax);
+    let minDesktopLaneDist = Infinity;
+    for (let i = 0; i < lanes.length; i++) {
+      const d = Math.hypot(x - lanes[i], y - clampedDesktopY);
+      if (d < minDesktopLaneDist) minDesktopLaneDist = d;
+    }
+    const reachableDesktopStationary = minDesktopLaneDist < rTotal;
+    const reachableDesktopLerp = Math.hypot(x - clamp(x, -2.2, 2.2), y - clampedDesktopY) < rTotal;
+
+    // 4. Proposed Wave 1 continuous 2D steering across full playerBounds [-3.8..3.8, -2.15..1.55]
+    const clampedFullX = clamp(x, desktopBounds.xMin, desktopBounds.xMax);
+    const minFull2DDist = Math.hypot(x - clampedFullX, y - clampedDesktopY);
+    const reachableProposed2D = minFull2DDist < rTotal;
+
+    let failureReasonMobile = "REACHABLE";
+    if (!reachableMobileStationary) {
+      if (dyMobile >= rTotal) {
+        failureReasonMobile = y > mobileY ? "UNREACHABLE_HIGH_Y" : "UNREACHABLE_LOW_Y";
+      } else if (!reachableMobileLerp) {
+        failureReasonMobile = "UNREACHABLE_OUTER_X";
+      } else {
+        failureReasonMobile = "UNREACHABLE_SCALLOP_GAP_BETWEEN_LANES";
+      }
+    }
+
+    return {
+      x: Number(x.toFixed(4)),
+      y: Number(y.toFixed(4)),
+      radius: Number(radius.toFixed(4)),
+      combinedReachRadius: Number(rTotal.toFixed(4)),
+      dyFromMobileLockedY: Number(dyMobile.toFixed(4)),
+      minMobileLaneDist: Number(minMobileLaneDist.toFixed(4)),
+      bestMobileLane,
+      reachableMobileStationary,
+      reachableMobileLerp,
+      reachableDesktopStationary,
+      reachableDesktopLerp,
+      reachableProposed2D,
+      failureReasonMobile
+    };
+  }
+
+  function diagPreUpdate() {
+    diagPreObjects.length = 0;
+    diagLastDrawCalls = state.rawDrawCalls;
+    diagLastGlDrawElements = diagGlDrawElementsCount;
+    for (let i = 0; i < objects.length; i++) {
+      const o = objects[i];
+      if (Math.abs(o.z - player.z) < 4.5) {
+        diagPreObjects.push({
+          ref: o,
+          type: o.type,
+          x: o.x,
+          y: o.y,
+          z: o.z,
+          size: o.size,
+          radius: o.radius,
+          rotX: o.rotX,
+          rotY: o.rotY,
+          rotZ: o.rotZ,
+          hullBefore: state.hull,
+          scoreBefore: state.score,
+          coresBefore: state.cores
+        });
+      }
+    }
+  }
+
+  function diagPostFrame(dt, seconds, rawRafIntervalMs = 0, cpuRenderMs = 0) {
+    diagLastFrameDrawCalls = state.rawDrawCalls - diagLastDrawCalls;
+    diagLastFrameGlDrawCalls = diagGlDrawElementsCount - diagLastGlDrawElements;
+    if (dt > 0) {
+      diagFrameTimesMs.push(Number((dt * 1000).toFixed(3)));
+      if (diagFrameTimesMs.length > 240) {
+        diagFrameTimesMs.shift();
+      }
+    }
+    if (rawRafIntervalMs > 0) {
+      diagRawRafIntervalsMs.push(Number(rawRafIntervalMs.toFixed(3)));
+      if (diagRawRafIntervalsMs.length > 240) {
+        diagRawRafIntervalsMs.shift();
+      }
+    }
+    if (cpuRenderMs >= 0) {
+      diagCpuRenderTimesMs.push(Number(cpuRenderMs.toFixed(3)));
+      if (diagCpuRenderTimesMs.length > 240) {
+        diagCpuRenderTimesMs.shift();
+      }
+    }
+
+    for (let i = 0; i < diagPreObjects.length; i++) {
+      const pre = diagPreObjects[i];
+      const stillPresent = objects.includes(pre.ref);
+      const advancedZ = pre.z + state.speed * dt;
+      const snapshotObj = {
+        type: pre.type,
+        x: pre.x,
+        y: pre.y,
+        z: stillPresent ? pre.ref.z : advancedZ,
+        size: pre.size,
+        radius: pre.radius,
+        rotX: pre.rotX,
+        rotY: pre.rotY,
+        rotZ: pre.rotZ
+      };
+
+      const crossedPlayerZ = pre.z < player.z && snapshotObj.z >= player.z;
+      if (!stillPresent || crossedPlayerZ) {
+        const bounds = diagComputeObjectBounds(snapshotObj, seconds);
+        const hullDelta = state.hull - pre.hullBefore;
+        const scoreDelta = state.score - pre.scoreBefore;
+        const coresDelta = state.cores - pre.coresBefore;
+        let outcome = "near_miss";
+        if (!stillPresent) {
+          if (hullDelta < 0) outcome = "hull_hit";
+          else if (coresDelta > 0 || scoreDelta > 0) outcome = pre.type === "debris" ? "dash_phase" : "pickup_collected";
+          else outcome = "contact_removed";
+        }
+        diagContactLog.push({
+          time: Number(state.time.toFixed(4)),
+          outcome,
+          type: pre.type,
+          hullDelta,
+          scoreDelta,
+          coresDelta,
+          playerPos: [Number(player.x.toFixed(4)), Number(player.y.toFixed(4)), Number(player.z.toFixed(4))],
+          renderedShipPos: [Number(player.x.toFixed(4)), Number(player.y.toFixed(4)), Number((player.z + 0.45).toFixed(4))],
+          objectCollisionPos: bounds.collisionWorld,
+          objectRenderedPos: bounds.renderedWorld,
+          corridorDisplacement: bounds.corridorDisplacement,
+          vsShip: bounds.vsShip
+        });
+        if (diagContactLog.length > 100) {
+          diagContactLog.shift();
+        }
+      }
+    }
+
+    if (diagOverlayEnabled) {
+      diagRenderOverlay(seconds);
+    }
+  }
+
+  function diagEnsureOverlayCanvas() {
+    if (diagOverlayCanvas) return diagOverlayCanvas;
+    diagOverlayCanvas = document.createElement("canvas");
+    diagOverlayCanvas.id = "wave0DiagOverlay";
+    diagOverlayCanvas.style.cssText =
+      "position:fixed;inset:0;width:100vw;height:100dvh;pointer-events:none;z-index:9999;";
+    document.body.appendChild(diagOverlayCanvas);
+    diagOverlayCtx = diagOverlayCanvas.getContext("2d");
+    return diagOverlayCanvas;
+  }
+
+  function diagRenderOverlay(seconds = state.time) {
+    const c = diagEnsureOverlayCanvas();
+    const ctx = diagOverlayCtx;
+    if (!ctx) return;
+    const cssSize = getViewportCssSize();
+    if (c.width !== cssSize.width || c.height !== cssSize.height) {
+      c.width = cssSize.width;
+      c.height = cssSize.height;
+    }
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    const ship = diagComputeShipBounds();
+
+    // Optional: draw mobile locked Y lane and 3 discrete lane reachability disks
+    if (diagOverlayOpts.showReachability) {
+      const lanes = [-2.2, 0, 2.2];
+      const leftPt = diagProjectWorldPoint(-3.8, MOBILE_LANE_TARGET_Y, player.z);
+      const rightPt = diagProjectWorldPoint(3.8, MOBILE_LANE_TARGET_Y, player.z);
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 78, 255, 0.85)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(leftPt.screenPx.x, leftPt.screenPx.y);
+      ctx.lineTo(rightPt.screenPx.x, rightPt.screenPx.y);
+      ctx.stroke();
+      ctx.fillStyle = "#ff85ff";
+      ctx.font = "bold 11px monospace";
+      ctx.fillText(`MOBILE LOCKED Y = ${MOBILE_LANE_TARGET_Y}m`, leftPt.screenPx.x + 6, leftPt.screenPx.y - 6);
+
+      for (let i = 0; i < lanes.length; i++) {
+        const ring = diagSampleCircleProjected(lanes[i], MOBILE_LANE_TARGET_Y, player.z, player.radius + 0.48, 24);
+        ctx.strokeStyle = "rgba(255, 78, 255, 0.45)";
+        ctx.beginPath();
+        for (let k = 0; k < ring.length; k++) {
+          if (k === 0) ctx.moveTo(ring[k].screenX, ring[k].screenY);
+          else ctx.lineTo(ring[k].screenX, ring[k].screenY);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Draw objects: rendered mesh bounds vs collider sphere
+    for (let i = 0; i < objects.length; i++) {
+      const o = objects[i];
+      if (o.z < -45 || o.z > 2) continue;
+      const ob = diagComputeObjectBounds(o, seconds);
+      const isPickup = o.type === "crystal" || o.type === "powerOrb" || o.type === "buffOrb";
+
+      // 1. Collider circle (Red dashed for hazard, Green/Red for pickup reachability)
+      ctx.save();
+      if (isPickup) {
+        const reach = diagEvaluatePickupReachability(o.x, o.y, o.radius);
+        ctx.strokeStyle = reach.reachableMobileStationary ? "#00ff88" : "#ff3355";
+      } else {
+        ctx.strokeStyle = "#ff3355";
+      }
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 3]);
+      ctx.beginPath();
+      for (let k = 0; k < ob.colliderPts.length; k++) {
+        const pt = ob.colliderPts[k];
+        if (k === 0) ctx.moveTo(pt.screenX, pt.screenY);
+        else ctx.lineTo(pt.screenX, pt.screenY);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      // 2. Rendered mesh bounding box & vertices (Amber for hazard, Cyan for pickup)
+      ctx.setLineDash([]);
+      ctx.strokeStyle = isPickup ? "#4ef0ff" : "#ffbe0b";
+      ctx.lineWidth = 1.5;
+      const rb = ob.renderedMeshBounds;
+      ctx.strokeRect(rb.minX, rb.minY, rb.width, rb.height);
+
+      // Center displacement line (Collider center -> Rendered center)
+      ctx.strokeStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(ob.colliderCenter.screenPx.x, ob.colliderCenter.screenPx.y);
+      ctx.lineTo(ob.renderedCenter.screenPx.x, ob.renderedCenter.screenPx.y);
+      ctx.stroke();
+
+      ctx.fillStyle = isPickup ? "#9dffb0" : "#ffd166";
+      ctx.font = "bold 10px monospace";
+      const label = isPickup
+        ? `${o.type} y=${o.y.toFixed(2)}m`
+        : `${o.type} rCol=${o.radius.toFixed(2)}m dz=${ob.vsShip.dzToCollider_M.toFixed(2)}m`;
+      ctx.fillText(label, rb.minX, Math.max(14, rb.minY - 4));
+      ctx.restore();
+    }
+
+    // Draw ship collider sphere at player.z = -7.80 (Cyan dashed circle)
+    ctx.save();
+    ctx.strokeStyle = "#00f5d4";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    for (let k = 0; k < ship.colliderPts.length; k++) {
+      const pt = ship.colliderPts[k];
+      if (k === 0) ctx.moveTo(pt.screenX, pt.screenY);
+      else ctx.lineTo(pt.screenX, pt.screenY);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // Draw rendered ship mesh bounds at shipZ = -7.35 (Solid Neon Green box + vertices)
+    ctx.setLineDash([]);
+    ctx.strokeStyle = "#39ff14";
+    ctx.lineWidth = 2;
+    const sb = ship.renderedMeshBounds;
+    ctx.strokeRect(sb.minX, sb.minY, sb.width, sb.height);
+
+    // Line between ship collider center (z=-7.80) and rendered ship center (z=-7.35)
+    ctx.strokeStyle = "#ffff00";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ship.colliderCenter.screenPx.x, ship.colliderCenter.screenPx.y);
+    ctx.lineTo(ship.renderedCenter.screenPx.x, ship.renderedCenter.screenPx.y);
+    ctx.stroke();
+
+    ctx.fillStyle = "#39ff14";
+    ctx.font = "bold 11px monospace";
+    ctx.fillText(
+      `SHIP MESH (z=${(player.z + 0.45).toFixed(2)}m) NDC_y=${ship.renderedCenter.ndc.y.toFixed(2)}`,
+      Math.max(8, sb.minX),
+      Math.min(c.height - 10, sb.maxY + 14)
+    );
+    ctx.fillStyle = "#00f5d4";
+    ctx.fillText(
+      `COLLIDER (r=${player.radius}m, z=${player.z.toFixed(2)}m) Δpx=${ship.centerDisplacement.distPx}px`,
+      Math.max(8, ship.colliderSphereBounds.minX),
+      Math.max(20, ship.colliderSphereBounds.minY - 6)
+    );
+
+    // Top-left diagnostic telemetry banner
+    const aspect = (canvas.width / Math.max(1, canvas.height)).toFixed(2);
+    const fp = getFrameProfile();
+    ctx.fillStyle = "rgba(4, 8, 18, 0.86)";
+    ctx.fillRect(8, 8, Math.min(c.width - 16, 430), 112);
+    ctx.strokeStyle = "rgba(78, 240, 255, 0.65)";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(8, 8, Math.min(c.width - 16, 430), 112);
+
+    ctx.fillStyle = "#4ef0ff";
+    ctx.font = "bold 11px monospace";
+    ctx.fillText(diagOverlayOpts.bannerTitle || "WAVE 0 DIAGNOSTIC TELEMETRY", 16, 24);
+    ctx.fillStyle = "#edf6ff";
+    ctx.font = "11px monospace";
+    ctx.fillText(
+      `VP: ${cssSize.width}x${cssSize.height} (buf ${canvas.width}x${canvas.height}, aspect ${aspect}, touch=${isTouchCapable})`,
+      16,
+      40
+    );
+    ctx.fillText(
+      `Ship: x=${player.x.toFixed(2)} y=${player.y.toFixed(2)} tgtY=${player.targetY.toFixed(2)} | NDC=(${ship.renderedCenter.ndc.x.toFixed(2)}, ${ship.renderedCenter.ndc.y.toFixed(2)})`,
+      16,
+      56
+    );
+    ctx.fillText(
+      `Cam: pitch=${state.viewPitch.toFixed(3)} fovScale=${fp.fovScale} depth=${fp.cameraDepth} followY=${getCameraFollow().y}`,
+      16,
+      72
+    );
+    ctx.fillText(
+      `MeshInVP: ${(sb.inViewportRatio * 100).toFixed(0)}% | BBoxY: [${sb.minY.toFixed(0)}..${sb.maxY.toFixed(0)}px] | Hull: ${state.hull} | Speed: ${state.speed.toFixed(1)}`,
+      16,
+      88
+    );
+    const lastContact = diagContactLog[diagContactLog.length - 1];
+    if (lastContact) {
+      ctx.fillStyle = lastContact.outcome === "hull_hit" ? "#ff5f7a" : "#9dffb0";
+      ctx.fillText(
+        `Last: ${lastContact.outcome} (${lastContact.type}) colMargin=${lastContact.vsShip.colliderMargin_M}m meshDist=${lastContact.vsShip.minMeshVertexDist2D_M}m`,
+        16,
+        104
+      );
+    }
+    ctx.restore();
+  }
+
+  if (DIAG_ENABLED && typeof window !== "undefined") {
+    window.__starfallWave0 = {
+      setSeed(seed) {
+        diagSeedState = typeof seed === "number" ? (seed | 0) : null;
+        return diagSeedState;
+      },
+      setTouchCapable(enabled) {
+        isTouchCapable = Boolean(enabled);
+        return isTouchCapable;
+      },
+      getInputState() {
+        return {
+          isTouchCapable,
+          activePointerId,
+          activePointerType,
+          touchStartX: Number(touchStartX.toFixed(2)),
+          touchStartY: Number(touchStartY.toFixed(2)),
+          touchAxis: { x: Number(touchAxis.x.toFixed(4)), y: Number(touchAxis.y.toFixed(4)) },
+          targetLane: player.targetLane,
+          targetX: Number(player.targetX.toFixed(4)),
+          targetY: Number(player.targetY.toFixed(4)),
+          playerX: Number(player.x.toFixed(4)),
+          playerY: Number(player.y.toFixed(4)),
+          activeKeys: Array.from(keys)
+        };
+      },
+      laneFromClientX,
+      setManualStep(enabled) {
+        diagManualStep = Boolean(enabled);
+        return diagManualStep;
+      },
+      setOverlay(enabled, opts = {}) {
+        diagOverlayEnabled = Boolean(enabled);
+        diagOverlayOpts = { ...diagOverlayOpts, ...opts };
+        if (diagOverlayEnabled) {
+          diagRenderOverlay(state.time);
+        } else if (diagOverlayCanvas) {
+          diagOverlayCanvas.remove();
+          diagOverlayCanvas = null;
+          diagOverlayCtx = null;
+        }
+        return diagOverlayEnabled;
+      },
+      projectWorldPoint: diagProjectWorldPoint,
+      computeShipBounds: diagComputeShipBounds,
+      computeObjectBounds: diagComputeObjectBounds,
+      evaluatePickupReachability: diagEvaluatePickupReachability,
+      generatePickupGridAudit(seed = 20261025, sampleCount = 600) {
+        const prevSeed = diagSeedState;
+        diagSeedState = seed | 0;
+        const samples = [];
+        for (let i = 0; i < sampleCount; i++) {
+          // Match spawnObject() class definitions:
+          // crystal: x in [-3.8, 3.8], y in [-2.0, 1.6], size in [0.55, 0.85], r = size * 0.68
+          // powerOrb: x in [-3.2, 3.2], y in [-1.7, 1.3], size in [0.38, 0.55], r = size * 0.72
+          // buffOrb: x in [-3.2, 3.2], y in [-1.7, 1.3], size in [0.36, 0.52], r = size * 0.72
+          const mod = i % 6;
+          const kind = mod < 4 ? "crystal" : mod === 4 ? "powerOrb" : "buffOrb";
+          const x = kind === "crystal" ? randomRange(-3.8, 3.8) : randomRange(-3.2, 3.2);
+          const y = kind === "crystal" ? randomRange(-2.0, 1.6) : randomRange(-1.7, 1.3);
+          const size =
+            kind === "crystal"
+              ? randomRange(0.55, 0.85)
+              : kind === "powerOrb"
+              ? randomRange(0.38, 0.55)
+              : randomRange(0.36, 0.52);
+          const radius = kind === "crystal" ? size * 0.68 : size * 0.72;
+          samples.push({
+            index: i,
+            kind,
+            size: Number(size.toFixed(4)),
+            ...diagEvaluatePickupReachability(x, y, radius)
+          });
+        }
+        diagSeedState = prevSeed;
+        const summarizeGroup = (arr) => {
+          const total = arr.length || 1;
+          const mStat = arr.filter((s) => s.reachableMobileStationary).length;
+          const mLerp = arr.filter((s) => s.reachableMobileLerp).length;
+          const dStat = arr.filter((s) => s.reachableDesktopStationary).length;
+          const dLerp = arr.filter((s) => s.reachableDesktopLerp).length;
+          const p2d = arr.filter((s) => s.reachableProposed2D).length;
+          return {
+            count: arr.length,
+            mobileStationaryReachable: mStat,
+            mobileStationaryPct: Number(((mStat / total) * 100).toFixed(2)),
+            mobileLerpReachable: mLerp,
+            mobileLerpPct: Number(((mLerp / total) * 100).toFixed(2)),
+            desktopStationaryReachable: dStat,
+            desktopStationaryPct: Number(((dStat / total) * 100).toFixed(2)),
+            desktopLerpReachable: dLerp,
+            desktopLerpPct: Number(((dLerp / total) * 100).toFixed(2)),
+            proposed2DGeometricReachable: p2d,
+            proposed2DGeometricPct: Number(((p2d / total) * 100).toFixed(2))
+          };
+        };
+        const summary = {
+          seed,
+          sampleCount,
+          mobileStationaryReachable: samples.filter((s) => s.reachableMobileStationary).length,
+          mobileLerpReachable: samples.filter((s) => s.reachableMobileLerp).length,
+          desktopStationaryReachable: samples.filter((s) => s.reachableDesktopStationary).length,
+          desktopLerpReachable: samples.filter((s) => s.reachableDesktopLerp).length,
+          proposed2DReachable: samples.filter((s) => s.reachableProposed2D).length,
+          byClass: {
+            crystal: summarizeGroup(samples.filter((s) => s.kind === "crystal")),
+            powerOrb: summarizeGroup(samples.filter((s) => s.kind === "powerOrb")),
+            buffOrb: summarizeGroup(samples.filter((s) => s.kind === "buffOrb")),
+            allPickups: summarizeGroup(samples)
+          },
+          byFailureReasonMobile: {}
+        };
+        samples.forEach((s) => {
+          summary.byFailureReasonMobile[s.failureReasonMobile] =
+            (summary.byFailureReasonMobile[s.failureReasonMobile] || 0) + 1;
+        });
+        return { summary, samples };
+      },
+      clearObjects() {
+        objects.length = 0;
+        sparks.length = 0;
+        trailParticles.length = 0;
+        return 0;
+      },
+      spawnTestObject(spec) {
+        const size = spec.size ?? (spec.type === "crystal" ? 0.7 : 1.15);
+        const radius =
+          spec.radius ??
+          (spec.type === "crystal"
+            ? size * 0.68
+            : spec.type === "powerOrb" || spec.type === "buffOrb"
+            ? size * 0.72
+            : size * 0.82);
+        const obj = {
+          type: spec.type || "debris",
+          x: spec.x ?? 0,
+          y: spec.y ?? player.y,
+          z: spec.z ?? -16,
+          size,
+          radius,
+          rotX: spec.rotX ?? 0,
+          rotY: spec.rotY ?? 0,
+          rotZ: spec.rotZ ?? 0,
+          spinX: spec.spinX ?? 0,
+          spinY: spec.spinY ?? 0,
+          spinZ: spec.spinZ ?? 0,
+          hp: spec.hp ?? 2,
+          maxHp: spec.maxHp ?? 2
+        };
+        objects.push(obj);
+        return obj;
+      },
+      setPlayerState(patch = {}) {
+        if (typeof patch.mode === "string") {
+          state.mode = patch.mode;
+          if (patch.mode === "playing") {
+            markOnboardingDone();
+            hideOnboardingModal();
+            syncHangarLifecycle(false);
+            setStatus("", "", true);
+          }
+        }
+        if (typeof patch.x === "number") player.x = patch.x;
+        if (typeof patch.y === "number") player.y = patch.y;
+        if (typeof patch.z === "number") player.z = patch.z;
+        if (typeof patch.targetX === "number") player.targetX = patch.targetX;
+        if (typeof patch.targetY === "number") player.targetY = patch.targetY;
+        if (typeof patch.targetLane === "number") player.targetLane = patch.targetLane;
+        if (typeof patch.speed === "number") {
+          state.speed = patch.speed;
+          state.lastSpeedMultiplier = patch.speed / 18;
+        }
+        if (typeof patch.hull === "number") state.hull = patch.hull;
+        if (typeof patch.score === "number") state.score = patch.score;
+        if (typeof patch.cores === "number") state.cores = patch.cores;
+        if (typeof patch.time === "number") state.time = patch.time;
+        if (typeof patch.spawnTimer === "number") state.spawnTimer = patch.spawnTimer;
+        if (typeof patch.dash === "number") player.dash = patch.dash;
+        if (patch.settleCamera) {
+          resizeCanvas();
+          const aspect = canvas.width / Math.max(1, canvas.height);
+          const frameProfile = getFrameProfile(aspect);
+          const follow = getCameraFollow();
+          const viewBiasY = frameProfile.viewBiasY;
+          const camTrackX = isTouchCapable ? 0.34 : Math.max(follow.x * 0.72, 0.06);
+          const bendHeading = state.mode === "playing" ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, state.time) : 0;
+          const targetViewYaw = clamp(
+            bendHeading * (isTouchCapable ? 3.5 : 3.1),
+            -CORRIDOR_VIEW_YAW_MAX,
+            CORRIDOR_VIEW_YAW_MAX
+          );
+          const targetCamX = -player.x * camTrackX - targetViewYaw * 0.68;
+          const targetCamY = -player.y * follow.y + viewBiasY + Math.abs(targetViewYaw) * 0.12;
+          const targetViewPitch =
+            (state.mode === "ready" ? frameProfile.readyPitch : frameProfile.playPitch) +
+            Math.abs(targetViewYaw) * 0.22;
+          const camLerp = 0.1;
+          for (let i = 0; i < 45; i++) {
+            state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
+            state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
+            state.viewPitch += (targetViewPitch - state.viewPitch) * camLerp;
+            state.viewYaw += (targetViewYaw - state.viewYaw) * Math.min(1, camLerp * 1.15);
+            const targetRoll = -player.x * 0.065 - state.viewYaw * 0.78;
+            state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
+          }
+        }
+        syncShellPlayState();
+        renderScene(state.time);
+        if (diagOverlayEnabled) diagRenderOverlay(state.time);
+        return readDebugState();
+      },
+      setupScenario(name) {
+        const api = window.__starfallWave0;
+        api.setManualStep(true);
+        api.setTouchCapable(name === "mobile_reachability");
+        api.clearObjects();
+        api.clearContactLog();
+        if (name === "mobile_reachability") {
+          api.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: -0.68,
+            z: -7.8,
+            targetX: 0,
+            targetY: -0.68,
+            targetLane: 0,
+            speed: 18,
+            time: 0,
+            hull: 3,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          // Exact spawnObject() sizes and radius multipliers (crystal: size in [0.55, 0.85], r = size * 0.68; powerOrb: size in [0.38, 0.55], r = size * 0.72)
+          api.spawnTestObject({ type: "crystal", x: 0.0, y: -0.68, z: -13.0, size: 0.72, radius: 0.72 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: 1.02, y: -0.68, z: -13.0, size: 0.76, radius: 0.76 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: 1.10, y: 0.22, z: -12.5, size: 0.65, radius: 0.65 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: -0.55, y: 1.22, z: -12.0, size: 0.78, radius: 0.78 * 0.68 });
+          api.spawnTestObject({ type: "powerOrb", x: 0.55, y: 1.18, z: -12.0, size: 0.48, radius: 0.48 * 0.72 });
+          api.setOverlay(true, {
+            showReachability: true,
+            bannerTitle: "WAVE 0 · P0-A/B: MOBILE PORTRAIT REACHABILITY (y LOCKED AT -0.68m)"
+          });
+        } else if (name === "collision_phantom_hit") {
+          // Production-valid debris size (size = 1.25 in [0.85, 1.35], radius = 1.25 * 0.82 = 1.025m) with representative 3D rotation
+          api.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: -0.45,
+            z: -7.8,
+            targetX: 0,
+            targetY: -0.45,
+            targetLane: 0,
+            speed: 18,
+            time: 0,
+            hull: 3,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          api.spawnTestObject({
+            type: "debris",
+            x: 1.48,
+            y: -0.18,
+            z: -8.05,
+            size: 1.25,
+            radius: 1.25 * 0.82,
+            rotX: 0.42,
+            rotY: 0.88,
+            rotZ: 0.35
+          });
+          api.stepFrames(1, 0.016);
+          api.spawnTestObject({
+            type: "debris",
+            x: 1.48,
+            y: -0.18,
+            z: -7.80,
+            size: 1.25,
+            radius: 1.25 * 0.82,
+            rotX: 0.42,
+            rotY: 0.88,
+            rotZ: 0.35
+          });
+          api.setOverlay(true, {
+            showReachability: false,
+            bannerTitle: "WAVE 0 · P0-C: PROD DEBRIS PHANTOM HIT (size=1.25m, rot=[0.42,0.88,0.35])"
+          });
+        } else if (name === "collision_phantom_hit_synthetic_control") {
+          // Preserved synthetic diagnostic control (size = 1.42, rot = [0, 0, 0])
+          api.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: -0.45,
+            z: -7.8,
+            targetX: 0,
+            targetY: -0.45,
+            targetLane: 0,
+            speed: 18,
+            time: 0,
+            hull: 3,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          api.spawnTestObject({ type: "debris", x: 1.58, y: -0.15, z: -8.05, size: 1.42, radius: 1.42 * 0.82 });
+          api.stepFrames(1, 0.016);
+          api.spawnTestObject({ type: "debris", x: 1.58, y: -0.15, z: -7.80, size: 1.42, radius: 1.42 * 0.82 });
+          api.setOverlay(true, {
+            showReachability: false,
+            bannerTitle: "WAVE 0 · P0-C CONTROL: SYNTHETIC EDGE COLLISION (size=1.42m, rot=[0,0,0])"
+          });
+        } else if (name === "collision_z_offset") {
+          // Production-valid debris size (size = 1.28 in [0.85, 1.35], radius = 1.28 * 0.82 = 1.0496m) with representative 3D rotation
+          api.setPlayerState({
+            mode: "playing",
+            x: -0.45,
+            y: -0.45,
+            z: -7.8,
+            targetX: -0.45,
+            targetY: -0.45,
+            targetLane: 0,
+            speed: 18,
+            time: 0,
+            hull: 3,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          api.spawnTestObject({
+            type: "debris",
+            x: 0.58,
+            y: -0.35,
+            z: -9.10,
+            size: 1.28,
+            radius: 1.28 * 0.82,
+            rotX: 0.30,
+            rotY: 0.75,
+            rotZ: 0.20
+          });
+          api.stepFrames(1, 0.016);
+          api.spawnTestObject({
+            type: "debris",
+            x: 0.58,
+            y: -0.35,
+            z: -8.85,
+            size: 1.28,
+            radius: 1.28 * 0.82,
+            rotX: 0.30,
+            rotY: 0.75,
+            rotZ: 0.20
+          });
+          api.setOverlay(true, {
+            showReachability: false,
+            bannerTitle: "WAVE 0 · P0-C: Z-AXIS LEAD OFFSET (Collider z=-7.80 vs Rendered z=-7.35)"
+          });
+        } else if (name === "desktop_bottom_clip") {
+          api.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: -2.15,
+            z: -7.8,
+            targetX: 0,
+            targetY: -2.15,
+            targetLane: 0,
+            speed: 18,
+            time: 0,
+            hull: 3,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          api.spawnTestObject({ type: "crystal", x: -1.2, y: -0.45, z: -14.0, size: 0.75, radius: 0.75 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: 1.2, y: 0.25, z: -16.0, size: 0.75, radius: 0.75 * 0.68 });
+          api.setOverlay(true, {
+            showReachability: false,
+            bannerTitle: "WAVE 0 · P0-D: DESKTOP VERTICAL STEER BOTTOM CLIPPING (y=-2.15, NDC_y < -1.0)"
+          });
+        }
+        renderScene(state.time);
+        if (diagOverlayEnabled) diagRenderOverlay(state.time);
+        return api.getViewportTelemetry();
+      },
+      stepFrames(count = 1, dt = 1 / 60) {
+        const snapshots = [];
+        for (let i = 0; i < count; i++) {
+          const shouldRender = i === count - 1;
+          const t0 = performance.now();
+          diagPreUpdate();
+          updateGame(dt);
+          updatePresentation(dt);
+          if (shouldRender) {
+            renderScene(state.time);
+          }
+          const cpuMs = performance.now() - t0;
+          diagPostFrame(dt, state.time, 0, shouldRender ? cpuMs : -1);
+          snapshots.push({
+            step: i,
+            time: Number(state.time.toFixed(4)),
+            hull: state.hull,
+            score: state.score,
+            cores: state.cores,
+            player: { x: Number(player.x.toFixed(4)), y: Number(player.y.toFixed(4)), z: Number(player.z.toFixed(4)) },
+            objectCount: objects.length
+          });
+        }
+        return { snapshots, contactLog: diagContactLog.slice() };
+      },
+      getContactLog() {
+        return diagContactLog.slice();
+      },
+      clearContactLog() {
+        diagContactLog.length = 0;
+        return 0;
+      },
+      resetPerfSamples() {
+        diagRawRafIntervalsMs.length = 0;
+        diagCpuRenderTimesMs.length = 0;
+        diagFrameTimesMs.length = 0;
+        diagLastRawRafMs = 0;
+        return true;
+      },
+      getViewportTelemetry() {
+        const vv = window.visualViewport;
+        const rect = canvas.getBoundingClientRect();
+        const fp = getFrameProfile();
+        return {
+          innerWidth: window.innerWidth,
+          innerHeight: window.innerHeight,
+          scrollX: window.scrollX || window.pageXOffset || 0,
+          scrollY: window.scrollY || window.pageYOffset || 0,
+          devicePixelRatio: window.devicePixelRatio || 1,
+          visualViewport: vv
+            ? {
+                width: vv.width,
+                height: vv.height,
+                offsetLeft: vv.offsetLeft,
+                offsetTop: vv.offsetTop,
+                pageLeft: vv.pageLeft,
+                pageTop: vv.pageTop,
+                scale: vv.scale
+              }
+            : null,
+          canvasClientRect: {
+            left: Number(rect.left.toFixed(2)),
+            top: Number(rect.top.toFixed(2)),
+            width: Number(rect.width.toFixed(2)),
+            height: Number(rect.height.toFixed(2))
+          },
+          canvasDrawingBuffer: { width: canvas.width, height: canvas.height },
+          aspect: Number((canvas.width / Math.max(1, canvas.height)).toFixed(4)),
+          renderFovRad: Number((state.currentFov * fp.fovScale).toFixed(4)),
+          renderFovDeg: Number(((state.currentFov * fp.fovScale * 180) / Math.PI).toFixed(2)),
+          frameProfile: fp,
+          viewMatrix: Array.from(viewMatrix).map((n) => Number(n.toFixed(4))),
+          projectionMatrix: Array.from(projectionMatrix).map((n) => Number(n.toFixed(4)))
+        };
+      },
+      getPerfSummary() {
+        const computeStats = (arr) => {
+          const sorted = arr.slice().sort((a, b) => a - b);
+          const n = sorted.length;
+          const pct = (p) => (n ? sorted[Math.min(n - 1, Math.floor(n * p))] : 0);
+          const avg = n ? Number((sorted.reduce((a, b) => a + b, 0) / n).toFixed(3)) : 0;
+          return {
+            sampleCount: n,
+            avgMs: avg,
+            minMs: n ? sorted[0] : 0,
+            p50Ms: pct(0.5),
+            p95Ms: pct(0.95),
+            p99Ms: pct(0.99),
+            maxMs: n ? sorted[n - 1] : 0
+          };
+        };
+        const rawRaf = computeStats(diagRawRafIntervalsMs);
+        const cpuRender = computeStats(diagCpuRenderTimesMs);
+        const cappedSim = computeStats(diagFrameTimesMs);
+        const mem = performance && performance.memory
+          ? {
+              usedJSHeapSize: performance.memory.usedJSHeapSize,
+              totalJSHeapSize: performance.memory.totalJSHeapSize,
+              jsHeapSizeLimit: performance.memory.jsHeapSizeLimit
+            }
+          : null;
+        return {
+          evidenceCategory: "headless_desktop_webgl",
+          uncappedRafIntervalMs: {
+            ...rawRaf,
+            approxFps: rawRaf.avgMs > 0 ? Number((1000 / rawRaf.avgMs).toFixed(1)) : 0
+          },
+          uncappedCpuRenderTimeMs: cpuRender,
+          cappedSimDeltaReferenceMs: {
+            note: "Reference only: clamped by Math.min(0.033, dt) in frame(); not used as frame-time evidence",
+            ...cappedSim
+          },
+          sampleCount: rawRaf.sampleCount || cpuRender.sampleCount,
+          avgFrameMs: rawRaf.sampleCount ? rawRaf.avgMs : cpuRender.avgMs,
+          approxFps: rawRaf.avgMs > 0 ? Number((1000 / rawRaf.avgMs).toFixed(1)) : 0,
+          p50FrameMs: rawRaf.sampleCount ? rawRaf.p50Ms : cpuRender.p50Ms,
+          p95FrameMs: rawRaf.sampleCount ? rawRaf.p95Ms : cpuRender.p95Ms,
+          p99FrameMs: rawRaf.sampleCount ? rawRaf.p99Ms : cpuRender.p99Ms,
+          maxFrameMs: rawRaf.sampleCount ? rawRaf.maxMs : cpuRender.maxMs,
+          glDrawCallsPerFrame: diagLastFrameGlDrawCalls,
+          scenePassesPerFrame: diagLastFrameDrawCalls,
+          drawCallsPerFrame: diagLastFrameGlDrawCalls,
+          totalGlDrawElementsCalls: diagGlDrawElementsCount,
+          totalRawDrawCalls: state.rawDrawCalls,
+          canvasBuffer: { width: canvas.width, height: canvas.height },
+          dpr: window.devicePixelRatio || 1,
+          renderBudgetTier: getRenderBudgetTier(),
+          memory: mem
+        };
+      },
+      renderOverlay: diagRenderOverlay,
+      captureCompositePng() {
+        renderScene(state.time);
+        if (diagOverlayEnabled) {
+          diagRenderOverlay(state.time);
+        }
+        const comp = document.createElement("canvas");
+        comp.width = canvas.width;
+        comp.height = canvas.height;
+        const cctx = comp.getContext("2d");
+        cctx.fillStyle = "#05070e";
+        cctx.fillRect(0, 0, comp.width, comp.height);
+        cctx.drawImage(canvas, 0, 0, comp.width, comp.height);
+        if (diagOverlayEnabled && diagOverlayCanvas) {
+          cctx.drawImage(diagOverlayCanvas, 0, 0, comp.width, comp.height);
+        }
+        return comp.toDataURL("image/png");
+      }
+    };
+    const bootScenario = new URLSearchParams(window.location.search).get("diagScenario");
+    if (bootScenario) {
+      window.setTimeout(() => {
+        if (window.__starfallWave0) {
+          window.__starfallWave0.setupScenario(bootScenario);
+        }
+      }, 380);
+    }
+  }
+
+
   const isLocalWave1Host =
     typeof window !== "undefined" &&
     window.location &&
@@ -6620,12 +7820,12 @@
       projectFullShipBounds: () => projectFullShipBounds(),
       getPerfSnapshot: () => ({
         rawDrawCalls: state.rawDrawCalls,
-        glDrawElementsPerFrame: state.lastFrameDrawCalls,
-        bufferBindsPerFrame: state.lastBufferBindCount,
-        textureBindsPerFrame: state.lastTextureBindCount,
-        renderCpuMs: Number((state.lastRenderCpuMs || 0).toFixed(4)),
-        uncappedRafMs: Number((state.lastUncappedRafMs || 16.67).toFixed(4)),
-        fps: Number((state.fps || 0).toFixed(2))
+        glDrawElementsPerFrame: state.lastFrameDrawCalls || state.frameDrawElementsCount,
+        bufferBindsPerFrame: state.lastBufferBindCount || state.frameBufferBindCount,
+        textureBindsPerFrame: state.lastTextureBindCount || state.frameTextureBindCount,
+        renderCpuMs: Number((state.renderCpuMs || state.lastRenderCpuMs || 0).toFixed(2)),
+        uncappedRafMs: Number((state.uncappedRafMs || 16.67).toFixed(2)),
+        fps: Number((state.fps || 60).toFixed(1))
       })
     };
 
@@ -6769,11 +7969,30 @@
     window.__starfallWave1 = wave1Api;
   }
 
+
   function frame(time) {
+    const rawRafIntervalMs =
+      DIAG_ENABLED && diagLastRawRafMs > 0 ? time - diagLastRawRafMs : 0;
+    if (DIAG_ENABLED) {
+      diagLastRawRafMs = time;
+    }
     if (state.lastRafTimestamp > 0) {
       state.lastUncappedRafMs = time - state.lastRafTimestamp;
     }
+    const rawInterval = state.lastRafTimestamp > 0 ? (time - state.lastRafTimestamp) : 16.6;
     state.lastRafTimestamp = time;
+    if (!state.recentRafIntervals) state.recentRafIntervals = [];
+    if (rawInterval > 0 && rawInterval < 250) {
+      state.recentRafIntervals.push(rawInterval);
+      if (state.recentRafIntervals.length > 60) state.recentRafIntervals.shift();
+    }
+    state.uncappedRafMs = state.recentRafIntervals.length > 0
+      ? Number((state.recentRafIntervals.reduce((a, b) => a + b, 0) / state.recentRafIntervals.length).toFixed(2))
+      : Number(rawInterval.toFixed(2));
+    state.fps = state.uncappedRafMs > 0 ? Math.round(1000 / state.uncappedRafMs) : 60;
+    state.frameDrawElementsCount = 0;
+    state.frameBufferBindCount = 0;
+    state.frameTextureBindCount = 0;
     const seconds = time * 0.001;
     const dt = Math.min(0.033, seconds - (state.lastTime || seconds));
     state.lastTime = seconds;
@@ -6800,6 +8019,14 @@
       return;
     }
     state.renderSuspended = false;
+    if (DIAG_ENABLED && diagManualStep) {
+      requestAnimationFrame(frame);
+      return;
+    }
+    if (DIAG_ENABLED) {
+      diagCpuStartMs = performance.now();
+      diagPreUpdate();
+    }
     if (state.mode === "revive") {
       tickRevive(dt);
     } else if (state.mode === "relaunch") {
@@ -6808,7 +8035,16 @@
       updateGame(dt);
     }
     updatePresentation(dt);
+    const tRenderStart = performance.now();
     renderScene(seconds);
+    state.renderCpuMs = Number((performance.now() - tRenderStart).toFixed(2));
+    state.lastFrameDrawCalls = state.frameDrawElementsCount;
+    state.lastBufferBindCount = state.frameBufferBindCount;
+    state.lastTextureBindCount = state.frameTextureBindCount;
+    if (DIAG_ENABLED) {
+      const cpuRenderMs = performance.now() - diagCpuStartMs;
+      diagPostFrame(dt, seconds, rawRafIntervalMs, cpuRenderMs);
+    }
     requestAnimationFrame(frame);
   }
 

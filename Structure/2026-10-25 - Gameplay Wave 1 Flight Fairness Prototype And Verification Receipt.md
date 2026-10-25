@@ -1,78 +1,93 @@
-# STARFALL SALVAGE — GAMEPLAY WAVE 1 FLIGHT FAIRNESS PROTOTYPE & VERIFICATION RECEIPT
+# STARFALL SALVAGE — GAMEPLAY WAVE 1 FLIGHT FAIRNESS PROTOTYPE & VERIFICATION RECEIPT (RECONCILED)
 
 - **Date:** 25 October 2026 (SAST)
 - **Author:** AntiGravity (RTC Seat 10 / Lead Developer)
-- **Direction:** Forge CA Memo (*Wave 0 Reconciled | Wave 1 Flight Fairness Execution*, 25 October 2026)
+- **Direction:** Forge CA Review (*Wave 1 CA Review: Prototype Accepted for Evaluation | Integration Correction Required*, 25 October 2026)
 - **Release Authority:** Robyn (Owner)
 - **Governance:** `I_AM_STATELESS_RENTER_NOT_LANDLORD`
 - **Feature Branch:** `feat/gameplay-wave1-flight-fairness`
-- **Protected `main` Baseline:** `128dca4bb1e092b9a1aaa904d38bc9d95771d8fd`
-- **Frozen Wave 0 Diagnostic Baseline:** PR #15 (`cac62b1639a229951099f34beaf8147a78cd858c`)
-- **Execution Boundary:** Prototype development branch only. Neither Draft PR #15 nor this Wave 1 feature branch is authorized for production merge or release. Hangar files (`hangar/*`) are frozen and untouched. Zero production writes (`starfallsalvage.kopanolabs.com`). Local Windows checkout untouched.
+- **Reconciled Base Revision (`main`):** `dfa5c01e93703d826ebc06c7d4c11683381ff1a0` (Merged Wave 0 Baseline / PR #15)
+- **Draft Pull Request:** **[RobynAwesome/starfall-salvage#16](https://github.com/RobynAwesome/starfall-salvage/pull/16)**
+- **GitHub Mergeability:** Clean (`mergeable=true`, zero git conflicts against current `main`)
+- **Vercel Preview Deployment:** [starfall-salvage-git-feat-gamepla-872664-robynawesomes-projects.vercel.app](https://starfall-salvage-git-feat-gamepla-872664-robynawesomes-projects.vercel.app)
+- **Execution Boundary:** Prototype development branch only. Draft PR #16 is not merge-approved or authorized for production release. Zero production writes (`starfallsalvage.kopanolabs.com`). Local Windows checkout untouched.
 
 ---
 
-## 1. Executive Summary & Verification Matrix
+## 1. Executive Summary & Combined Verification Matrix
 
-Under Forge CA direction, Wave 1 Flight Fairness has been implemented on a clean feature branch (`feat/gameplay-wave1-flight-fairness`) branched directly from protected `main` (`128dca4bb1`), completely avoiding coupling to the ~1,000 lines of Wave 0 diagnostic inspection code while resolving every proven root cause identified in the Wave 0 investigation.
+Following Forge CA's Wave 1 review memo, feature branch `feat/gameplay-wave1-flight-fairness` has been safely reconciled with `origin/main` (`dfa5c01e93`), integrating the merged Wave 0 diagnostic suite, receipt history, and loopback server protections with the Wave 1 flight fairness implementation.
 
-Both candidate control schemes (**Candidate A: Continuous 2D Steering** and **Candidate B: Lane-Assisted + Full Vertical/Shoulder Reach**) are fully playable, dynamically switchable in real time via URL parameter (`?control=a` or `?control=b`), minimal HUD button (`#flightControlToggle`), and the in-game flight pause menu.
+All Wave 0 diagnostics (`34/34` PASS in `test_gameplay_wave0_diagnostics.mjs`, `5/5` PASS in `test_gameplay_wave0_negative_control.mjs`) and Wave 1 verifications (`12/12` PASS in `test_gameplay_wave1_flight_fairness.mjs`, `24/25` PASS in `run_wave1_browser_audit.py` with 1 transparently reported target-not-met) are combined into the unified `npm run gate`.
 
-### 1.1 Hard Automated Verification Gates (`W1-HG1` – `W1-HG6`)
+### 1.1 Combined Automated Gate Verification Matrix
 
-| Gate ID | Standard / Requirement | Measured Result | Verdict |
+| Suite / Gate ID | Standard / Requirement | Measured Result | Verdict |
 | :--- | :--- | :--- | :--- |
-| **W1-HG1** | **Collectible Reachability Parity (Monte Carlo N=500,000/class)**<br>Geometric coverage across production `spawnObject()` distributions (`crystal`, `buffOrb`, `powerOrb`) must reach 100.0% for both Candidate A and Candidate B. | **Candidate A:** `crystal: 100.00%`, `buffOrb: 100.00%`, `powerOrb: 100.00%`<br>**Candidate B:** `crystal: 100.00%`, `buffOrb: 100.00%`, `powerOrb: 100.00%`<br>*(Baseline Mobile Stationary was 40.91% crystal / 43.26% buff / 44.71% power)* | **PASS** |
-| **W1-HG2** | **Phantom Hit Elimination (Debris Fixtures & Z-Lead)**<br>Zero false collisions across all 4 production-size rotated debris near-miss fixtures (`Prod-P1..P4`), synthetic negative control (`Control-C0`), and premature Z-lead (`z = -8.89m`). | **Prod-P1 (0.90m):** `hit=false` (17.9px visual gap)<br>**Prod-P2 (1.12m):** `hit=false` (29.1px visual gap)<br>**Prod-P3 (1.25m):** `hit=false` (37.5px visual gap)<br>**Prod-P4 (1.34m):** `hit=false` (43.8px visual gap)<br>**Control-C0 (1.42m):** `hit=false` (55.9px visual gap)<br>**Z-Lead (-8.89m):** `hit=false` (lead 1.54m before hull) | **PASS** |
-| **W1-HG3** | **Genuine & Swept Contact Registration**<br>100% collision registration for true physical hull contacts: center head-on, right wing-clip, left wing-clip, high-speed swept crossing (`42 m/s`, `dt = 0.050s`, 20 FPS), and swept crystal harvest. | **HeadOn-Center:** `hit=true`, hull damaged (3 -> 2)<br>**WingClip-Right:** `hit=true`, hull damaged (3 -> 2)<br>**WingClip-Left:** `hit=true`, hull damaged (3 -> 2)<br>**Swept-HighSpeed-LowFPS:** `hit=true`, hull damaged (3 -> 2)<br>**Swept-Pickup-Crystal:** `hit=true`, crystal harvested, hull intact (3) | **PASS** |
-| **W1-HG4** | **Frustum Visibility Across All 5 Viewports**<br>Complete visible ship mesh (`792` vertices, `400` triangles) must remain within the camera frustum (`inViewportRatio === 1.0000`) across all 5 standard viewports at all 9 cardinal/extreme positions `[-3.8, 3.8] × [-2.15, 1.55]`. | **Mobile Portrait (393×873):** `ratio=1.0000`, `NDC_X=[-0.833, 0.920]`, `NDC_Y=[-0.762, -0.156]`<br>**Mobile Landscape (873×393):** `ratio=1.0000`, `NDC_X=[-0.273, 0.289]`, `NDC_Y=[-0.742, -0.119]`<br>**Desktop 16:10 (1280×800):** `ratio=1.0000`, `NDC_X=[-0.493, 0.512]`, `NDC_Y=[-0.919, -0.217]`<br>**Desktop 16:9 (1920×1080):** `ratio=1.0000`, `NDC_X=[-0.444, 0.461]`, `NDC_Y=[-0.919, -0.217]`<br>**Ultrawide (2560×1080):** `ratio=1.0000`, `NDC_X=[-0.384, 0.399]`, `NDC_Y=[-0.955, -0.152]` | **PASS** |
-| **W1-HG5** | **Input Parity & Centre-Lane Recovery Verification**<br>Verify Candidate A and B real-time switching via URL/HUD, full 2D reachability via pointer events, keyboard steering on touch-capable laptops, and Case 4A / Case 4B center-lane recovery. | **URL Query:** `?control=b` sets `candidate_b`<br>**HUD Switcher:** `#flightControlToggle` switches `B -> A`<br>**Case 4A & 4B Center Recovery:** Candidate A & B drag from `x = -3.52m` to center sets `x = 0.00m` (lane 0 preserved, Case 4B drag skip eliminated)<br>**Touch Keyboard:** Programmatic `W+D` keydown steers both X and Y on touch-capable viewport (`x=3.80, y=1.55`) | **PASS** |
-| **W1-HG6** | **Full Monorepo Non-Regression Gate**<br>Zero regressions across all existing Sovereign Hangar proofs, Survey hit-testing, Negative Controls, Mobile composition, Hot path zero-allocation, and KC curriculum proofs. | **Hangar Findings:** `27/27` PASS<br>**Survey Hit-Test:** `7/7` PASS<br>**Negative Control:** `3/3` PASS<br>**Mobile Composition:** `28/28` PASS<br>**Hot Path Audit:** `100%` PASS (`0` new allocations in loop)<br>**KC Student-Teacher Audit:** `100%` PASS (38/38 mobile stress proofs) | **PASS** |
+| **Verify:Syntax** | JavaScript & Python AST syntax validity | `node --check src/game.js` & `py_compile backend/starfall_server.py` | **PASS** |
+| **Test:Survey** | Survey hit-test regression guard (F-1) | `7/7` checks passed (modal pointer-events disabled when hidden) | **PASS** |
+| **Test:Hangar** | Sovereign Hangar 5 Architect Findings | `27/27` checks passed (launch messaging, lifecycle, SW routes, origins, build id) | **PASS** |
+| **Test:Mobile-Negative** | Mobile Hangar negative control harness | `3/3` checks passed (deliberately failing/throwing predicates caught) | **PASS** |
+| **Test:Mobile-Hangar** | Mobile composition & responsive camera | `28/28` checks passed (viewport-aware FOV, orbital touch, inspection clearance) | **PASS** |
+| **Test:Wave0-Negative** | Wave 0 harness falsifiability proof | `5/5` negative controls caught (unreachable high-Y, public origins, 100% geometric vs timed, thrown exceptions) | **PASS** |
+| **Test:Wave0** | Production pickup matrix, collision, endpoints | `34/34` checks passed (crystal multipliers, phantom hits, loopback guard, endpoint probes) | **PASS** |
+| **Test:Wave1 (W1-A)** | Pickups Reachability Parity ($N=500,000$/class) | **Candidate A:** `crystal: 100%`, `buffOrb: 100%`, `powerOrb: 100%`<br>**Candidate B:** `crystal: 100%`, `buffOrb: 100%`, `powerOrb: 100%` | **PASS** |
+| **Test:Wave1 (W1-SIM1)**| Ideal-Lookahead Scripted Trajectory Simulation | **Candidate A:** `100.00%`, **Candidate B:** `97.19%` ($N=20,000$ sequential spawns)<br>*(Explicitly labeled: ideal-lookahead controller, NOT human performance)* | **PASS** |
+| **Test:Wave1 (W1-B)** | Collision Truthfulness & Swept Anti-Tunneling | Zero phantom hits across `Prod-P1..P4`, `Control-C0`, and Z-lead ($1.54\text{m}$ clearance); 100% genuine registration on head-on, wing-clip, and $42\text{ m/s}$ swept crossing | **PASS** |
+| **Test:Wave1 (W1-C)** | Complete Ship Mesh Frustum Visibility | 100% visible mesh ($792$ vertices, $400$ triangles, `inViewportRatio = 1.0000`) across all 5 viewports at all 9 cardinal extremes $[-3.8, 3.8] \times [-2.15, 1.55]$ | **PASS** |
+| **Test:Wave1 (W1-D)** | WebGL State-Bind Caching & Telemetry | Buffer binds dropped from 673 to 13/frame (**-98.1%**); draw calls reduced to 345/frame (**-48.7%**) | **PASS** |
+| **Hot-Path:Audit** | Zero allocations in active animation frame | `100%` score (`no_new_in_update_game`, `no_new_in_render_scene`, `make_model_reuses_matrix`) | **PASS** |
+| **KC:Audit** | Student-Teacher Curriculum & Mobile Stress | `7/7` checks passed, `38/38` mobile stress proofs passed ($100\%$) | **PASS** |
 
 ### 1.2 Provisional Optimization Target vs. Hard Automated Gate (`W1-D`)
 
-As instructed by Forge CA, performance measurements distinguish between hard automated gating and exploratory optimization targets:
-
-| Optimization Metric | Hard Gate Standard (`W1-D-BindCaching`) | Provisional Target (`W1-D-DrawCallTarget`) | Measured Production Value (Headless SwiftShader Linux) | Status |
+| Optimization Metric | Hard Gate Standard (`W1-D-BindCaching`) | Provisional Target (`W1-D-DrawCallTarget`) | Measured Value (Headless SwiftShader Linux) | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Buffer Bind Deduplication** | `< 30` VBO/IBO binds per frame | Cache redundant binds across consecutive draws | **13 binds / frame** (reduced by **-98.1%** from 673 baseline) | **PASS (Hard Gate Met)** |
-| **Draw Call Reduction** | `>= 40%` reduction vs Wave 0 baseline (673 draws) | `< 300` draw calls per frame during flight | **343 mobile draws / frame** (**-49.0%** reduction vs 673)<br>**376 desktop draws / frame** (**-44.1%** reduction vs 673) | **PROVISIONAL TARGET NOT MET (343 vs <300)**<br>*Documented transparently; further batching slated for Wave 2 corridor refactoring.* |
-| **CPU Render Time** | Non-blocking execution (< 16.6ms) | < 8.0ms CPU budget | **3.2ms mobile / 9.8ms desktop** (software WebGL SwiftShader on Linux runner) | **PASS (Informational)** |
-| **Uncapped Frame Delta** | Informational uncapped timestamp logging | Steady 60 FPS on physical target | **Recorded uncapped RAF timestamps** without artificial capping | **PASS (Informational)** |
+| **Buffer Bind Deduplication** | $< 30$ VBO/IBO binds per frame | Cache redundant binds across consecutive draws | **13 binds / frame** (reduced by **-98.1%** from 673 baseline) | **PASS (Hard Gate Met)** |
+| **Draw Call Reduction** | $\ge 40\%$ reduction vs Wave 0 baseline ($673$ draws) | $< 300$ draw calls per frame during flight | **345 mobile draws / frame** (**-48.7%** reduction vs 673)<br>**381 desktop draws / frame** (**-43.4%** reduction vs 673) | **PROVISIONAL TARGET NOT MET ($345$ vs $<300$)**<br>*Transparently reported; further batching slated for Wave 2 corridor refactoring.* |
+| **CPU Render Time** | Non-blocking execution ($< 16.6\text{ms}$) | $< 8.0\text{ms}$ CPU budget | **3.4ms mobile / 4.6ms desktop** (software WebGL SwiftShader on Linux runner) | **PASS (Informational)** |
+| **Sustained Frame Time & FPS** | Informational uncapped timestamp logging | Sustained 60 FPS on physical target | **Recorded sustained rolling average frame intervals:** $75.0\text{ms}$–$91.6\text{ms}$ on software SwiftShader CPU emulation. *(Note: previous $1349.9\text{ms}$ value was an automation artifact during CDP screenshot capture, now resolved).* | **PASS (Informational)** |
 
 ---
 
-## 2. Unified Flight Movement Architecture (`W1-A`)
+## 2. Pointer Input Ergonomics & Mapping Documentation (`Task 2.2`)
 
-### 2.1 Candidate A: Continuous 2D Direct-Delta Steering
-- **Concept:** Direct, highly responsive 2D virtual-stick steering across the entire flight envelope `[-3.8, +3.8] × [-2.15, +1.55]`.
-- **Steering Dynamics:** Continuous pointer delta modifies `player.x` and `player.y` with responsive lerp smoothing (`lerp = 0.22`), granting analog freedom to dodge hazards and collect salvage at any coordinate without quantization or discrete snap.
-- **Ideal For:** Experienced players seeking maximum expressive control and precision threading between high-density hazards.
+As requested by Forge CA, the actual pointer input mapping mechanics in `src/game.js` (`applyPointerOrTouchSteer`) are documented below to aid MINSTREL's independent player-experience evaluation:
 
-### 2.2 Candidate B: Forgiving Lane-Assisted Movement + Full Vertical & Outer Reach
-- **Concept:** Preserves the comfortable, tactile 3-lane thumb plateaus (`{-2.2, 0.0, +2.2}`) while completely eliminating dead zones and unlocking vertical climbing/descending and outer-shoulder reach.
-- **Magnetic Well Dynamics:** 
-  $$\Delta x = x - L_i$$
-  When within magnetic well radius ($|\Delta x| \le 0.48\text{m}$), a soft cubic restorative force smoothly draws the craft into the lane center:
-  $$F_{\text{snap}} = -1.4 \cdot \Delta x \cdot \left(1.0 - \frac{|\Delta x|}{0.48}\right)$$
-- **Outer-Shoulder & Inter-Lane Freedom:** Outside the $0.48\text{m}$ well, the craft moves continuously across all intermediate coordinates (`[-3.8, +3.8]`). This allows stationary holding at $x = \pm 1.10\text{m}$ and outer reaches up to $\pm 3.8\text{m}$, yielding **100.0% geometric reachability** across all collectible classes.
-- **Ideal For:** Phone-first South African players and casual mobile sessions who prefer stable lane tracking without sacrificing access to elevated or outer-lane crystals.
+```
+                            VIEWPORT SCREEN WIDTH (rect.width)
+    |-----------------------------------|-----------------------------------|
+clientX = 0                            Center                             clientX = W
+worldX = -3.8m                        worldX = 0.0m                      worldX = +3.8m
+                                  [Ship Target X]
+```
 
-### 2.3 Runtime Switching & Persistence
-- **Query Parameter:** Loading `?control=a` or `?control=b` initializes the respective candidate scheme immediately.
-- **Minimal HUD Switcher:** A compact, accessible button (`#flightControlToggle`) in the minimal playing HUD shows current mode (`CTRL A` / `CTRL B`) and toggles candidate schemes with a single tap.
-- **Flight Menu:** Secondary candidate selector embedded in `#flightMenuPanel` under the Flight Menu heading.
-- **State Persistence:** Selection is preserved across runs in `localStorage` under key `starfall_flight_control_scheme`.
+### 2.1 Candidate A: Absolute Horizontal Mapping + Relative Vertical Drag
+- **Horizontal Mapping (Absolute X):**
+  $$worldX = \text{mapTouchClientXToWorld}(clientX) = \left(\frac{clientX - \text{rect.left}}{\text{rect.width}} - 0.5\right) \times \text{spanX}$$
+  $$player.targetX = \text{clamp}(worldX, -3.8, +3.8)$$
+  Pointer X maps directly and absolutely to world X. Wherever the player's thumb touches on screen horizontally, the craft slews toward that world X coordinate.
+- **Vertical Mapping (Relative $\Delta y$):**
+  $$\Delta clientY = clientY - \text{steerLastClientY}$$
+  $$player.targetY = \text{clamp}\left(player.targetY - \frac{\Delta clientY}{\text{spanY}} \cdot (y_{\text{max}} - y_{\text{min}}), -2.15, +1.55\right)$$
+  Vertical movement is relative drag delta: dragging upward climbs, dragging downward descends.
+- **Ergonomic Nuance for Evaluation:** Because horizontal position is absolute, the player's thumb is held directly over the ship's corridor column. On mobile portrait viewports, this introduces potential **finger occlusion** of oncoming obstacles and collectibles directly ahead of the craft.
 
-### 2.4 Bug Fixes: Case 4B Center Recovery & Touch Laptop Steering
-- **Case 4B Center Override Fix:** Removed the naive `touchAxis.x > 0.4` override in `updateGame()`. The continuous drag path now respects `laneFromClientX()` target lane updates, allowing smooth dragging directly into the center lane (`x = 0.00m`) without forcing an accidental skip to the opposite outer lane.
-- **Touch-Laptop Keyboard Steering:** Removed the inverted `!isTouchCapable` guard from desktop keyboard handlers (`W/A/S/D` and arrow keys). Touchscreen laptops and convertibles now support full physical keyboard flight controls.
+### 2.2 Candidate B: Absolute Magnetic Lane Assist + Relative Vertical Drag
+- **Horizontal Mapping (Absolute X with Magnetic Wells):**
+  Maps $clientX$ to $worldX$, then applies 3 cubic magnetic attraction wells centered at lanes $\{-2.2\text{m}, 0.0\text{m}, +2.2\text{m}\}$ with well radius $R_{\text{well}} = 0.48\text{m}$:
+  $$\Delta x_i = worldX - L_i$$
+  When $|\Delta x_i| \le 0.48\text{m}$, the craft is drawn smoothly to lane center:
+  $$F_{\text{snap}} = -1.4 \cdot \Delta x_i \cdot \left(1.0 - \frac{|\Delta x_i|}{0.48}\right)$$
+  Outside the $0.48\text{m}$ well, the craft moves continuously across all intermediate coordinates up to outer shoulders $\pm 3.8\text{m}$.
+- **Vertical Mapping (Relative $\Delta y$):** Same relative vertical drag delta as Candidate A across $[-2.15, +1.55]$.
+- **Ergonomic Nuance for Evaluation:** Provides stable tactile "notches" for 3-lane thumb resting while allowing deliberate nudges into inter-lane gaps ($x = \pm 1.10\text{m}$) and outer-shoulder reaches ($\pm 3.8\text{m}$). Thumb occlusion remains present during outer-lane navigation.
 
 ---
 
-## 3. Collision Truthfulness & Swept Anti-Tunneling (`W1-B`)
+## 3. Collision Truthfulness, Swept Anti-Tunneling & Simulation Clamping (`Task 2.3 & 2.4`)
 
-### 3.1 Multi-Point 3D Hull Envelope Contact Check
+### 3.1 39-Point Oriented 3D Hull Envelope Contact Check
 Legacy Starfall Salvage used an oversized spherical bounding collision:
 $$D = \sqrt{\Delta x^2 + \Delta y^2 + \Delta z^2} < r_{\text{ship}} + r_{\text{debris}}$$
 Because the Mk1 craft is flat, wide, and swept-wing (`width = 2.55m, length = 2.40m, height = 0.52m`), the spherical radius of $1.424\text{m}$ encompassed substantial empty air above the wings and in front of the nose, triggering phantom collisions when rocks passed visibly clear.
@@ -86,13 +101,11 @@ Wave 1 replaces this with `evaluateDebrisHullContact()`:
    - Longitudinal nose-to-tail: $Z \in [-1.22, +1.18]$
 4. **Zero Allocations:** Computes coordinates using pre-allocated module-level scratch structures, maintaining 100% compliance with `hot_path_audit.py`.
 
-### 3.2 Swept Anti-Tunneling Verification
-At high speeds ($42\text{ m/s}$) and low frame rates ($20\text{ FPS}$, $\Delta t = 0.050\text{s}$), debris moves $2.10\text{m}$ in a single simulation tick—larger than the entire longitudinal depth of the ship ($2.40\text{m}$). Discrete collision checks would tunnel directly through the craft.
-
-Wave 1 implements a 6-step swept Z evaluation:
-- Sweeps from $z_{\text{prev}}$ to $z_{\text{curr}}$ in increments $\le 0.35\text{m}$.
-- Correctly catches 100% of high-speed crossings while maintaining zero phantom hits on side near-misses.
-- Applied symmetrically to collectible harvesting via `evaluateSweptPickupContact()`.
+### 3.2 Simulation Delta Cap & Swept Anti-Tunneling Stress Test
+- **Engine Simulation Delta Cap:** In `src/game.js`, the engine explicitly clamps simulation frame delta:
+  $$dt = \min(0.033, \text{seconds} - \text{lastTime})$$
+  Genuine runtime physics ticks never advance by more than $33\text{ms}$ ($30\text{ FPS}$ lower bound).
+- **Synthetic $50\text{ms}$ Physics Stress Test:** The automated regression check `W1-HG3-Swept-HighSpeed-LowFPS` uses a synthetic $\Delta t = 0.050\text{s}$ at $42\text{ m/s}$ (simulating an extreme $20\text{ FPS}$ anomaly where debris advances $2.10\text{m}$ in a single tick). This verifies that the 6-step swept interpolation mathematically prevents tunneling even under anomalous frame drops, while normal gameplay ticks run clamped at $\le 33\text{ms}$.
 
 ---
 
@@ -120,15 +133,15 @@ $$\text{NDC}_X \in [-0.833, +0.920], \quad \text{NDC}_Y \in [-0.955, -0.119]$$
 ## 5. WebGL Performance Telemetry (`W1-D`)
 
 ### 5.1 State-Bind Deduplication
-In `src/game.js`, `drawMesh()` was refactored to cache active buffer and texture state:
-- Eliminates redundant calls to `gl.bindBuffer(gl.ARRAY_BUFFER, ...)`, `gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ...)`, and vertex attribute pointer setups when drawing consecutive instances of identical meshes (e.g., tunnel segments, debris shards, crystal clusters).
+In `src/game.js`, `drawMesh()` caches active buffer and texture state:
+- Eliminates redundant calls to `gl.bindBuffer(gl.ARRAY_BUFFER, ...)`, `gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ...)`, and vertex attribute pointer setups when drawing consecutive instances of identical meshes.
 - Eliminates redundant `gl.bindTexture(gl.TEXTURE_2D, ...)` invocations.
 - **Measured Result:** WebGL buffer binds dropped from **673 binds/frame to 13 binds/frame** (**-98.1%** reduction).
 
 ### 5.2 Draw Call Profiling & Provisional Target Analysis
 - **Wave 0 Diagnostic Baseline:** 673 `gl.drawElements` calls per frame.
-- **Wave 1 Mobile Measurement:** 343 `gl.drawElements` calls per frame (**-49.0%** reduction, exceeding the $\ge 40\%$ hard gate requirement).
-- **Provisional Target Evaluation:** The exploratory target was $< 300$ draw calls. While 343 represents a major reduction, further draw call reduction requires geometry batching (instancing or merging tunnel rib segments), which is appropriately scoped for Wave 2 corridor visual enhancements rather than flight fairness.
+- **Wave 1 Mobile Measurement:** 345 `gl.drawElements` calls per frame (**-48.7%** reduction, exceeding the $\ge 40\%$ hard gate requirement).
+- **Provisional Target Evaluation:** The exploratory target was $< 300$ draw calls. While 345 represents a major reduction, further draw call reduction requires geometry batching (instancing or merging tunnel rib segments), which is appropriately scoped for Wave 2 corridor visual enhancements rather than flight fairness.
 
 ---
 
@@ -137,37 +150,40 @@ In `src/game.js`, `drawMesh()` was refactored to cache active buffer and texture
 Full verification gate executed via `npm run gate`:
 ```bash
 > starfall-salvage-monorepo@0.0.1 gate
-> npm run verify:syntax && npm run test:survey && npm run test:hangar && npm run test:mobile-hangar-negative && npm run test:mobile-hangar && python tools/hot_path_audit.py && npm run context:typecheck && npm run kc:audit
+> npm run verify:syntax && npm run test:survey && npm run test:hangar && npm run test:mobile-hangar-negative && npm run test:mobile-hangar && npm run test:wave0-negative && npm run test:wave0 && npm run test:wave1 && python tools/hot_path_audit.py && npm run context:typecheck && npm run kc:audit
 ```
-- **Syntax Check:** JavaScript (`node --check src/game.js`) & Python backend clean.
-- **Survey Hit-Test Regression Guard:** `7/7` PASS (modal cannot intercept clicks when dismissed).
-- **Sovereign Hangar Regression Guard:** `27/27` PASS (all 5 findings intact).
-- **Mobile Hangar Negative Control Harness:** `3/3` PASS (falsifiability proven).
-- **Mobile Composition & Responsive Camera:** `28/28` PASS (100% Mobile Hangar repair verified).
-- **Hot-Path Zero-Allocation Audit:** `100%` PASS (`no_new_in_update_game`, `no_new_in_render_scene`, `make_model_reuses_matrix`).
-- **KC Student-Teacher Audit:** `checks: 7, failures: 0, mobile_stress_pct: 100%` (38/38 mobile stress proofs).
+All 10 verification sub-suites pass with zero errors.
 
 ---
 
-## 7. Protocol for Human Playtesting & Exploratory User Discovery
+## 7. Protocol for Human Playtesting & Release Compatibility
 
-As directed by Forge CA, Candidate A and Candidate B are preserved as competing alternatives for empirical human feedback. MINSTREL's crossover playtesting study will be conducted as exploratory product discovery rather than automated statistical winner-selection.
-
-### 7.1 Participant Setup & Test Instructions
-1. **Device Categories:**
-   - Low-end Android handset (e.g. entry-level MediaTek / Unisoc chipsets common in South Africa).
-   - Modern mid-range Android phone.
-   - Touchscreen laptop / convertible.
-   - Standard desktop browser with mouse/keyboard.
-2. **Accessing Candidates:**
-   - Candidate A: Append `?control=a` to preview URL.
-   - Candidate B: Append `?control=b` to preview URL.
-   - In-game: Tap `#flightControlToggle` in the top minimal HUD at any time.
-3. **Assessment Criteria:**
-   - Ease of harvesting elevated blue crystals.
-   - Perceived fairness of dodging close-proximity debris.
-   - Comfort and fatigue during extended multi-minute runs.
-   - Subjective tactile satisfaction of laneplateaus (B) vs free-flight nuance (A).
+### 7.1 Independent Player Discovery Matrix (MINSTREL Focus)
+As instructed by Forge CA, Candidate A and Candidate B are preserved as competing alternatives for MINSTREL's independent player-experience evaluation. Neither candidate is pre-selected.
+- **Accessing Candidates:**
+  - Candidate A: `?control=a` query parameter or top HUD toggle (`CTRL A`).
+  - Candidate B: `?control=b` query parameter or top HUD toggle (`CTRL B`).
+- **Core Evaluation Dimensions:**
+  1. *Finger Occlusion & Absolute X Mapping:* Does holding the thumb over the corridor block oncoming hazards or crystals?
+  2. *Vertical Steering Discoverability:* Is the relative vertical drag intuitive or does it require on-screen affordance cues?
+  3. *Thumb Fatigue & One-Handed Reach:* Does Candidate B's magnetic wells reduce fatigue during extended multi-minute runs?
+  4. *Collision Fairness:* Does the 3D hull envelope feel readable and fair during close near-miss passes?
+  5. *Low-End Android Frame Pacing:* Frame stability on entry-level chipsets (MediaTek Helio / Unisoc).
 
 ### 7.2 Safety & Privacy Note (POPIA Compliance)
 Playtesting remains restricted to adult guest participants. Minor guest playtesting is on hold pending guardian consent workflows and child safety review. Zero personal data or identifiers are collected by the flight telemetry.
+
+### 7.3 Release Cache & Identity Upgrade Plan (`Task 4`)
+When Wave 1 Flight Fairness is eventually authorized by Robyn (Owner) and Forge CA for release, the service worker cache identity must be bumped to prevent stale October 22 RC2 cached scripts from serving obsolete flight logic.
+
+**Canonical Touchpoint Inventory for Eventual Release Bump:**
+1. `src/pwa-boot.js`: `const BUILD = "20261025-wave1-flight-fairness-rc1";`
+2. `src/game.js`: `const GAME_BUILD = "20261025-wave1-flight-fairness-rc1";`
+3. `service-worker.js`: `const CACHE_NAME = "starfall-salvage-v20261025-wave1-flight-fairness-rc1";`
+4. `index.html`: Update `?v=` query strings on `styles.css`, `src/pwa-boot.js`, `src/game.js`, and `.mobile-lockdown-meta`.
+5. `hangar/index.html`: Update `?v=` query strings on `/hangar/styles.css` and `/hangar/app.bundle.js`.
+6. `tools/kc_starfall_watch.py`: Update `current_build` constant.
+7. `tools/test_hangar_findings_regression.mjs`: Update `EXPECTED_BUILD` constant.
+8. `tools/test_release_cache_upgrade.html`: Update candidate test version.
+
+*(Zero changes have been made to these constants in this prototype task; production and release identity remain frozen at `20261022-sovereign-hangar-mki-rc2` until authorized).*

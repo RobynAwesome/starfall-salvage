@@ -1,0 +1,1815 @@
+{
+  "campaign": "Wave 0 Fairness & Telemetry Browser Audit (Reconciled)",
+  "timestamp": "2026-10-25T14:55:56.927Z",
+  "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "verdict": "PASS",
+  "steps": [
+    {
+      "timestamp": "2026-10-25T14:55:37.471Z",
+      "type": "pass",
+      "step": "BOOT",
+      "desc": "Wave 0 diagnostic controller initialized in live WebGL context (localhost guard verified)",
+      "details": {
+        "build": "20261022-sovereign-hangar-mki-rc2",
+        "hostname": "127.0.0.1"
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:37.888Z",
+      "type": "pass",
+      "step": "VP_MOBILE_PORTRAIT_393X873",
+      "desc": "Recorded baseline projection at 393x873 (touch=true, y=-0.68)",
+      "details": {
+        "width": 393,
+        "height": 873,
+        "touchCapable": true,
+        "aspect": 0.5282,
+        "renderFovDeg": 45.29,
+        "playPitch": 0.22,
+        "cameraDepth": -2.9,
+        "shipCenterNdc": {
+          "x": 0.1373,
+          "y": -0.6625,
+          "z": 0.9814,
+          "w": 9.8832
+        },
+        "shipCenterScreenPx": {
+          "x": 223.48,
+          "y": 618.44
+        },
+        "shipColliderNdc": {
+          "x": 0.1363,
+          "y": -0.6582,
+          "z": 0.9823,
+          "w": 10.3212
+        },
+        "shipMeshInViewportRatio": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:38.828Z",
+      "type": "pass",
+      "step": "VP_MOBILE_LANDSCAPE_873X393",
+      "desc": "Recorded baseline projection at 873x393 (touch=true, y=-0.68)",
+      "details": {
+        "width": 873,
+        "height": 393,
+        "touchCapable": true,
+        "aspect": 2.2214,
+        "renderFovDeg": 47.61,
+        "playPitch": 0.18,
+        "cameraDepth": -2.55,
+        "shipCenterNdc": {
+          "x": 0.0319,
+          "y": -0.5761,
+          "z": 0.9808,
+          "w": 9.606
+        },
+        "shipCenterScreenPx": {
+          "x": 450.43,
+          "y": 309.71
+        },
+        "shipColliderNdc": {
+          "x": 0.0316,
+          "y": -0.5702,
+          "z": 0.9817,
+          "w": 10.0476
+        },
+        "shipMeshInViewportRatio": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:39.267Z",
+      "type": "pass",
+      "step": "VP_DESKTOP_16X10_1280X800",
+      "desc": "Recorded baseline projection at 1280x800 (touch=false, y=-0.45)",
+      "details": {
+        "width": 1280,
+        "height": 800,
+        "touchCapable": false,
+        "aspect": 1.7558,
+        "renderFovDeg": 44.13,
+        "playPitch": 0.21,
+        "cameraDepth": -2.72,
+        "shipCenterNdc": {
+          "x": 0.0381,
+          "y": -0.6606,
+          "z": 0.9811,
+          "w": 9.7324
+        },
+        "shipCenterScreenPx": {
+          "x": 664.36,
+          "y": 605.27
+        },
+        "shipColliderNdc": {
+          "x": 0.0378,
+          "y": -0.6559,
+          "z": 0.982,
+          "w": 10.1714
+        },
+        "shipMeshInViewportRatio": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:39.623Z",
+      "type": "pass",
+      "step": "VP_DESKTOP_16X9_1920X1080",
+      "desc": "Recorded baseline projection at 1920x1080 (touch=false, y=-0.45)",
+      "details": {
+        "width": 1920,
+        "height": 1080,
+        "touchCapable": false,
+        "aspect": 2.6337,
+        "renderFovDeg": 39.48,
+        "playPitch": 0.18,
+        "cameraDepth": -2.48,
+        "shipCenterNdc": {
+          "x": 0.0291,
+          "y": -0.6854,
+          "z": 0.9807,
+          "w": 9.5543
+        },
+        "shipCenterScreenPx": {
+          "x": 987.91,
+          "y": 614.33
+        },
+        "shipColliderNdc": {
+          "x": 0.0288,
+          "y": -0.6789,
+          "z": 0.9816,
+          "w": 9.996
+        },
+        "shipMeshInViewportRatio": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:40.261Z",
+      "type": "pass",
+      "step": "VP_DESKTOP_ULTRAWIDE_2560X1080",
+      "desc": "Recorded baseline projection at 2560x1080 (touch=false, y=-0.45)",
+      "details": {
+        "width": 2560,
+        "height": 1080,
+        "touchCapable": false,
+        "aspect": 3.5117,
+        "renderFovDeg": 39.48,
+        "playPitch": 0.18,
+        "cameraDepth": -2.48,
+        "shipCenterNdc": {
+          "x": 0.0218,
+          "y": -0.6849,
+          "z": 0.9807,
+          "w": 9.5547
+        },
+        "shipCenterScreenPx": {
+          "x": 1307.91,
+          "y": 614.15
+        },
+        "shipColliderNdc": {
+          "x": 0.0216,
+          "y": -0.6784,
+          "z": 0.9816,
+          "w": 9.9965
+        },
+        "shipMeshInViewportRatio": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:41.725Z",
+      "type": "pass",
+      "step": "LANE_RECOVERY_4A_CENTER_RETAP",
+      "desc": "Verified Case 4A: Tapping/re-touching inside central zone (|dx| <= 32.8px) sets targetLane=0 via laneFromClientX() and recovers ship to x=0.00m",
+      "details": {
+        "description": "Direct touch/pointerdown in central band (clientX=196.5px on 393px width, |dx|=0 <= 32.8px)",
+        "initialTargetLane": -1,
+        "initialPlayerX": -2.2,
+        "targetLaneAfterPointerDown": 0,
+        "touchAxisX": 0,
+        "targetLaneAfter25Frames": 0,
+        "settledPlayerX": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:41.746Z",
+      "type": "pass",
+      "step": "LANE_RECOVERY_4B_CONTINUOUS_DRAG_OVERRIDE",
+      "desc": "Verified Case 4B: Continuous drag from x=40px to center x=196.5px sets laneFromClientX=0 on pointermove, but updateGame (touchAxis.x > 0.4) overwrites targetLane to +1 on next tick",
+      "details": {
+        "description": "Single unbroken drag from outer lane (clientX=40px) to center (clientX=196.5px, dx=+156.5px > 32.8px)",
+        "targetLaneSetByPointerMove": 0,
+        "touchAxisXDuringDrag": 1,
+        "targetLaneAfterUpdateGameTick": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:42.760Z",
+      "type": "pass",
+      "step": "DISAPPEAR_PHYSICAL_1_WHEEL",
+      "desc": "Tested physical WheelEvent on 1920x1080 (overflow:hidden prevents page scroll; wheel does not move ship)",
+      "details": {
+        "method": "physical_wheel_event_and_window_scroll",
+        "scrollY": 0,
+        "shipCenterNdcY": -0.6702,
+        "shipCenterScreenY": 608.77,
+        "inViewportRatio": 1,
+        "disappeared": false
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:43.021Z",
+      "type": "pass",
+      "step": "DISAPPEAR_PHYSICAL_2_ZOOM",
+      "desc": "Tested physical Ctrl+Wheel + CSS page zoom (1.5x) on desktop",
+      "details": {
+        "method": "physical_ctrl_wheel_and_css_zoom_1.5",
+        "cssZoom": "1.5",
+        "canvasClientRect": {
+          "left": 0,
+          "top": 0,
+          "width": 2880,
+          "height": 1093.5
+        },
+        "shipCenterNdcY": -0.6702,
+        "shipCenterScreenY": 608.77,
+        "inViewportRatio": 1
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:44.718Z",
+      "type": "pass",
+      "step": "DISAPPEAR_PHYSICAL_3_KEYDOWN_ARROWDOWN",
+      "desc": "Reproduced desktop ship disappearance via physical ArrowDown key hold across 35 live frames (y reaches -2.15m, NDC_y < -1.0)",
+      "details": {
+        "method": "physical_keydown_ArrowDown_35_live_frames",
+        "desktop16x9_1920x1080": {
+          "playerYAfterKeyHold": -2.1499,
+          "targetYAfterKeyHold": -2.15,
+          "centerNdcY": -1.208,
+          "centerScreenY": 804.81,
+          "viewportHeight": 1080,
+          "centerInFrustum": false,
+          "meshInViewportRatio": 0
+        },
+        "ultrawide21x9_2560x1080": {
+          "playerYAfterKeyHold": -2.1499,
+          "targetYAfterKeyHold": -2.15,
+          "centerNdcY": -1.2417,
+          "centerScreenY": 817.1,
+          "viewportHeight": 1080,
+          "centerInFrustum": false,
+          "meshInViewportRatio": 0
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:45.226Z",
+      "type": "pass",
+      "step": "DISAPPEAR_PHYSICAL_4_RESIZE",
+      "desc": "Confirmed physical resize across aspect>1.85 switches to fovScale=0.68 & viewBiasY=-0.06, keeping bottom-steered ship outside frustum",
+      "details": {
+        "method": "physical_window_resize_to_1920x900_aspect_2.1333",
+        "width": 1920,
+        "height": 900,
+        "aspect": 2.1333,
+        "playerY": -2.15,
+        "centerNdcY": -1.2424,
+        "centerScreenY": 817.34,
+        "centerInFrustum": false,
+        "meshInViewportRatio": 0
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:46.374Z",
+      "type": "pass",
+      "step": "PICKUP_REACHABILITY",
+      "desc": "Verified production-exact seed 20261025 reachability matrix (crystal r=0.68*size, orb r=0.72*size) and live collection step",
+      "details": {
+        "seed": 20261025,
+        "sampleCount": 600,
+        "mobileStationaryReachable": 251,
+        "mobileLerpReachable": 304,
+        "desktopStationaryReachable": 516,
+        "desktopLerpReachable": 544,
+        "proposed2DReachable": 600,
+        "byClass": {
+          "crystal": {
+            "count": 400,
+            "mobileStationaryReachable": 163,
+            "mobileStationaryPct": 40.75,
+            "mobileLerpReachable": 190,
+            "mobileLerpPct": 47.5,
+            "desktopStationaryReachable": 342,
+            "desktopStationaryPct": 85.5,
+            "desktopLerpReachable": 347,
+            "desktopLerpPct": 86.75,
+            "proposed2DGeometricReachable": 400,
+            "proposed2DGeometricPct": 100
+          },
+          "powerOrb": {
+            "count": 100,
+            "mobileStationaryReachable": 43,
+            "mobileStationaryPct": 43,
+            "mobileLerpReachable": 55,
+            "mobileLerpPct": 55,
+            "desktopStationaryReachable": 89,
+            "desktopStationaryPct": 89,
+            "desktopLerpReachable": 98,
+            "desktopLerpPct": 98,
+            "proposed2DGeometricReachable": 100,
+            "proposed2DGeometricPct": 100
+          },
+          "buffOrb": {
+            "count": 100,
+            "mobileStationaryReachable": 45,
+            "mobileStationaryPct": 45,
+            "mobileLerpReachable": 59,
+            "mobileLerpPct": 59,
+            "desktopStationaryReachable": 85,
+            "desktopStationaryPct": 85,
+            "desktopLerpReachable": 99,
+            "desktopLerpPct": 99,
+            "proposed2DGeometricReachable": 100,
+            "proposed2DGeometricPct": 100
+          },
+          "allPickups": {
+            "count": 600,
+            "mobileStationaryReachable": 251,
+            "mobileStationaryPct": 41.83,
+            "mobileLerpReachable": 304,
+            "mobileLerpPct": 50.67,
+            "desktopStationaryReachable": 516,
+            "desktopStationaryPct": 86,
+            "desktopLerpReachable": 544,
+            "desktopLerpPct": 90.67,
+            "proposed2DGeometricReachable": 600,
+            "proposed2DGeometricPct": 100
+          }
+        },
+        "byFailureReasonMobile": {
+          "REACHABLE": 251,
+          "UNREACHABLE_HIGH_Y": 217,
+          "UNREACHABLE_SCALLOP_GAP_BETWEEN_LANES": 53,
+          "UNREACHABLE_OUTER_X": 58,
+          "UNREACHABLE_LOW_Y": 21
+        },
+        "liveStepProof": {
+          "crystalRadiusMultiplierUsed": 0.68,
+          "coresCollected": 1,
+          "elevatedMissed": 1,
+          "remainingUncollectedObjects": 1,
+          "contactEvents": [
+            {
+              "time": 1.6993,
+              "outcome": "pickup_collected",
+              "type": "crystal",
+              "hullDelta": 0,
+              "scoreDelta": 140.224,
+              "coresDelta": 1,
+              "playerPos": [
+                0,
+                -0.68,
+                -7.8
+              ],
+              "renderedShipPos": [
+                0,
+                -0.68,
+                -7.35
+              ],
+              "objectCollisionPos": [
+                0,
+                -0.68,
+                -7.8684
+              ],
+              "objectRenderedPos": [
+                0.0001,
+                -0.6799,
+                -7.8684
+              ],
+              "corridorDisplacement": {
+                "dxM": 0.0001,
+                "dyM": 0.0001,
+                "dist2D_M": 0.0002
+              },
+              "vsShip": {
+                "colliderCenterDist2D_M": 0,
+                "combinedColliderRadius_M": 1.13,
+                "colliderMargin_M": -1.13,
+                "colliderTriggersHit": true,
+                "dzToCollider_M": 0.0684,
+                "dzToRenderedShip_M": 0.5184,
+                "minMeshVertexDist2D_M": 0.0047,
+                "minMeshVertexDist3D_M": 0.0157,
+                "minMeshVertexDistScreen_Px": 1,
+                "renderedScreenBboxOverlap": true
+              }
+            },
+            {
+              "time": 1.7153,
+              "outcome": "near_miss",
+              "type": "crystal",
+              "hullDelta": 0,
+              "scoreDelta": 0.22736000000000445,
+              "coresDelta": 0,
+              "playerPos": [
+                0,
+                -0.68,
+                -7.8
+              ],
+              "renderedShipPos": [
+                0,
+                -0.68,
+                -7.35
+              ],
+              "objectCollisionPos": [
+                0,
+                1.25,
+                -7.6367
+              ],
+              "objectRenderedPos": [
+                0,
+                1.25,
+                -7.6367
+              ],
+              "corridorDisplacement": {
+                "dxM": 0,
+                "dyM": 0,
+                "dist2D_M": 0
+              },
+              "vsShip": {
+                "colliderCenterDist2D_M": 1.93,
+                "combinedColliderRadius_M": 1.13,
+                "colliderMargin_M": 0.8,
+                "colliderTriggersHit": false,
+                "dzToCollider_M": 0.1633,
+                "dzToRenderedShip_M": 0.2867,
+                "minMeshVertexDist2D_M": 1.2373,
+                "minMeshVertexDist3D_M": 1.333,
+                "minMeshVertexDistScreen_Px": 110.68,
+                "renderedScreenBboxOverlap": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:46.720Z",
+      "type": "pass",
+      "step": "COLLISION_C1_HEAD_ON",
+      "desc": "Reproduced head-on collision (production size=1.25m)",
+      "details": {
+        "time": 1.7473,
+        "outcome": "hull_hit",
+        "type": "debris",
+        "hullDelta": -1,
+        "scoreDelta": 0.22736000000000445,
+        "coresDelta": 0,
+        "playerPos": [
+          0,
+          -0.45,
+          -7.8
+        ],
+        "renderedShipPos": [
+          0,
+          -0.45,
+          -7.35
+        ],
+        "objectCollisionPos": [
+          0,
+          -0.45,
+          -7.8165
+        ],
+        "objectRenderedPos": [
+          0,
+          -0.45,
+          -7.8165
+        ],
+        "corridorDisplacement": {
+          "dxM": 0,
+          "dyM": 0,
+          "dist2D_M": 0
+        },
+        "vsShip": {
+          "colliderCenterDist2D_M": 0,
+          "combinedColliderRadius_M": 1.645,
+          "colliderMargin_M": -1.645,
+          "colliderTriggersHit": true,
+          "dzToCollider_M": 0.0165,
+          "dzToRenderedShip_M": 0.4665,
+          "minMeshVertexDist2D_M": 0.1333,
+          "minMeshVertexDist3D_M": 0.4271,
+          "minMeshVertexDistScreen_Px": 15.54,
+          "renderedScreenBboxOverlap": true
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:46.812Z",
+      "type": "pass",
+      "step": "COLLISION_C2_CLEAN_DODGE",
+      "desc": "Verified clean dodge when lateral distance (2.20m) > combined collider (1.645m)",
+      "details": {
+        "hullAfter": 3,
+        "hullHits": 0,
+        "contactEvents": [
+          {
+            "time": 1.7793,
+            "outcome": "near_miss",
+            "type": "debris",
+            "hullDelta": 0,
+            "scoreDelta": 0.22736000000000445,
+            "coresDelta": 0,
+            "playerPos": [
+              -2.2,
+              -0.45,
+              -7.8
+            ],
+            "renderedShipPos": [
+              -2.2,
+              -0.45,
+              -7.35
+            ],
+            "objectCollisionPos": [
+              0,
+              -0.45,
+              -7.5827
+            ],
+            "objectRenderedPos": [
+              0,
+              -0.45,
+              -7.5827
+            ],
+            "corridorDisplacement": {
+              "dxM": 0,
+              "dyM": 0,
+              "dist2D_M": 0
+            },
+            "vsShip": {
+              "colliderCenterDist2D_M": 2.2,
+              "combinedColliderRadius_M": 1.645,
+              "colliderMargin_M": 0.555,
+              "colliderTriggersHit": false,
+              "dzToCollider_M": 0.2173,
+              "dzToRenderedShip_M": 0.2327,
+              "minMeshVertexDist2D_M": 1.1968,
+              "minMeshVertexDist3D_M": 1.236,
+              "minMeshVertexDistScreen_Px": 113.71,
+              "renderedScreenBboxOverlap": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:46.898Z",
+      "type": "pass",
+      "step": "COLLISION_C3_NEAR_MISS",
+      "desc": "Verified near miss just outside sphere collider boundary (1.72m > 1.645m)",
+      "details": {
+        "dx": 1.72,
+        "combinedColliderRadius": 1.645,
+        "hullAfter": 3,
+        "hullHits": 0,
+        "contactEvents": [
+          {
+            "time": 1.8113,
+            "outcome": "near_miss",
+            "type": "debris",
+            "hullDelta": 0,
+            "scoreDelta": 0.22736000000000445,
+            "coresDelta": 0,
+            "playerPos": [
+              0,
+              -0.45,
+              -7.8
+            ],
+            "renderedShipPos": [
+              0,
+              -0.45,
+              -7.35
+            ],
+            "objectCollisionPos": [
+              1.72,
+              -0.45,
+              -7.5824
+            ],
+            "objectRenderedPos": [
+              1.72,
+              -0.45,
+              -7.5824
+            ],
+            "corridorDisplacement": {
+              "dxM": 0,
+              "dyM": 0,
+              "dist2D_M": 0
+            },
+            "vsShip": {
+              "colliderCenterDist2D_M": 1.72,
+              "combinedColliderRadius_M": 1.645,
+              "colliderMargin_M": 0.075,
+              "colliderTriggersHit": false,
+              "dzToCollider_M": 0.2176,
+              "dzToRenderedShip_M": 0.2324,
+              "minMeshVertexDist2D_M": 0.7162,
+              "minMeshVertexDist3D_M": 0.7368,
+              "minMeshVertexDistScreen_Px": 65.74,
+              "renderedScreenBboxOverlap": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:46.965Z",
+      "type": "pass",
+      "step": "COLLISION_C4A_PROD_ROTATED_PHANTOM_HIT",
+      "desc": "Reproduced production-valid rotated debris phantom hit (size=1.25m, rot=[0.42,0.88,0.35]): Hull damaged with +0.5355m 2D vertex gap (36px screen gap)",
+      "details": {
+        "scenarioClass": "production_valid_debris",
+        "size": 1.25,
+        "rotationRad": [
+          0.42,
+          0.88,
+          0.35
+        ],
+        "contactRecord": {
+          "time": 1.8273,
+          "outcome": "hull_hit",
+          "type": "debris",
+          "hullDelta": -1,
+          "scoreDelta": 0.22736000000000445,
+          "coresDelta": 0,
+          "playerPos": [
+            0,
+            -0.45,
+            -7.8
+          ],
+          "renderedShipPos": [
+            0,
+            -0.45,
+            -7.35
+          ],
+          "objectCollisionPos": [
+            1.48,
+            -0.18,
+            -7.8161
+          ],
+          "objectRenderedPos": [
+            1.48,
+            -0.18,
+            -7.8161
+          ],
+          "corridorDisplacement": {
+            "dxM": 0,
+            "dyM": 0,
+            "dist2D_M": 0
+          },
+          "vsShip": {
+            "colliderCenterDist2D_M": 1.5044,
+            "combinedColliderRadius_M": 1.645,
+            "colliderMargin_M": -0.1406,
+            "colliderTriggersHit": true,
+            "dzToCollider_M": 0.0161,
+            "dzToRenderedShip_M": 0.4661,
+            "minMeshVertexDist2D_M": 0.5355,
+            "minMeshVertexDist3D_M": 0.6723,
+            "minMeshVertexDistScreen_Px": 47.06,
+            "renderedScreenBboxOverlap": false
+          }
+        },
+        "shipMeshMaxWx": 0.5322,
+        "rockMeshMinWx": 1.0086,
+        "meshWorldGapX": 0.4764,
+        "meshScreenGapPx": 36
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:47.050Z",
+      "type": "pass",
+      "step": "COLLISION_C4B_PROD_ROTATED_MEDIUM_PHANTOM_HIT",
+      "desc": "Reproduced medium production debris phantom hit (size=1.12m, rot=[0.65,1.20,0.40]): Hull damaged with +0.5394m 2D vertex gap",
+      "details": {
+        "scenarioClass": "production_valid_debris",
+        "size": 1.12,
+        "rotationRad": [
+          0.65,
+          1.2,
+          0.4
+        ],
+        "contactRecord": {
+          "time": 1.8433,
+          "outcome": "hull_hit",
+          "type": "debris",
+          "hullDelta": -1,
+          "scoreDelta": 0.22736000000000445,
+          "coresDelta": 0,
+          "playerPos": [
+            0,
+            -0.45,
+            -7.8
+          ],
+          "renderedShipPos": [
+            0,
+            -0.45,
+            -7.35
+          ],
+          "objectCollisionPos": [
+            1.42,
+            -0.22,
+            -7.816
+          ],
+          "objectRenderedPos": [
+            1.42,
+            -0.22,
+            -7.816
+          ],
+          "corridorDisplacement": {
+            "dxM": 0,
+            "dyM": 0,
+            "dist2D_M": 0
+          },
+          "vsShip": {
+            "colliderCenterDist2D_M": 1.4385,
+            "combinedColliderRadius_M": 1.5384,
+            "colliderMargin_M": -0.0999,
+            "colliderTriggersHit": true,
+            "dzToCollider_M": 0.016,
+            "dzToRenderedShip_M": 0.466,
+            "minMeshVertexDist2D_M": 0.5394,
+            "minMeshVertexDist3D_M": 0.6361,
+            "minMeshVertexDistScreen_Px": 47.48,
+            "renderedScreenBboxOverlap": false
+          }
+        },
+        "meshWorldGapX": 0.5356,
+        "meshScreenGapPx": 43.73
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:47.124Z",
+      "type": "pass",
+      "step": "COLLISION_C4C_SYNTHETIC_CONTROL",
+      "desc": "Preserved synthetic diagnostic control (size=1.42m, rot=[0,0,0]): +0.6221m gap (41.11px)",
+      "details": {
+        "scenarioClass": "synthetic_non_production_diagnostic_control",
+        "size": 1.42,
+        "rotationRad": [
+          0,
+          0,
+          0
+        ],
+        "contactRecord": {
+          "time": 1.8593,
+          "outcome": "hull_hit",
+          "type": "debris",
+          "hullDelta": -1,
+          "scoreDelta": 0.22736000000000445,
+          "coresDelta": 0,
+          "playerPos": [
+            0,
+            -0.45,
+            -7.8
+          ],
+          "renderedShipPos": [
+            0,
+            -0.45,
+            -7.35
+          ],
+          "objectCollisionPos": [
+            1.58,
+            -0.15,
+            -7.8159
+          ],
+          "objectRenderedPos": [
+            1.58,
+            -0.15,
+            -7.8159
+          ],
+          "corridorDisplacement": {
+            "dxM": 0,
+            "dyM": 0,
+            "dist2D_M": 0
+          },
+          "vsShip": {
+            "colliderCenterDist2D_M": 1.6082,
+            "combinedColliderRadius_M": 1.7844,
+            "colliderMargin_M": -0.1762,
+            "colliderTriggersHit": true,
+            "dzToCollider_M": 0.0159,
+            "dzToRenderedShip_M": 0.4659,
+            "minMeshVertexDist2D_M": 0.7816,
+            "minMeshVertexDist3D_M": 1.0864,
+            "minMeshVertexDistScreen_Px": 64.88,
+            "renderedScreenBboxOverlap": false
+          }
+        },
+        "meshWorldGapX": 0.6221,
+        "meshScreenGapPx": 41.11
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:47.168Z",
+      "type": "pass",
+      "step": "COLLISION_C5_Z_LEAD_OFFSET",
+      "desc": "Reproduced early Z-axis collision 1.5358m ahead of rendered ship center (shipZ=-7.35 vs collider z=-7.80)",
+      "details": {
+        "time": 1.8753,
+        "outcome": "hull_hit",
+        "type": "debris",
+        "hullDelta": -1,
+        "scoreDelta": 0.22736000000000445,
+        "coresDelta": 0,
+        "playerPos": [
+          0,
+          -0.45,
+          -7.8
+        ],
+        "renderedShipPos": [
+          0,
+          -0.45,
+          -7.35
+        ],
+        "objectCollisionPos": [
+          0,
+          -0.45,
+          -8.8858
+        ],
+        "objectRenderedPos": [
+          0.0017,
+          -0.4482,
+          -8.8858
+        ],
+        "corridorDisplacement": {
+          "dxM": 0.0017,
+          "dyM": 0.0018,
+          "dist2D_M": 0.0024
+        },
+        "vsShip": {
+          "colliderCenterDist2D_M": 0,
+          "combinedColliderRadius_M": 1.6696,
+          "colliderMargin_M": -1.6696,
+          "colliderTriggersHit": true,
+          "dzToCollider_M": 1.0858,
+          "dzToRenderedShip_M": 1.5358,
+          "minMeshVertexDist2D_M": 0.0915,
+          "minMeshVertexDist3D_M": 0.7783,
+          "minMeshVertexDistScreen_Px": 15.29,
+          "renderedScreenBboxOverlap": true
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:52.639Z",
+      "type": "pass",
+      "step": "PERF_BASELINE_UNCAPPED",
+      "desc": "Captured uncapped RAF interval (p50=199.9ms, p95=249.9ms), CPU render time (p50=6.1ms), and glDrawCallsPerFrame=673",
+      "details": {
+        "evidenceCategory": "headless_desktop_webgl",
+        "uncappedRafIntervalMs": {
+          "sampleCount": 21,
+          "avgMs": 276.971,
+          "minMs": 66.7,
+          "p50Ms": 199.9,
+          "p95Ms": 249.9,
+          "p99Ms": 2183.3,
+          "maxMs": 2183.3,
+          "approxFps": 3.6
+        },
+        "uncappedCpuRenderTimeMs": {
+          "sampleCount": 22,
+          "avgMs": 7.85,
+          "minMs": 1.7,
+          "p50Ms": 6.1,
+          "p95Ms": 16.4,
+          "p99Ms": 18.6,
+          "maxMs": 18.6
+        },
+        "cappedSimDeltaReferenceMs": {
+          "note": "Reference only: clamped by Math.min(0.033, dt) in frame(); not used as frame-time evidence",
+          "sampleCount": 22,
+          "avgMs": 33,
+          "minMs": 33,
+          "p50Ms": 33,
+          "p95Ms": 33,
+          "p99Ms": 33,
+          "maxMs": 33
+        },
+        "sampleCount": 21,
+        "avgFrameMs": 276.971,
+        "approxFps": 3.6,
+        "p50FrameMs": 199.9,
+        "p95FrameMs": 249.9,
+        "p99FrameMs": 2183.3,
+        "maxFrameMs": 2183.3,
+        "glDrawCallsPerFrame": 673,
+        "scenePassesPerFrame": 1,
+        "drawCallsPerFrame": 673,
+        "totalGlDrawElementsCalls": 37693,
+        "totalRawDrawCalls": 56,
+        "canvasBuffer": {
+          "width": 1280,
+          "height": 729
+        },
+        "dpr": 1,
+        "renderBudgetTier": {
+          "id": "high",
+          "maxDpr": 2,
+          "particleScale": 1,
+          "tunnelDecorScale": 1,
+          "rotateTopology": true
+        },
+        "memory": {
+          "usedJSHeapSize": 6057789,
+          "totalJSHeapSize": 14488285,
+          "jsHeapSizeLimit": 3696492544
+        }
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:52.934Z",
+      "type": "pass",
+      "step": "SECURITY_GUARD_PUBLIC_ORIGIN_403",
+      "desc": "Verified /api/record_wave0 rejects simulated public-origin POST with HTTP 403",
+      "details": {
+        "simulatedPublicOriginPostStatus": 403
+      }
+    },
+    {
+      "timestamp": "2026-10-25T14:55:53.796Z",
+      "type": "pass",
+      "step": "SCREENSHOT_MOBILE_REACHABILITY",
+      "desc": "Captured composite WebGL + overlay screenshot: wave0_mobile_portrait_reachability.png (393x873)",
+      "details": null
+    },
+    {
+      "timestamp": "2026-10-25T14:55:54.912Z",
+      "type": "pass",
+      "step": "SCREENSHOT_COLLISION_PHANTOM_HIT",
+      "desc": "Captured composite WebGL + overlay screenshot: wave0_collision_phantom_hit_edge.png (1280x800)",
+      "details": null
+    },
+    {
+      "timestamp": "2026-10-25T14:55:55.883Z",
+      "type": "pass",
+      "step": "SCREENSHOT_COLLISION_Z_OFFSET",
+      "desc": "Captured composite WebGL + overlay screenshot: wave0_collision_z_lead_offset.png (1280x800)",
+      "details": null
+    },
+    {
+      "timestamp": "2026-10-25T14:55:56.927Z",
+      "type": "pass",
+      "step": "SCREENSHOT_DESKTOP_BOTTOM_CLIP",
+      "desc": "Captured composite WebGL + overlay screenshot: wave0_desktop_vertical_steer_bottom.png (1920x1080)",
+      "details": null
+    }
+  ],
+  "telemetry": {
+    "viewports": {
+      "mobile_portrait_393x873": {
+        "width": 393,
+        "height": 873,
+        "touchCapable": true,
+        "aspect": 0.5282,
+        "renderFovDeg": 45.29,
+        "playPitch": 0.22,
+        "cameraDepth": -2.9,
+        "shipCenterNdc": {
+          "x": 0.1373,
+          "y": -0.6625,
+          "z": 0.9814,
+          "w": 9.8832
+        },
+        "shipCenterScreenPx": {
+          "x": 223.48,
+          "y": 618.44
+        },
+        "shipColliderNdc": {
+          "x": 0.1363,
+          "y": -0.6582,
+          "z": 0.9823,
+          "w": 10.3212
+        },
+        "shipMeshInViewportRatio": 1
+      },
+      "mobile_landscape_873x393": {
+        "width": 873,
+        "height": 393,
+        "touchCapable": true,
+        "aspect": 2.2214,
+        "renderFovDeg": 47.61,
+        "playPitch": 0.18,
+        "cameraDepth": -2.55,
+        "shipCenterNdc": {
+          "x": 0.0319,
+          "y": -0.5761,
+          "z": 0.9808,
+          "w": 9.606
+        },
+        "shipCenterScreenPx": {
+          "x": 450.43,
+          "y": 309.71
+        },
+        "shipColliderNdc": {
+          "x": 0.0316,
+          "y": -0.5702,
+          "z": 0.9817,
+          "w": 10.0476
+        },
+        "shipMeshInViewportRatio": 1
+      },
+      "desktop_16x10_1280x800": {
+        "width": 1280,
+        "height": 800,
+        "touchCapable": false,
+        "aspect": 1.7558,
+        "renderFovDeg": 44.13,
+        "playPitch": 0.21,
+        "cameraDepth": -2.72,
+        "shipCenterNdc": {
+          "x": 0.0381,
+          "y": -0.6606,
+          "z": 0.9811,
+          "w": 9.7324
+        },
+        "shipCenterScreenPx": {
+          "x": 664.36,
+          "y": 605.27
+        },
+        "shipColliderNdc": {
+          "x": 0.0378,
+          "y": -0.6559,
+          "z": 0.982,
+          "w": 10.1714
+        },
+        "shipMeshInViewportRatio": 1
+      },
+      "desktop_16x9_1920x1080": {
+        "width": 1920,
+        "height": 1080,
+        "touchCapable": false,
+        "aspect": 2.6337,
+        "renderFovDeg": 39.48,
+        "playPitch": 0.18,
+        "cameraDepth": -2.48,
+        "shipCenterNdc": {
+          "x": 0.0291,
+          "y": -0.6854,
+          "z": 0.9807,
+          "w": 9.5543
+        },
+        "shipCenterScreenPx": {
+          "x": 987.91,
+          "y": 614.33
+        },
+        "shipColliderNdc": {
+          "x": 0.0288,
+          "y": -0.6789,
+          "z": 0.9816,
+          "w": 9.996
+        },
+        "shipMeshInViewportRatio": 1
+      },
+      "desktop_ultrawide_2560x1080": {
+        "width": 2560,
+        "height": 1080,
+        "touchCapable": false,
+        "aspect": 3.5117,
+        "renderFovDeg": 39.48,
+        "playPitch": 0.18,
+        "cameraDepth": -2.48,
+        "shipCenterNdc": {
+          "x": 0.0218,
+          "y": -0.6849,
+          "z": 0.9807,
+          "w": 9.5547
+        },
+        "shipCenterScreenPx": {
+          "x": 1307.91,
+          "y": 614.15
+        },
+        "shipColliderNdc": {
+          "x": 0.0216,
+          "y": -0.6784,
+          "z": 0.9816,
+          "w": 9.9965
+        },
+        "shipMeshInViewportRatio": 1
+      }
+    },
+    "centreLaneRecovery": {
+      "case4A_centerTapOrRetouch": {
+        "description": "Direct touch/pointerdown in central band (clientX=196.5px on 393px width, |dx|=0 <= 32.8px)",
+        "initialTargetLane": -1,
+        "initialPlayerX": -2.2,
+        "targetLaneAfterPointerDown": 0,
+        "touchAxisX": 0,
+        "targetLaneAfter25Frames": 0,
+        "settledPlayerX": 0
+      },
+      "case4B_continuousOuterToCenterDrag": {
+        "description": "Single unbroken drag from outer lane (clientX=40px) to center (clientX=196.5px, dx=+156.5px > 32.8px)",
+        "targetLaneSetByPointerMove": 0,
+        "touchAxisXDuringDrag": 1,
+        "targetLaneAfterUpdateGameTick": 1
+      }
+    },
+    "desktopDisappearanceCases": {
+      "physical_input_and_viewport": {
+        "case1_plainWheelScroll": {
+          "method": "physical_wheel_event_and_window_scroll",
+          "scrollY": 0,
+          "shipCenterNdcY": -0.6702,
+          "shipCenterScreenY": 608.77,
+          "inViewportRatio": 1,
+          "disappeared": false
+        },
+        "case2_ctrlWheelZoom": {
+          "method": "physical_ctrl_wheel_and_css_zoom_1.5",
+          "cssZoom": "1.5",
+          "canvasClientRect": {
+            "left": 0,
+            "top": 0,
+            "width": 2880,
+            "height": 1093.5
+          },
+          "shipCenterNdcY": -0.6702,
+          "shipCenterScreenY": 608.77,
+          "inViewportRatio": 1
+        },
+        "case3_physicalKeyboardArrowDownHold": {
+          "method": "physical_keydown_ArrowDown_35_live_frames",
+          "desktop16x9_1920x1080": {
+            "playerYAfterKeyHold": -2.1499,
+            "targetYAfterKeyHold": -2.15,
+            "centerNdcY": -1.208,
+            "centerScreenY": 804.81,
+            "viewportHeight": 1080,
+            "centerInFrustum": false,
+            "meshInViewportRatio": 0
+          },
+          "ultrawide21x9_2560x1080": {
+            "playerYAfterKeyHold": -2.1499,
+            "targetYAfterKeyHold": -2.15,
+            "centerNdcY": -1.2417,
+            "centerScreenY": 817.1,
+            "viewportHeight": 1080,
+            "centerInFrustum": false,
+            "meshInViewportRatio": 0
+          }
+        },
+        "case4_aspectThresholdResize": {
+          "method": "physical_window_resize_to_1920x900_aspect_2.1333",
+          "width": 1920,
+          "height": 900,
+          "aspect": 2.1333,
+          "playerY": -2.15,
+          "centerNdcY": -1.2424,
+          "centerScreenY": 817.34,
+          "centerInFrustum": false,
+          "meshInViewportRatio": 0
+        }
+      },
+      "injected_webgl_state": {
+        "method": "deterministic_setPlayerState_y_-2.15_for_overlay_comparison",
+        "desktop16x9_1920x1080": {
+          "centerNdcY": -1.2469,
+          "centerScreenY": 818.99,
+          "meshInViewportRatio": 0
+        },
+        "ultrawide21x9_2560x1080": {
+          "centerNdcY": -1.2469,
+          "centerScreenY": 818.99,
+          "meshInViewportRatio": 0
+        }
+      }
+    },
+    "pickupReachability": {
+      "seed": 20261025,
+      "sampleCount": 600,
+      "mobileStationaryReachable": 251,
+      "mobileLerpReachable": 304,
+      "desktopStationaryReachable": 516,
+      "desktopLerpReachable": 544,
+      "proposed2DReachable": 600,
+      "byClass": {
+        "crystal": {
+          "count": 400,
+          "mobileStationaryReachable": 163,
+          "mobileStationaryPct": 40.75,
+          "mobileLerpReachable": 190,
+          "mobileLerpPct": 47.5,
+          "desktopStationaryReachable": 342,
+          "desktopStationaryPct": 85.5,
+          "desktopLerpReachable": 347,
+          "desktopLerpPct": 86.75,
+          "proposed2DGeometricReachable": 400,
+          "proposed2DGeometricPct": 100
+        },
+        "powerOrb": {
+          "count": 100,
+          "mobileStationaryReachable": 43,
+          "mobileStationaryPct": 43,
+          "mobileLerpReachable": 55,
+          "mobileLerpPct": 55,
+          "desktopStationaryReachable": 89,
+          "desktopStationaryPct": 89,
+          "desktopLerpReachable": 98,
+          "desktopLerpPct": 98,
+          "proposed2DGeometricReachable": 100,
+          "proposed2DGeometricPct": 100
+        },
+        "buffOrb": {
+          "count": 100,
+          "mobileStationaryReachable": 45,
+          "mobileStationaryPct": 45,
+          "mobileLerpReachable": 59,
+          "mobileLerpPct": 59,
+          "desktopStationaryReachable": 85,
+          "desktopStationaryPct": 85,
+          "desktopLerpReachable": 99,
+          "desktopLerpPct": 99,
+          "proposed2DGeometricReachable": 100,
+          "proposed2DGeometricPct": 100
+        },
+        "allPickups": {
+          "count": 600,
+          "mobileStationaryReachable": 251,
+          "mobileStationaryPct": 41.83,
+          "mobileLerpReachable": 304,
+          "mobileLerpPct": 50.67,
+          "desktopStationaryReachable": 516,
+          "desktopStationaryPct": 86,
+          "desktopLerpReachable": 544,
+          "desktopLerpPct": 90.67,
+          "proposed2DGeometricReachable": 600,
+          "proposed2DGeometricPct": 100
+        }
+      },
+      "byFailureReasonMobile": {
+        "REACHABLE": 251,
+        "UNREACHABLE_HIGH_Y": 217,
+        "UNREACHABLE_SCALLOP_GAP_BETWEEN_LANES": 53,
+        "UNREACHABLE_OUTER_X": 58,
+        "UNREACHABLE_LOW_Y": 21
+      },
+      "liveStepProof": {
+        "crystalRadiusMultiplierUsed": 0.68,
+        "coresCollected": 1,
+        "elevatedMissed": 1,
+        "remainingUncollectedObjects": 1,
+        "contactEvents": [
+          {
+            "time": 1.6993,
+            "outcome": "pickup_collected",
+            "type": "crystal",
+            "hullDelta": 0,
+            "scoreDelta": 140.224,
+            "coresDelta": 1,
+            "playerPos": [
+              0,
+              -0.68,
+              -7.8
+            ],
+            "renderedShipPos": [
+              0,
+              -0.68,
+              -7.35
+            ],
+            "objectCollisionPos": [
+              0,
+              -0.68,
+              -7.8684
+            ],
+            "objectRenderedPos": [
+              0.0001,
+              -0.6799,
+              -7.8684
+            ],
+            "corridorDisplacement": {
+              "dxM": 0.0001,
+              "dyM": 0.0001,
+              "dist2D_M": 0.0002
+            },
+            "vsShip": {
+              "colliderCenterDist2D_M": 0,
+              "combinedColliderRadius_M": 1.13,
+              "colliderMargin_M": -1.13,
+              "colliderTriggersHit": true,
+              "dzToCollider_M": 0.0684,
+              "dzToRenderedShip_M": 0.5184,
+              "minMeshVertexDist2D_M": 0.0047,
+              "minMeshVertexDist3D_M": 0.0157,
+              "minMeshVertexDistScreen_Px": 1,
+              "renderedScreenBboxOverlap": true
+            }
+          },
+          {
+            "time": 1.7153,
+            "outcome": "near_miss",
+            "type": "crystal",
+            "hullDelta": 0,
+            "scoreDelta": 0.22736000000000445,
+            "coresDelta": 0,
+            "playerPos": [
+              0,
+              -0.68,
+              -7.8
+            ],
+            "renderedShipPos": [
+              0,
+              -0.68,
+              -7.35
+            ],
+            "objectCollisionPos": [
+              0,
+              1.25,
+              -7.6367
+            ],
+            "objectRenderedPos": [
+              0,
+              1.25,
+              -7.6367
+            ],
+            "corridorDisplacement": {
+              "dxM": 0,
+              "dyM": 0,
+              "dist2D_M": 0
+            },
+            "vsShip": {
+              "colliderCenterDist2D_M": 1.93,
+              "combinedColliderRadius_M": 1.13,
+              "colliderMargin_M": 0.8,
+              "colliderTriggersHit": false,
+              "dzToCollider_M": 0.1633,
+              "dzToRenderedShip_M": 0.2867,
+              "minMeshVertexDist2D_M": 1.2373,
+              "minMeshVertexDist3D_M": 1.333,
+              "minMeshVertexDistScreen_Px": 110.68,
+              "renderedScreenBboxOverlap": false
+            }
+          }
+        ]
+      }
+    },
+    "collisionEncounters": {
+      "c1_headOn": {
+        "time": 1.7473,
+        "outcome": "hull_hit",
+        "type": "debris",
+        "hullDelta": -1,
+        "scoreDelta": 0.22736000000000445,
+        "coresDelta": 0,
+        "playerPos": [
+          0,
+          -0.45,
+          -7.8
+        ],
+        "renderedShipPos": [
+          0,
+          -0.45,
+          -7.35
+        ],
+        "objectCollisionPos": [
+          0,
+          -0.45,
+          -7.8165
+        ],
+        "objectRenderedPos": [
+          0,
+          -0.45,
+          -7.8165
+        ],
+        "corridorDisplacement": {
+          "dxM": 0,
+          "dyM": 0,
+          "dist2D_M": 0
+        },
+        "vsShip": {
+          "colliderCenterDist2D_M": 0,
+          "combinedColliderRadius_M": 1.645,
+          "colliderMargin_M": -1.645,
+          "colliderTriggersHit": true,
+          "dzToCollider_M": 0.0165,
+          "dzToRenderedShip_M": 0.4665,
+          "minMeshVertexDist2D_M": 0.1333,
+          "minMeshVertexDist3D_M": 0.4271,
+          "minMeshVertexDistScreen_Px": 15.54,
+          "renderedScreenBboxOverlap": true
+        }
+      },
+      "c2_cleanDodge": {
+        "hullAfter": 3,
+        "hullHits": 0,
+        "contactEvents": [
+          {
+            "time": 1.7793,
+            "outcome": "near_miss",
+            "type": "debris",
+            "hullDelta": 0,
+            "scoreDelta": 0.22736000000000445,
+            "coresDelta": 0,
+            "playerPos": [
+              -2.2,
+              -0.45,
+              -7.8
+            ],
+            "renderedShipPos": [
+              -2.2,
+              -0.45,
+              -7.35
+            ],
+            "objectCollisionPos": [
+              0,
+              -0.45,
+              -7.5827
+            ],
+            "objectRenderedPos": [
+              0,
+              -0.45,
+              -7.5827
+            ],
+            "corridorDisplacement": {
+              "dxM": 0,
+              "dyM": 0,
+              "dist2D_M": 0
+            },
+            "vsShip": {
+              "colliderCenterDist2D_M": 2.2,
+              "combinedColliderRadius_M": 1.645,
+              "colliderMargin_M": 0.555,
+              "colliderTriggersHit": false,
+              "dzToCollider_M": 0.2173,
+              "dzToRenderedShip_M": 0.2327,
+              "minMeshVertexDist2D_M": 1.1968,
+              "minMeshVertexDist3D_M": 1.236,
+              "minMeshVertexDistScreen_Px": 113.71,
+              "renderedScreenBboxOverlap": false
+            }
+          }
+        ]
+      },
+      "c3_nearMiss": {
+        "dx": 1.72,
+        "combinedColliderRadius": 1.645,
+        "hullAfter": 3,
+        "hullHits": 0,
+        "contactEvents": [
+          {
+            "time": 1.8113,
+            "outcome": "near_miss",
+            "type": "debris",
+            "hullDelta": 0,
+            "scoreDelta": 0.22736000000000445,
+            "coresDelta": 0,
+            "playerPos": [
+              0,
+              -0.45,
+              -7.8
+            ],
+            "renderedShipPos": [
+              0,
+              -0.45,
+              -7.35
+            ],
+            "objectCollisionPos": [
+              1.72,
+              -0.45,
+              -7.5824
+            ],
+            "objectRenderedPos": [
+              1.72,
+              -0.45,
+              -7.5824
+            ],
+            "corridorDisplacement": {
+              "dxM": 0,
+              "dyM": 0,
+              "dist2D_M": 0
+            },
+            "vsShip": {
+              "colliderCenterDist2D_M": 1.72,
+              "combinedColliderRadius_M": 1.645,
+              "colliderMargin_M": 0.075,
+              "colliderTriggersHit": false,
+              "dzToCollider_M": 0.2176,
+              "dzToRenderedShip_M": 0.2324,
+              "minMeshVertexDist2D_M": 0.7162,
+              "minMeshVertexDist3D_M": 0.7368,
+              "minMeshVertexDistScreen_Px": 65.74,
+              "renderedScreenBboxOverlap": false
+            }
+          }
+        ]
+      },
+      "c4a_phantomEdgeHit_productionRotated_125": {
+        "scenarioClass": "production_valid_debris",
+        "size": 1.25,
+        "rotationRad": [
+          0.42,
+          0.88,
+          0.35
+        ],
+        "contactRecord": {
+          "time": 1.8273,
+          "outcome": "hull_hit",
+          "type": "debris",
+          "hullDelta": -1,
+          "scoreDelta": 0.22736000000000445,
+          "coresDelta": 0,
+          "playerPos": [
+            0,
+            -0.45,
+            -7.8
+          ],
+          "renderedShipPos": [
+            0,
+            -0.45,
+            -7.35
+          ],
+          "objectCollisionPos": [
+            1.48,
+            -0.18,
+            -7.8161
+          ],
+          "objectRenderedPos": [
+            1.48,
+            -0.18,
+            -7.8161
+          ],
+          "corridorDisplacement": {
+            "dxM": 0,
+            "dyM": 0,
+            "dist2D_M": 0
+          },
+          "vsShip": {
+            "colliderCenterDist2D_M": 1.5044,
+            "combinedColliderRadius_M": 1.645,
+            "colliderMargin_M": -0.1406,
+            "colliderTriggersHit": true,
+            "dzToCollider_M": 0.0161,
+            "dzToRenderedShip_M": 0.4661,
+            "minMeshVertexDist2D_M": 0.5355,
+            "minMeshVertexDist3D_M": 0.6723,
+            "minMeshVertexDistScreen_Px": 47.06,
+            "renderedScreenBboxOverlap": false
+          }
+        },
+        "shipMeshMaxWx": 0.5322,
+        "rockMeshMinWx": 1.0086,
+        "meshWorldGapX": 0.4764,
+        "meshScreenGapPx": 36
+      },
+      "c4b_phantomEdgeHit_productionRotated_112": {
+        "scenarioClass": "production_valid_debris",
+        "size": 1.12,
+        "rotationRad": [
+          0.65,
+          1.2,
+          0.4
+        ],
+        "contactRecord": {
+          "time": 1.8433,
+          "outcome": "hull_hit",
+          "type": "debris",
+          "hullDelta": -1,
+          "scoreDelta": 0.22736000000000445,
+          "coresDelta": 0,
+          "playerPos": [
+            0,
+            -0.45,
+            -7.8
+          ],
+          "renderedShipPos": [
+            0,
+            -0.45,
+            -7.35
+          ],
+          "objectCollisionPos": [
+            1.42,
+            -0.22,
+            -7.816
+          ],
+          "objectRenderedPos": [
+            1.42,
+            -0.22,
+            -7.816
+          ],
+          "corridorDisplacement": {
+            "dxM": 0,
+            "dyM": 0,
+            "dist2D_M": 0
+          },
+          "vsShip": {
+            "colliderCenterDist2D_M": 1.4385,
+            "combinedColliderRadius_M": 1.5384,
+            "colliderMargin_M": -0.0999,
+            "colliderTriggersHit": true,
+            "dzToCollider_M": 0.016,
+            "dzToRenderedShip_M": 0.466,
+            "minMeshVertexDist2D_M": 0.5394,
+            "minMeshVertexDist3D_M": 0.6361,
+            "minMeshVertexDistScreen_Px": 47.48,
+            "renderedScreenBboxOverlap": false
+          }
+        },
+        "meshWorldGapX": 0.5356,
+        "meshScreenGapPx": 43.73
+      },
+      "c4c_phantomEdgeHit_syntheticControl": {
+        "scenarioClass": "synthetic_non_production_diagnostic_control",
+        "size": 1.42,
+        "rotationRad": [
+          0,
+          0,
+          0
+        ],
+        "contactRecord": {
+          "time": 1.8593,
+          "outcome": "hull_hit",
+          "type": "debris",
+          "hullDelta": -1,
+          "scoreDelta": 0.22736000000000445,
+          "coresDelta": 0,
+          "playerPos": [
+            0,
+            -0.45,
+            -7.8
+          ],
+          "renderedShipPos": [
+            0,
+            -0.45,
+            -7.35
+          ],
+          "objectCollisionPos": [
+            1.58,
+            -0.15,
+            -7.8159
+          ],
+          "objectRenderedPos": [
+            1.58,
+            -0.15,
+            -7.8159
+          ],
+          "corridorDisplacement": {
+            "dxM": 0,
+            "dyM": 0,
+            "dist2D_M": 0
+          },
+          "vsShip": {
+            "colliderCenterDist2D_M": 1.6082,
+            "combinedColliderRadius_M": 1.7844,
+            "colliderMargin_M": -0.1762,
+            "colliderTriggersHit": true,
+            "dzToCollider_M": 0.0159,
+            "dzToRenderedShip_M": 0.4659,
+            "minMeshVertexDist2D_M": 0.7816,
+            "minMeshVertexDist3D_M": 1.0864,
+            "minMeshVertexDistScreen_Px": 64.88,
+            "renderedScreenBboxOverlap": false
+          }
+        },
+        "meshWorldGapX": 0.6221,
+        "meshScreenGapPx": 41.11
+      },
+      "c5_zLeadHit": {
+        "time": 1.8753,
+        "outcome": "hull_hit",
+        "type": "debris",
+        "hullDelta": -1,
+        "scoreDelta": 0.22736000000000445,
+        "coresDelta": 0,
+        "playerPos": [
+          0,
+          -0.45,
+          -7.8
+        ],
+        "renderedShipPos": [
+          0,
+          -0.45,
+          -7.35
+        ],
+        "objectCollisionPos": [
+          0,
+          -0.45,
+          -8.8858
+        ],
+        "objectRenderedPos": [
+          0.0017,
+          -0.4482,
+          -8.8858
+        ],
+        "corridorDisplacement": {
+          "dxM": 0.0017,
+          "dyM": 0.0018,
+          "dist2D_M": 0.0024
+        },
+        "vsShip": {
+          "colliderCenterDist2D_M": 0,
+          "combinedColliderRadius_M": 1.6696,
+          "colliderMargin_M": -1.6696,
+          "colliderTriggersHit": true,
+          "dzToCollider_M": 1.0858,
+          "dzToRenderedShip_M": 1.5358,
+          "minMeshVertexDist2D_M": 0.0915,
+          "minMeshVertexDist3D_M": 0.7783,
+          "minMeshVertexDistScreen_Px": 15.29,
+          "renderedScreenBboxOverlap": true
+        }
+      }
+    },
+    "performance": {
+      "evidenceCategory": "headless_desktop_webgl",
+      "uncappedRafIntervalMs": {
+        "sampleCount": 21,
+        "avgMs": 276.971,
+        "minMs": 66.7,
+        "p50Ms": 199.9,
+        "p95Ms": 249.9,
+        "p99Ms": 2183.3,
+        "maxMs": 2183.3,
+        "approxFps": 3.6
+      },
+      "uncappedCpuRenderTimeMs": {
+        "sampleCount": 22,
+        "avgMs": 7.85,
+        "minMs": 1.7,
+        "p50Ms": 6.1,
+        "p95Ms": 16.4,
+        "p99Ms": 18.6,
+        "maxMs": 18.6
+      },
+      "cappedSimDeltaReferenceMs": {
+        "note": "Reference only: clamped by Math.min(0.033, dt) in frame(); not used as frame-time evidence",
+        "sampleCount": 22,
+        "avgMs": 33,
+        "minMs": 33,
+        "p50Ms": 33,
+        "p95Ms": 33,
+        "p99Ms": 33,
+        "maxMs": 33
+      },
+      "sampleCount": 21,
+      "avgFrameMs": 276.971,
+      "approxFps": 3.6,
+      "p50FrameMs": 199.9,
+      "p95FrameMs": 249.9,
+      "p99FrameMs": 2183.3,
+      "maxFrameMs": 2183.3,
+      "glDrawCallsPerFrame": 673,
+      "scenePassesPerFrame": 1,
+      "drawCallsPerFrame": 673,
+      "totalGlDrawElementsCalls": 37693,
+      "totalRawDrawCalls": 56,
+      "canvasBuffer": {
+        "width": 1280,
+        "height": 729
+      },
+      "dpr": 1,
+      "renderBudgetTier": {
+        "id": "high",
+        "maxDpr": 2,
+        "particleScale": 1,
+        "tunnelDecorScale": 1,
+        "rotateTopology": true
+      },
+      "memory": {
+        "usedJSHeapSize": 6057789,
+        "totalJSHeapSize": 14488285,
+        "jsHeapSizeLimit": 3696492544
+      }
+    },
+    "securityGuards": {
+      "simulatedPublicOriginPostStatus": 403
+    },
+    "screenshots": [
+      {
+        "filename": "wave0_mobile_portrait_reachability.png",
+        "width": 393,
+        "height": 873,
+        "scenario": "mobile_reachability",
+        "saved": true
+      },
+      {
+        "filename": "wave0_collision_phantom_hit_edge.png",
+        "width": 1280,
+        "height": 800,
+        "scenario": "collision_phantom_hit",
+        "saved": true
+      },
+      {
+        "filename": "wave0_collision_z_lead_offset.png",
+        "width": 1280,
+        "height": 800,
+        "scenario": "collision_z_offset",
+        "saved": true
+      },
+      {
+        "filename": "wave0_desktop_vertical_steer_bottom.png",
+        "width": 1920,
+        "height": 1080,
+        "scenario": "desktop_bottom_clip",
+        "saved": true
+      }
+    ]
+  }
+}

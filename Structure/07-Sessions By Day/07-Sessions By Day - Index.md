@@ -19,6 +19,14 @@ Chronological proof lane for shipped and audited work.
 
 - `../2026-05-19 - Movement Control Fix Case Study.md`
 
+## 2026-10-25
+
+- `../2026-10-25 - Sovereign Hangar RC2 Sprint Close Retrospective.md`
+
+## 2026-05-23
+
+- `../2026-05-23 - Screen Fill Frame Pass Case Study.md`
+
 ## 2026-05-21
 
 - `../2026-05-21 - Curve Anticipation Pass Case Study.md`

@@ -22,7 +22,7 @@
       "id": "W1-HG4-desktop_1920x1080",
       "description": "Full visible ship mesh visibility on desktop_1920x1080 (touchCapable=False) across all 9 extreme/cardinal positions",
       "ok": true,
-      "detail": "inViewportRatio=1.0000, tris=400, NDC_X=[-0.444, 0.461], NDC_Y=[-0.919, -0.217]"
+      "detail": "inViewportRatio=1.0000, tris=400, NDC_X=[-0.446, 0.460], NDC_Y=[-0.918, -0.215]"
     },
     {
       "id": "W1-HG4-ultrawide_2560x1080",
@@ -58,7 +58,7 @@
       "id": "W1-HG2-Control-C0",
       "description": "Live WebGL phantom-hit elimination for Control-C0 (x=1.42m, size=1.0m)",
       "ok": true,
-      "detail": "hit=False, hullAfter=3, renderGapPxX=55.89px"
+      "detail": "hit=False, hullAfter=3, renderGapPxX=55.9px"
     },
     {
       "id": "W1-HG2-Z-Lead-1.54m",
@@ -142,13 +142,13 @@
       "id": "W1-D-DrawCallTarget",
       "kind": "provisional_target",
       "ok": false,
-      "detail": "mobileDraws=343, desktopDraws=376"
+      "detail": "mobileDraws=345, desktopDraws=381"
     },
     {
       "id": "W1-D-BindCaching",
       "description": "Redundant VBO/attrib binds eliminated (buffer binds/frame < 30) and draw calls reduced >= 40% vs 673 baseline",
       "ok": true,
-      "detail": "mobileDraws=343 (-49.0%), desktopDraws=376, bufferBinds=13"
+      "detail": "mobileDraws=345 (-48.7%), desktopDraws=381, bufferBinds=13"
     }
   ],
   "viewports": {
@@ -643,14 +643,14 @@
         "inViewportCount": 1200,
         "clippedVertexCount": 0,
         "inViewportRatio": 1,
-        "minNdcX": -0.0687,
-        "maxNdcX": 0.0851,
-        "minNdcY": -0.7509,
-        "maxNdcY": -0.6846,
-        "minPxX": 894.08,
-        "maxPxX": 1041.68,
-        "minPxY": 909.7,
-        "maxPxY": 945.5
+        "minNdcX": -0.0701,
+        "maxNdcX": 0.0837,
+        "minNdcY": -0.7497,
+        "maxNdcY": -0.6834,
+        "minPxX": 892.72,
+        "maxPxX": 1040.31,
+        "minPxY": 909.04,
+        "maxPxY": 944.85
       },
       {
         "x": 3.8,
@@ -660,14 +660,14 @@
         "inViewportCount": 1200,
         "clippedVertexCount": 0,
         "inViewportRatio": 1,
-        "minNdcX": 0.2538,
-        "maxNdcX": 0.4139,
-        "minNdcY": -0.9194,
-        "maxNdcY": -0.8385,
-        "minPxX": 1203.67,
-        "maxPxX": 1357.3,
-        "minPxY": 992.77,
-        "maxPxY": 1036.49
+        "minNdcX": 0.2523,
+        "maxNdcX": 0.4123,
+        "minNdcY": -0.9181,
+        "maxNdcY": -0.8373,
+        "minPxX": 1202.22,
+        "maxPxX": 1355.77,
+        "minPxY": 992.15,
+        "maxPxY": 1035.76
       },
       {
         "x": -3.8,
@@ -677,82 +677,82 @@
         "inViewportCount": 1200,
         "clippedVertexCount": 0,
         "inViewportRatio": 1,
-        "minNdcX": -0.4172,
-        "maxNdcX": -0.2601,
-        "minNdcY": -0.711,
-        "maxNdcY": -0.6374,
-        "minPxX": 559.49,
-        "maxPxX": 710.29,
-        "minPxY": 884.22,
-        "maxPxY": 923.95
+        "minNdcX": -0.4187,
+        "maxNdcX": -0.2615,
+        "minNdcY": -0.7099,
+        "maxNdcY": -0.6365,
+        "minPxX": 558.05,
+        "maxPxX": 708.92,
+        "minPxY": 883.69,
+        "maxPxY": 923.32
       },
       {
         "x": 0.0,
         "y": -0.55,
+        "totalVertices": 1200,
+        "totalTriangles": 400,
+        "inViewportCount": 1200,
+        "clippedVertexCount": 0,
+        "inViewportRatio": 1,
+        "minNdcX": -0.069,
+        "maxNdcX": 0.0822,
+        "minNdcY": -0.5415,
+        "maxNdcY": -0.4765,
+        "minPxX": 893.78,
+        "maxPxX": 1038.91,
+        "minPxY": 797.33,
+        "maxPxY": 832.4
+      },
+      {
+        "x": 3.8,
+        "y": -0.55,
+        "totalVertices": 1200,
+        "totalTriangles": 400,
+        "inViewportCount": 1200,
+        "clippedVertexCount": 0,
+        "inViewportRatio": 1,
+        "minNdcX": 0.2753,
+        "maxNdcX": 0.4332,
+        "minNdcY": -0.7102,
+        "maxNdcY": -0.6368,
+        "minPxX": 1224.28,
+        "maxPxX": 1375.9,
+        "minPxY": 883.87,
+        "maxPxY": 923.5
+      },
+      {
+        "x": -3.8,
+        "y": 1.55,
+        "totalVertices": 1200,
+        "totalTriangles": 400,
+        "inViewportCount": 1200,
+        "clippedVertexCount": 0,
+        "inViewportRatio": 1,
+        "minNdcX": -0.4455,
+        "maxNdcX": -0.2909,
+        "minNdcY": -0.4508,
+        "maxNdcY": -0.3778,
+        "minPxX": 532.32,
+        "maxPxX": 680.71,
+        "minPxY": 744.02,
+        "maxPxY": 783.46
+      },
+      {
+        "x": 0.0,
+        "y": 1.55,
         "totalVertices": 1200,
         "totalTriangles": 400,
         "inViewportCount": 1200,
         "clippedVertexCount": 0,
         "inViewportRatio": 1,
         "minNdcX": -0.0676,
-        "maxNdcX": 0.0836,
-        "minNdcY": -0.5426,
-        "maxNdcY": -0.4777,
-        "minPxX": 895.11,
-        "maxPxX": 1040.25,
-        "minPxY": 797.97,
-        "maxPxY": 833.03
-      },
-      {
-        "x": 3.8,
-        "y": -0.55,
-        "totalVertices": 1200,
-        "totalTriangles": 400,
-        "inViewportCount": 1200,
-        "clippedVertexCount": 0,
-        "inViewportRatio": 1,
-        "minNdcX": 0.2768,
-        "maxNdcX": 0.4348,
-        "minNdcY": -0.7114,
-        "maxNdcY": -0.6379,
-        "minPxX": 1225.69,
-        "maxPxX": 1377.4,
-        "minPxY": 884.44,
-        "maxPxY": 924.16
-      },
-      {
-        "x": -3.8,
-        "y": 1.55,
-        "totalVertices": 1200,
-        "totalTriangles": 400,
-        "inViewportCount": 1200,
-        "clippedVertexCount": 0,
-        "inViewportRatio": 1,
-        "minNdcX": -0.444,
-        "maxNdcX": -0.2895,
-        "minNdcY": -0.4519,
-        "maxNdcY": -0.379,
-        "minPxX": 533.74,
-        "maxPxX": 682.05,
-        "minPxY": 744.67,
-        "maxPxY": 784.01
-      },
-      {
-        "x": 0.0,
-        "y": 1.55,
-        "totalVertices": 1200,
-        "totalTriangles": 400,
-        "inViewportCount": 1200,
-        "clippedVertexCount": 0,
-        "inViewportRatio": 1,
-        "minNdcX": -0.0662,
-        "maxNdcX": 0.0817,
-        "minNdcY": -0.2929,
-        "maxNdcY": -0.2166,
-        "minPxX": 896.41,
-        "maxPxX": 1038.45,
-        "minPxY": 656.97,
-        "maxPxY": 698.17
+        "maxNdcX": 0.0804,
+        "minNdcY": -0.2924,
+        "maxNdcY": -0.2155,
+        "minPxX": 895.12,
+        "maxPxX": 1037.15,
+        "minPxY": 656.36,
+        "maxPxY": 697.89
       },
       {
         "x": 3.8,
@@ -762,14 +762,14 @@
         "inViewportCount": 1200,
         "clippedVertexCount": 0,
         "inViewportRatio": 1,
-        "minNdcX": 0.3058,
-        "maxNdcX": 0.4612,
-        "minNdcY": -0.4514,
-        "maxNdcY": -0.3785,
-        "minPxX": 1253.54,
-        "maxPxX": 1402.78,
-        "minPxY": 744.41,
-        "maxPxY": 783.76
+        "minNdcX": 0.3043,
+        "maxNdcX": 0.4597,
+        "minNdcY": -0.4505,
+        "maxNdcY": -0.3774,
+        "minPxX": 1252.17,
+        "maxPxX": 1401.33,
+        "minPxY": 743.81,
+        "maxPxY": 783.25
       }
     ],
     "ultrawide_2560x1080": [
@@ -982,12 +982,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5591,
-        "maxNdcY": -0.4941,
+        "minNdcY": -0.559,
+        "maxNdcY": -0.494,
         "minPxX": 591.87,
         "maxPxX": 699.53,
-        "minPxY": 597.64,
-        "maxPxY": 623.66
+        "minPxY": 597.59,
+        "maxPxY": 623.61
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1020,12 +1020,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.559,
-        "maxNdcY": -0.494,
+        "minNdcY": -0.5589,
+        "maxNdcY": -0.4938,
         "minPxX": 591.87,
         "maxPxX": 699.53,
-        "minPxY": 597.59,
-        "maxPxY": 623.61
+        "minPxY": 597.54,
+        "maxPxY": 623.57
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1058,12 +1058,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5589,
-        "maxNdcY": -0.4938,
+        "minNdcY": -0.5588,
+        "maxNdcY": -0.4937,
         "minPxX": 591.87,
         "maxPxX": 699.53,
-        "minPxY": 597.54,
-        "maxPxY": 623.57
+        "minPxY": 597.49,
+        "maxPxY": 623.53
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1087,7 +1087,7 @@
       "pickupCollected": false,
       "hullBefore": 3,
       "hullAfter": 3,
-      "gapPxX": 55.89,
+      "gapPxX": 55.9,
       "shipBounds": {
         "totalVertices": 1200,
         "totalTriangles": 400,
@@ -1096,12 +1096,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5588,
-        "maxNdcY": -0.4937,
+        "minNdcY": -0.5587,
+        "maxNdcY": -0.4936,
         "minPxX": 591.87,
-        "maxPxX": 699.53,
-        "minPxY": 597.49,
-        "maxPxY": 623.53
+        "maxPxX": 699.52,
+        "minPxY": 597.46,
+        "maxPxY": 623.49
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1134,12 +1134,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5587,
-        "maxNdcY": -0.4936,
+        "minNdcY": -0.5586,
+        "maxNdcY": -0.4935,
         "minPxX": 591.87,
         "maxPxX": 699.52,
-        "minPxY": 597.46,
-        "maxPxY": 623.49
+        "minPxY": 597.4,
+        "maxPxY": 623.44
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1172,12 +1172,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5586,
-        "maxNdcY": -0.4935,
+        "minNdcY": -0.5585,
+        "maxNdcY": -0.4934,
         "minPxX": 591.87,
         "maxPxX": 699.52,
-        "minPxY": 597.4,
-        "maxPxY": 623.44
+        "minPxY": 597.35,
+        "maxPxY": 623.39
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1210,12 +1210,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5585,
-        "maxNdcY": -0.4934,
+        "minNdcY": -0.5584,
+        "maxNdcY": -0.4933,
         "minPxX": 591.87,
         "maxPxX": 699.52,
-        "minPxY": 597.35,
-        "maxPxY": 623.39
+        "minPxY": 597.33,
+        "maxPxY": 623.38
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1252,8 +1252,8 @@
         "maxNdcY": -0.4933,
         "minPxX": 591.87,
         "maxPxX": 699.52,
-        "minPxY": 597.33,
-        "maxPxY": 623.38
+        "minPxY": 597.31,
+        "maxPxY": 623.36
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1287,11 +1287,11 @@
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
         "minNdcY": -0.5584,
-        "maxNdcY": -0.4933,
+        "maxNdcY": -0.4932,
         "minPxX": 591.87,
         "maxPxX": 699.52,
-        "minPxY": 597.31,
-        "maxPxY": 623.36
+        "minPxY": 597.3,
+        "maxPxY": 623.35
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1324,12 +1324,12 @@
         "inViewportRatio": 1,
         "minNdcX": -0.0752,
         "maxNdcX": 0.093,
-        "minNdcY": -0.5584,
+        "minNdcY": -0.5583,
         "maxNdcY": -0.4932,
         "minPxX": 591.87,
         "maxPxX": 699.52,
-        "minPxY": 597.3,
-        "maxPxY": 623.35
+        "minPxY": 597.27,
+        "maxPxY": 623.32
       },
       "shardBounds": {
         "totalVertices": 24,
@@ -1477,22 +1477,22 @@
   },
   "perf": {
     "mobile_393x873": {
-      "rawDrawCalls": 24,
-      "glDrawElementsPerFrame": 343,
+      "rawDrawCalls": 23,
+      "glDrawElementsPerFrame": 345,
       "bufferBindsPerFrame": 13,
       "textureBindsPerFrame": 97,
-      "renderCpuMs": 3.2,
-      "uncappedRafMs": 1349.9,
-      "fps": 0
+      "renderCpuMs": 3.4,
+      "uncappedRafMs": 91.64,
+      "fps": 60
     },
     "desktop_1280x800": {
-      "rawDrawCalls": 2,
-      "glDrawElementsPerFrame": 376,
+      "rawDrawCalls": 4,
+      "glDrawElementsPerFrame": 381,
       "bufferBindsPerFrame": 17,
-      "textureBindsPerFrame": 101,
-      "renderCpuMs": 9.8,
-      "uncappedRafMs": 33.3,
-      "fps": 0
+      "textureBindsPerFrame": 105,
+      "renderCpuMs": 4.6,
+      "uncappedRafMs": 74.95,
+      "fps": 13
     },
     "wave0_baseline_draw_calls": 673
   }

@@ -439,9 +439,9 @@ def main() -> int:
         )
 
         # 4. Verify W1-D: WebGL Draw-Call & State-Bind Reduction Telemetry
-        perf_mobile = ws.eval_js(
-            "window.__starfallWave1.preparePlayState(); window.__starfallWave1.stepSimulation(30, 0.016).perf"
-        )
+        ws.eval_js("window.__starfallWave1.preparePlayState();")
+        time.sleep(0.5)
+        perf_mobile = ws.eval_js("window.__starfallWave1.getPerfSnapshot()")
         ws.call(
             "Emulation.setDeviceMetricsOverride",
             {"width": 1280, "height": 800, "deviceScaleFactor": 1.0, "mobile": False},
@@ -450,9 +450,9 @@ def main() -> int:
         ws.call("Page.navigate", {"url": f"http://127.0.0.1:{HTTP_PORT}/?control=a"})
         time.sleep(0.4)
         wait_for_ready()
-        perf_desktop = ws.eval_js(
-            "window.__starfallWave1.preparePlayState(); window.__starfallWave1.stepSimulation(30, 0.016).perf"
-        )
+        ws.eval_js("window.__starfallWave1.preparePlayState();")
+        time.sleep(0.5)
+        perf_desktop = ws.eval_js("window.__starfallWave1.getPerfSnapshot()")
         report["perf"] = {"mobile_393x873": perf_mobile, "desktop_1280x800": perf_desktop, "wave0_baseline_draw_calls": 673}
         # W1-D is a provisional optimisation TARGET (not a hard gate W1-HG1..HG6): reported, never silently passed.
         draws = perf_mobile["glDrawElementsPerFrame"]
