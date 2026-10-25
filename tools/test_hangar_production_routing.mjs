@@ -13,7 +13,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const PORT = 5199;
 const BASE_URL = `http://127.0.0.1:${PORT}/`;
-const EDGE_PATH = "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe";
+const EDGE_PATH = process.platform === "win32"
+  ? "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"
+  : (fs.existsSync("/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe")
+      ? "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+      : "msedge");
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
