@@ -117,11 +117,23 @@
     typeof window !== "undefined" &&
     window.location &&
     new URLSearchParams(window.location.search).get("strictMobile") === "1";
+  function isLocalDiagHost(hostname) {
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      hostname === "[::1]"
+    );
+  }
   const DIAG_PARAM = (typeof window !== "undefined" && window.location && window.location.search)
     ? new URLSearchParams(window.location.search).get("diag")
     : null;
-  const DIAG_ENABLED = DIAG_PARAM === "1";
+  const DIAG_ENABLED =
+    DIAG_PARAM === "1" &&
+    typeof window !== "undefined" &&
+    Boolean(window.location && isLocalDiagHost(window.location.hostname));
   let diagSeedState = null;
+  let diagGlDrawElementsCount = 0;
 
   if (!gl) {
     hud.statusTitle.textContent = "WebGL unavailable";
@@ -1487,7 +1499,7 @@
   let TOUCH_FULL_RANGE_PX = 70;
   const TOUCH_TAP_MAX_PX = 14;
   const TOUCH_TAP_MAX_MS = 260;
-  const isTouchCapable = (typeof window !== "undefined") && (
+  let isTouchCapable = (typeof window !== "undefined") && (
     "ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
   );
   const supportsPointerEvents = (typeof window !== "undefined") && "PointerEvent" in window;
@@ -5215,6 +5227,9 @@
     gl.uniform1f(locations.pulse, options.pulse ?? 0);
     gl.bindTexture(gl.TEXTURE_2D, options.texture);
     gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
+    if (DIAG_ENABLED) {
+      diagGlDrawElementsCount++;
+    }
   }
 
   function renderScene(alphaTime) {
@@ -6158,8 +6173,14 @@
   const diagContactLog = [];
   const diagPreObjects = [];
   const diagFrameTimesMs = [];
+  const diagRawRafIntervalsMs = [];
+  const diagCpuRenderTimesMs = [];
   let diagLastDrawCalls = 0;
   let diagLastFrameDrawCalls = 0;
+  let diagLastGlDrawElements = 0;
+  let diagLastFrameGlDrawCalls = 0;
+  let diagLastRawRafMs = 0;
+  let diagCpuStartMs = 0;
 
   function diagProjectWorldPoint(wx, wy, wz) {
     const cssSize = getViewportCssSize();
@@ -6476,6 +6497,7 @@
   function diagPreUpdate() {
     diagPreObjects.length = 0;
     diagLastDrawCalls = state.rawDrawCalls;
+    diagLastGlDrawElements = diagGlDrawElementsCount;
     for (let i = 0; i < objects.length; i++) {
       const o = objects[i];
       if (Math.abs(o.z - player.z) < 4.5) {
@@ -6498,12 +6520,25 @@
     }
   }
 
-  function diagPostFrame(dt, seconds) {
+  function diagPostFrame(dt, seconds, rawRafIntervalMs = 0, cpuRenderMs = 0) {
     diagLastFrameDrawCalls = state.rawDrawCalls - diagLastDrawCalls;
+    diagLastFrameGlDrawCalls = diagGlDrawElementsCount - diagLastGlDrawElements;
     if (dt > 0) {
       diagFrameTimesMs.push(Number((dt * 1000).toFixed(3)));
       if (diagFrameTimesMs.length > 240) {
         diagFrameTimesMs.shift();
+      }
+    }
+    if (rawRafIntervalMs > 0) {
+      diagRawRafIntervalsMs.push(Number(rawRafIntervalMs.toFixed(3)));
+      if (diagRawRafIntervalsMs.length > 240) {
+        diagRawRafIntervalsMs.shift();
+      }
+    }
+    if (cpuRenderMs >= 0) {
+      diagCpuRenderTimesMs.push(Number(cpuRenderMs.toFixed(3)));
+      if (diagCpuRenderTimesMs.length > 240) {
+        diagCpuRenderTimesMs.shift();
       }
     }
 
@@ -6759,6 +6794,27 @@
         diagSeedState = typeof seed === "number" ? (seed | 0) : null;
         return diagSeedState;
       },
+      setTouchCapable(enabled) {
+        isTouchCapable = Boolean(enabled);
+        return isTouchCapable;
+      },
+      getInputState() {
+        return {
+          isTouchCapable,
+          activePointerId,
+          activePointerType,
+          touchStartX: Number(touchStartX.toFixed(2)),
+          touchStartY: Number(touchStartY.toFixed(2)),
+          touchAxis: { x: Number(touchAxis.x.toFixed(4)), y: Number(touchAxis.y.toFixed(4)) },
+          targetLane: player.targetLane,
+          targetX: Number(player.targetX.toFixed(4)),
+          targetY: Number(player.targetY.toFixed(4)),
+          playerX: Number(player.x.toFixed(4)),
+          playerY: Number(player.y.toFixed(4)),
+          activeKeys: Array.from(keys)
+        };
+      },
+      laneFromClientX,
       setManualStep(enabled) {
         diagManualStep = Boolean(enabled);
         return diagManualStep;
@@ -6779,23 +6835,55 @@
       computeShipBounds: diagComputeShipBounds,
       computeObjectBounds: diagComputeObjectBounds,
       evaluatePickupReachability: diagEvaluatePickupReachability,
-      generatePickupGridAudit(seed = 20261025, sampleCount = 200) {
+      generatePickupGridAudit(seed = 20261025, sampleCount = 600) {
         const prevSeed = diagSeedState;
         diagSeedState = seed | 0;
         const samples = [];
         for (let i = 0; i < sampleCount; i++) {
-          const isCrystal = i % 3 !== 0;
-          const x = isCrystal ? randomRange(-3.8, 3.8) : randomRange(-3.2, 3.2);
-          const y = isCrystal ? randomRange(-2.0, 1.6) : randomRange(-1.7, 1.3);
-          const size = isCrystal ? randomRange(0.55, 0.85) : randomRange(0.38, 0.55);
-          const radius = isCrystal ? size * 0.68 : size * 0.72;
+          // Match spawnObject() class definitions:
+          // crystal: x in [-3.8, 3.8], y in [-2.0, 1.6], size in [0.55, 0.85], r = size * 0.68
+          // powerOrb: x in [-3.2, 3.2], y in [-1.7, 1.3], size in [0.38, 0.55], r = size * 0.72
+          // buffOrb: x in [-3.2, 3.2], y in [-1.7, 1.3], size in [0.36, 0.52], r = size * 0.72
+          const mod = i % 6;
+          const kind = mod < 4 ? "crystal" : mod === 4 ? "powerOrb" : "buffOrb";
+          const x = kind === "crystal" ? randomRange(-3.8, 3.8) : randomRange(-3.2, 3.2);
+          const y = kind === "crystal" ? randomRange(-2.0, 1.6) : randomRange(-1.7, 1.3);
+          const size =
+            kind === "crystal"
+              ? randomRange(0.55, 0.85)
+              : kind === "powerOrb"
+              ? randomRange(0.38, 0.55)
+              : randomRange(0.36, 0.52);
+          const radius = kind === "crystal" ? size * 0.68 : size * 0.72;
           samples.push({
             index: i,
-            kind: isCrystal ? "crystal" : "orb",
+            kind,
+            size: Number(size.toFixed(4)),
             ...diagEvaluatePickupReachability(x, y, radius)
           });
         }
         diagSeedState = prevSeed;
+        const summarizeGroup = (arr) => {
+          const total = arr.length || 1;
+          const mStat = arr.filter((s) => s.reachableMobileStationary).length;
+          const mLerp = arr.filter((s) => s.reachableMobileLerp).length;
+          const dStat = arr.filter((s) => s.reachableDesktopStationary).length;
+          const dLerp = arr.filter((s) => s.reachableDesktopLerp).length;
+          const p2d = arr.filter((s) => s.reachableProposed2D).length;
+          return {
+            count: arr.length,
+            mobileStationaryReachable: mStat,
+            mobileStationaryPct: Number(((mStat / total) * 100).toFixed(2)),
+            mobileLerpReachable: mLerp,
+            mobileLerpPct: Number(((mLerp / total) * 100).toFixed(2)),
+            desktopStationaryReachable: dStat,
+            desktopStationaryPct: Number(((dStat / total) * 100).toFixed(2)),
+            desktopLerpReachable: dLerp,
+            desktopLerpPct: Number(((dLerp / total) * 100).toFixed(2)),
+            proposed2DGeometricReachable: p2d,
+            proposed2DGeometricPct: Number(((p2d / total) * 100).toFixed(2))
+          };
+        };
         const summary = {
           seed,
           sampleCount,
@@ -6804,6 +6892,12 @@
           desktopStationaryReachable: samples.filter((s) => s.reachableDesktopStationary).length,
           desktopLerpReachable: samples.filter((s) => s.reachableDesktopLerp).length,
           proposed2DReachable: samples.filter((s) => s.reachableProposed2D).length,
+          byClass: {
+            crystal: summarizeGroup(samples.filter((s) => s.kind === "crystal")),
+            powerOrb: summarizeGroup(samples.filter((s) => s.kind === "powerOrb")),
+            buffOrb: summarizeGroup(samples.filter((s) => s.kind === "buffOrb")),
+            allPickups: summarizeGroup(samples)
+          },
           byFailureReasonMobile: {}
         };
         samples.forEach((s) => {
@@ -6820,7 +6914,13 @@
       },
       spawnTestObject(spec) {
         const size = spec.size ?? (spec.type === "crystal" ? 0.7 : 1.15);
-        const radius = spec.radius ?? (spec.type === "crystal" ? size * 0.68 : size * 0.82);
+        const radius =
+          spec.radius ??
+          (spec.type === "crystal"
+            ? size * 0.68
+            : spec.type === "powerOrb" || spec.type === "buffOrb"
+            ? size * 0.72
+            : size * 0.82);
         const obj = {
           type: spec.type || "debris",
           x: spec.x ?? 0,
@@ -6867,8 +6967,31 @@
         if (typeof patch.spawnTimer === "number") state.spawnTimer = patch.spawnTimer;
         if (typeof patch.dash === "number") player.dash = patch.dash;
         if (patch.settleCamera) {
+          resizeCanvas();
+          const aspect = canvas.width / Math.max(1, canvas.height);
+          const frameProfile = getFrameProfile(aspect);
+          const follow = getCameraFollow();
+          const viewBiasY = frameProfile.viewBiasY;
+          const camTrackX = isTouchCapable ? 0.34 : Math.max(follow.x * 0.72, 0.06);
+          const bendHeading = state.mode === "playing" ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, state.time) : 0;
+          const targetViewYaw = clamp(
+            bendHeading * (isTouchCapable ? 3.5 : 3.1),
+            -CORRIDOR_VIEW_YAW_MAX,
+            CORRIDOR_VIEW_YAW_MAX
+          );
+          const targetCamX = -player.x * camTrackX - targetViewYaw * 0.68;
+          const targetCamY = -player.y * follow.y + viewBiasY + Math.abs(targetViewYaw) * 0.12;
+          const targetViewPitch =
+            (state.mode === "ready" ? frameProfile.readyPitch : frameProfile.playPitch) +
+            Math.abs(targetViewYaw) * 0.22;
+          const camLerp = 0.1;
           for (let i = 0; i < 45; i++) {
-            renderScene(state.time);
+            state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
+            state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
+            state.viewPitch += (targetViewPitch - state.viewPitch) * camLerp;
+            state.viewYaw += (targetViewYaw - state.viewYaw) * Math.min(1, camLerp * 1.15);
+            const targetRoll = -player.x * 0.065 - state.viewYaw * 0.78;
+            state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
           }
         }
         syncShellPlayState();
@@ -6879,6 +7002,7 @@
       setupScenario(name) {
         const api = window.__starfallWave0;
         api.setManualStep(true);
+        api.setTouchCapable(name === "mobile_reachability");
         api.clearObjects();
         api.clearContactLog();
         if (name === "mobile_reachability") {
@@ -6896,16 +7020,61 @@
             spawnTimer: 99,
             settleCamera: true
           });
-          api.spawnTestObject({ type: "crystal", x: 0.0, y: -0.68, z: -13.0, size: 0.82, radius: 0.82 * 0.58 });
-          api.spawnTestObject({ type: "crystal", x: 1.02, y: -0.68, z: -13.0, size: 0.84, radius: 0.84 * 0.58 });
-          api.spawnTestObject({ type: "crystal", x: 1.10, y: 0.22, z: -12.5, size: 0.80, radius: 0.80 * 0.58 });
-          api.spawnTestObject({ type: "crystal", x: -0.55, y: 1.22, z: -12.0, size: 0.86, radius: 0.86 * 0.58 });
-          api.spawnTestObject({ type: "powerOrb", x: 0.55, y: 1.18, z: -12.0, size: 0.78, radius: 0.78 * 0.78 });
+          // Exact spawnObject() sizes and radius multipliers (crystal: size in [0.55, 0.85], r = size * 0.68; powerOrb: size in [0.38, 0.55], r = size * 0.72)
+          api.spawnTestObject({ type: "crystal", x: 0.0, y: -0.68, z: -13.0, size: 0.72, radius: 0.72 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: 1.02, y: -0.68, z: -13.0, size: 0.76, radius: 0.76 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: 1.10, y: 0.22, z: -12.5, size: 0.65, radius: 0.65 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: -0.55, y: 1.22, z: -12.0, size: 0.78, radius: 0.78 * 0.68 });
+          api.spawnTestObject({ type: "powerOrb", x: 0.55, y: 1.18, z: -12.0, size: 0.48, radius: 0.48 * 0.72 });
           api.setOverlay(true, {
             showReachability: true,
             bannerTitle: "WAVE 0 · P0-A/B: MOBILE PORTRAIT REACHABILITY (y LOCKED AT -0.68m)"
           });
         } else if (name === "collision_phantom_hit") {
+          // Production-valid debris size (size = 1.25 in [0.85, 1.35], radius = 1.25 * 0.82 = 1.025m) with representative 3D rotation
+          api.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: -0.45,
+            z: -7.8,
+            targetX: 0,
+            targetY: -0.45,
+            targetLane: 0,
+            speed: 18,
+            time: 0,
+            hull: 3,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          api.spawnTestObject({
+            type: "debris",
+            x: 1.48,
+            y: -0.18,
+            z: -8.05,
+            size: 1.25,
+            radius: 1.25 * 0.82,
+            rotX: 0.42,
+            rotY: 0.88,
+            rotZ: 0.35
+          });
+          api.stepFrames(1, 0.016);
+          api.spawnTestObject({
+            type: "debris",
+            x: 1.48,
+            y: -0.18,
+            z: -7.80,
+            size: 1.25,
+            radius: 1.25 * 0.82,
+            rotX: 0.42,
+            rotY: 0.88,
+            rotZ: 0.35
+          });
+          api.setOverlay(true, {
+            showReachability: false,
+            bannerTitle: "WAVE 0 · P0-C: PROD DEBRIS PHANTOM HIT (size=1.25m, rot=[0.42,0.88,0.35])"
+          });
+        } else if (name === "collision_phantom_hit_synthetic_control") {
+          // Preserved synthetic diagnostic control (size = 1.42, rot = [0, 0, 0])
           api.setPlayerState({
             mode: "playing",
             x: 0,
@@ -6925,9 +7094,10 @@
           api.spawnTestObject({ type: "debris", x: 1.58, y: -0.15, z: -7.80, size: 1.42, radius: 1.42 * 0.82 });
           api.setOverlay(true, {
             showReachability: false,
-            bannerTitle: "WAVE 0 · P0-C: PHANTOM EDGE COLLISION (3D Mesh Gap vs Sphere Overlap)"
+            bannerTitle: "WAVE 0 · P0-C CONTROL: SYNTHETIC EDGE COLLISION (size=1.42m, rot=[0,0,0])"
           });
         } else if (name === "collision_z_offset") {
+          // Production-valid debris size (size = 1.28 in [0.85, 1.35], radius = 1.28 * 0.82 = 1.0496m) with representative 3D rotation
           api.setPlayerState({
             mode: "playing",
             x: -0.45,
@@ -6942,9 +7112,29 @@
             spawnTimer: 99,
             settleCamera: true
           });
-          api.spawnTestObject({ type: "debris", x: 0.65, y: -0.35, z: -9.10, size: 1.38, radius: 1.38 * 0.82 });
+          api.spawnTestObject({
+            type: "debris",
+            x: 0.58,
+            y: -0.35,
+            z: -9.10,
+            size: 1.28,
+            radius: 1.28 * 0.82,
+            rotX: 0.30,
+            rotY: 0.75,
+            rotZ: 0.20
+          });
           api.stepFrames(1, 0.016);
-          api.spawnTestObject({ type: "debris", x: 0.65, y: -0.35, z: -8.85, size: 1.38, radius: 1.38 * 0.82 });
+          api.spawnTestObject({
+            type: "debris",
+            x: 0.58,
+            y: -0.35,
+            z: -8.85,
+            size: 1.28,
+            radius: 1.28 * 0.82,
+            rotX: 0.30,
+            rotY: 0.75,
+            rotZ: 0.20
+          });
           api.setOverlay(true, {
             showReachability: false,
             bannerTitle: "WAVE 0 · P0-C: Z-AXIS LEAD OFFSET (Collider z=-7.80 vs Rendered z=-7.35)"
@@ -6964,8 +7154,8 @@
             spawnTimer: 99,
             settleCamera: true
           });
-          api.spawnTestObject({ type: "crystal", x: -1.2, y: -0.45, z: -14.0, size: 0.80, radius: 0.80 * 0.58 });
-          api.spawnTestObject({ type: "crystal", x: 1.2, y: 0.25, z: -16.0, size: 0.80, radius: 0.80 * 0.58 });
+          api.spawnTestObject({ type: "crystal", x: -1.2, y: -0.45, z: -14.0, size: 0.75, radius: 0.75 * 0.68 });
+          api.spawnTestObject({ type: "crystal", x: 1.2, y: 0.25, z: -16.0, size: 0.75, radius: 0.75 * 0.68 });
           api.setOverlay(true, {
             showReachability: false,
             bannerTitle: "WAVE 0 · P0-D: DESKTOP VERTICAL STEER BOTTOM CLIPPING (y=-2.15, NDC_y < -1.0)"
@@ -6978,11 +7168,16 @@
       stepFrames(count = 1, dt = 1 / 60) {
         const snapshots = [];
         for (let i = 0; i < count; i++) {
+          const shouldRender = i === count - 1;
+          const t0 = performance.now();
           diagPreUpdate();
           updateGame(dt);
           updatePresentation(dt);
-          renderScene(state.time);
-          diagPostFrame(dt, state.time);
+          if (shouldRender) {
+            renderScene(state.time);
+          }
+          const cpuMs = performance.now() - t0;
+          diagPostFrame(dt, state.time, 0, shouldRender ? cpuMs : -1);
           snapshots.push({
             step: i,
             time: Number(state.time.toFixed(4)),
@@ -7001,6 +7196,13 @@
       clearContactLog() {
         diagContactLog.length = 0;
         return 0;
+      },
+      resetPerfSamples() {
+        diagRawRafIntervalsMs.length = 0;
+        diagCpuRenderTimesMs.length = 0;
+        diagFrameTimesMs.length = 0;
+        diagLastRawRafMs = 0;
+        return true;
       },
       getViewportTelemetry() {
         const vv = window.visualViewport;
@@ -7039,10 +7241,24 @@
         };
       },
       getPerfSummary() {
-        const sorted = diagFrameTimesMs.slice().sort((a, b) => a - b);
-        const n = sorted.length;
-        const pct = (p) => (n ? sorted[Math.min(n - 1, Math.floor(n * p))] : 0);
-        const avgMs = n ? sorted.reduce((a, b) => a + b, 0) / n : 0;
+        const computeStats = (arr) => {
+          const sorted = arr.slice().sort((a, b) => a - b);
+          const n = sorted.length;
+          const pct = (p) => (n ? sorted[Math.min(n - 1, Math.floor(n * p))] : 0);
+          const avg = n ? Number((sorted.reduce((a, b) => a + b, 0) / n).toFixed(3)) : 0;
+          return {
+            sampleCount: n,
+            avgMs: avg,
+            minMs: n ? sorted[0] : 0,
+            p50Ms: pct(0.5),
+            p95Ms: pct(0.95),
+            p99Ms: pct(0.99),
+            maxMs: n ? sorted[n - 1] : 0
+          };
+        };
+        const rawRaf = computeStats(diagRawRafIntervalsMs);
+        const cpuRender = computeStats(diagCpuRenderTimesMs);
+        const cappedSim = computeStats(diagFrameTimesMs);
         const mem = performance && performance.memory
           ? {
               usedJSHeapSize: performance.memory.usedJSHeapSize,
@@ -7051,14 +7267,27 @@
             }
           : null;
         return {
-          sampleCount: n,
-          avgFrameMs: Number(avgMs.toFixed(3)),
-          approxFps: avgMs > 0 ? Number((1000 / avgMs).toFixed(1)) : 0,
-          p50FrameMs: pct(0.5),
-          p95FrameMs: pct(0.95),
-          p99FrameMs: pct(0.99),
-          maxFrameMs: n ? sorted[n - 1] : 0,
-          drawCallsPerFrame: diagLastFrameDrawCalls,
+          evidenceCategory: "headless_desktop_webgl",
+          uncappedRafIntervalMs: {
+            ...rawRaf,
+            approxFps: rawRaf.avgMs > 0 ? Number((1000 / rawRaf.avgMs).toFixed(1)) : 0
+          },
+          uncappedCpuRenderTimeMs: cpuRender,
+          cappedSimDeltaReferenceMs: {
+            note: "Reference only: clamped by Math.min(0.033, dt) in frame(); not used as frame-time evidence",
+            ...cappedSim
+          },
+          sampleCount: rawRaf.sampleCount || cpuRender.sampleCount,
+          avgFrameMs: rawRaf.sampleCount ? rawRaf.avgMs : cpuRender.avgMs,
+          approxFps: rawRaf.avgMs > 0 ? Number((1000 / rawRaf.avgMs).toFixed(1)) : 0,
+          p50FrameMs: rawRaf.sampleCount ? rawRaf.p50Ms : cpuRender.p50Ms,
+          p95FrameMs: rawRaf.sampleCount ? rawRaf.p95Ms : cpuRender.p95Ms,
+          p99FrameMs: rawRaf.sampleCount ? rawRaf.p99Ms : cpuRender.p99Ms,
+          maxFrameMs: rawRaf.sampleCount ? rawRaf.maxMs : cpuRender.maxMs,
+          glDrawCallsPerFrame: diagLastFrameGlDrawCalls,
+          scenePassesPerFrame: diagLastFrameDrawCalls,
+          drawCallsPerFrame: diagLastFrameGlDrawCalls,
+          totalGlDrawElementsCalls: diagGlDrawElementsCount,
           totalRawDrawCalls: state.rawDrawCalls,
           canvasBuffer: { width: canvas.width, height: canvas.height },
           dpr: window.devicePixelRatio || 1,
@@ -7096,6 +7325,11 @@
   }
 
   function frame(time) {
+    const rawRafIntervalMs =
+      DIAG_ENABLED && diagLastRawRafMs > 0 ? time - diagLastRawRafMs : 0;
+    if (DIAG_ENABLED) {
+      diagLastRawRafMs = time;
+    }
     const seconds = time * 0.001;
     const dt = Math.min(0.033, seconds - (state.lastTime || seconds));
     state.lastTime = seconds;
@@ -7123,14 +7357,11 @@
     }
     state.renderSuspended = false;
     if (DIAG_ENABLED && diagManualStep) {
-      renderScene(state.time);
-      if (diagOverlayEnabled) {
-        diagRenderOverlay(state.time);
-      }
       requestAnimationFrame(frame);
       return;
     }
     if (DIAG_ENABLED) {
+      diagCpuStartMs = performance.now();
       diagPreUpdate();
     }
     if (state.mode === "revive") {
@@ -7143,7 +7374,8 @@
     updatePresentation(dt);
     renderScene(seconds);
     if (DIAG_ENABLED) {
-      diagPostFrame(dt, seconds);
+      const cpuRenderMs = performance.now() - diagCpuStartMs;
+      diagPostFrame(dt, seconds, rawRafIntervalMs, cpuRenderMs);
     }
     requestAnimationFrame(frame);
   }

@@ -9,11 +9,29 @@ import urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RECEIPT_FILE = os.path.join(ROOT, "Structure", "wave0_diagnostic_receipt.json")
 EVIDENCE_DIR = os.path.join(ROOT, "Structure", "evidence", "wave0")
+LINUX_CHROME_BIN = "/home/rkhol/.cache/puppeteer/chrome/linux-156.0.8078.47/chrome-linux64/chrome"
 EDGE_BIN = "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-WIN_TEMP_DIR_WSL = "/mnt/c/Users/rkhol/AppData/Local/Temp"
-WIN_TEMP_DIR_WIN = r"C:\Users\rkhol\AppData\Local\Temp"
+BROWSER_BIN = LINUX_CHROME_BIN if os.path.exists(LINUX_CHROME_BIN) else EDGE_BIN
 PORT = 8799
-CAMPAIGN_URL = f"http://localhost:{PORT}/tools/test_wave0_in_browser.html"
+CAMPAIGN_URL = f"http://127.0.0.1:{PORT}/tools/test_wave0_in_browser.html"
+
+def kill_headless_edge():
+    if BROWSER_BIN == LINUX_CHROME_BIN:
+        return
+    try:
+        subprocess.run(
+            [
+                "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+                "-NoProfile",
+                "-Command",
+                "Get-CimInstance Win32_Process -Filter \"Name='msedge.exe' AND CommandLine LIKE '%--headless%'\" | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=8,
+        )
+    except Exception:
+        pass
 
 EXPECTED_SCREENSHOTS = [
     "wave0_mobile_portrait_reachability.png",
@@ -34,8 +52,6 @@ def ensure_server():
     server_proc = subprocess.Popen(
         [sys.executable, os.path.join(ROOT, "tools", "serve_hangar.py"), str(PORT)],
         cwd=ROOT,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
     )
     for _ in range(25):
         time.sleep(0.15)
@@ -62,23 +78,38 @@ def main():
             except Exception:
                 pass
 
+        kill_headless_edge()
+
         cmd = [
-            EDGE_BIN,
+            BROWSER_BIN,
             "--headless=new",
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
             "--no-first-run",
             "--no-default-browser-check",
+            "--disable-background-timer-throttling",
+            "--disable-renderer-backgrounding",
+            "--disable-backgrounding-occluded-windows",
+            "--use-gl=angle",
+            "--use-angle=swiftshader-webgl",
+            "--enable-unsafe-swiftshader",
             "--enable-webgl",
             "--ignore-gpu-blocklist",
             "--force-device-scale-factor=1",
-            "--window-size=2640,1200",
+            "--window-size=1600,1000",
             CAMPAIGN_URL,
         ]
-        print("\n[Edge Launch] Executing Wave 0 multi-viewport, collision & screenshot campaign...")
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        env = os.environ.copy()
+        chrome_lib_dir = "/home/rkhol/.cache/chrome-libs/root/usr/lib/x86_64-linux-gnu"
+        if os.path.isdir(chrome_lib_dir):
+            prev_ld = env.get("LD_LIBRARY_PATH", "")
+            env["LD_LIBRARY_PATH"] = f"{chrome_lib_dir}:{prev_ld}" if prev_ld else chrome_lib_dir
+        print(f"\n[Browser Launch: {os.path.basename(BROWSER_BIN)}] Executing Wave 0 multi-viewport, collision & screenshot campaign...")
+        proc = subprocess.Popen(cmd, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         receipt = None
         start_time = time.time()
         try:
-            while time.time() - start_time < 45:
+            while time.time() - start_time < 75:
                 if os.path.exists(RECEIPT_FILE):
                     try:
                         with open(RECEIPT_FILE, "r", encoding="utf-8") as f:
@@ -94,6 +125,7 @@ def main():
                 proc.kill()
             except Exception:
                 pass
+            kill_headless_edge()
 
         if not receipt:
             print("[FAIL] Timed out waiting for Wave 0 browser diagnostic receipt.")

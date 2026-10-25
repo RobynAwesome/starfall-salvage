@@ -21,7 +21,31 @@ class HangarHandler(SimpleHTTPRequestHandler):
         self.send_response(204)
         self.end_headers()
 
+    def _is_local_diagnostic_request(self):
+        client_ip = self.client_address[0] if self.client_address else ""
+        is_loopback_or_wsl_host = (
+            client_ip in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+            or client_ip.startswith("172.")
+            or client_ip.startswith("::ffff:172.")
+        )
+        if not is_loopback_or_wsl_host:
+            return False
+        if self.headers.get("X-Simulated-Public-Origin") == "1":
+            return False
+        host_hdr = (self.headers.get("Host") or "").split(":")[0].strip().lower()
+        if host_hdr and host_hdr not in ("localhost", "127.0.0.1", "::1", "[::1]"):
+            return False
+        return True
+
     def do_POST(self):
+        if self.path in ("/api/save_screenshot", "/api/record_journey", "/api/record_upgrade", "/api/record_wave0"):
+            if not self._is_local_diagnostic_request():
+                print(f"[403 FORBIDDEN] Non-local diagnostic write blocked: {self.path}", flush=True)
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"error": "Diagnostic test endpoints are restricted to local loopback only"}\n')
+                return
         if self.path == "/api/save_screenshot":
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(content_length).decode("utf-8")
@@ -92,7 +116,8 @@ class HangarHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8799
-    server = ThreadingHTTPServer(("0.0.0.0", port), HangarHandler)
-    print(f"Threading HTTP Server running on 0.0.0.0:{port} in {os.getcwd()}", flush=True)
+    bind_host = os.environ.get("STARFALL_TEST_BIND_HOST", "0.0.0.0")
+    server = ThreadingHTTPServer((bind_host, port), HangarHandler)
+    print(f"Threading HTTP Server running on {bind_host}:{port} in {os.getcwd()}", flush=True)
     server.serve_forever()
 

@@ -1,6 +1,7 @@
 // tools/test_gameplay_wave0_negative_control.mjs
 // Proves that tools/test_gameplay_wave0_diagnostics.mjs actually executes test predicates
 // and reliably exits with non-zero code on failing predicates, unreachable pickup claims,
+// public-origin diagnostic activation claims, 100% geometric==timed collection claims,
 // and thrown exceptions.
 
 import { spawnSync } from "node:child_process";
@@ -46,6 +47,20 @@ if (!output.includes("[FAIL] Negative control: elevated crystal (y=+1.20) claime
   console.log("[PASS] Harness correctly evaluated and rejected unreachable high-Y crystal claim");
 }
 
+if (!output.includes("[FAIL] Negative control: public production hostname claimed eligible for ?diag=1 must fail")) {
+  console.error("[FAIL] Missing public-origin production guard negative control failure message");
+  ok = false;
+} else {
+  console.log("[PASS] Harness correctly evaluated and rejected public-origin ?diag=1 eligibility claim");
+}
+
+if (!output.includes("[FAIL] Negative control: claiming 100% static 2D geometric coverage equals 100% real-time timed collection must fail")) {
+  console.error("[FAIL] Missing geometric-vs-timed collection negative control failure message");
+  ok = false;
+} else {
+  console.log("[PASS] Harness correctly evaluated and rejected 100% geometric == 100% timed collection claim");
+}
+
 if (!output.includes("[FAIL] Negative control: throwing predicate must fail with captured exception")) {
   console.error("[FAIL] Missing throwing-predicate failure message");
   ok = false;
@@ -55,7 +70,7 @@ if (!output.includes("[FAIL] Negative control: throwing predicate must fail with
 
 console.log("\n================================================================================");
 if (ok) {
-  console.log("VERDICT: PASS — Wave 0 test harness negative control successfully proven.");
+  console.log("VERDICT: PASS — Wave 0 test harness negative control successfully proven (5/5 controls).");
 } else {
   console.error("VERDICT: FAIL — Wave 0 test harness negative control validation failed.");
 }
