@@ -1,12 +1,22 @@
 # Now
 
-## Current branch truth
+## Current branch truth (2026-10-25)
 
-- Branch: `codex/starfall-mobile-weapon-ecosystem`
-- Canonical promoted build marker: `20260523-screen-fill-frame`
-- Production stays on the last pushed branch/main state until a new commit is merged
+- Merged branch: `fix/mobile-sovereign-hangar-framing` merged to `main` via PR #13 (`8df8b320dccae9f890f23e05c4542fdd86236269`)
+- Canonical promoted build marker: `20261022-sovereign-hangar-mki-rc2`
+- Production HEAD observed: `128dca4bb1e092b9a1aaa904d38bc9d95771d8fd` (Vercel production READY)
+- Sovereign Hangar RC2 implementation sprint: **CLOSED** at owner direction
+- Next mission: **Gameplay discovery and evaluation** (awaiting owner diagnostic assessment)
 
-## Current watch
+## Sovereign Hangar sprint close & evidence
+
+- Owner physical mobile testing confirmed satisfaction ("I liked it"); PR #13 merged to `main`.
+- Bounded scope frozen: interactive stations, loadout customization, and shop parked for future epochs.
+- Retrospective recorded at `../2026-10-25 - Sovereign Hangar RC2 Sprint Close Retrospective.md`.
+- Persistent cache upgrade verified: `../release_upgrade_receipt.json` (RC1 purged, RC2 active).
+- Player journey verified: `../journey_interaction_receipt.json` (13 passed, 0 failed).
+
+## Preserved historical watch (2026-05-23)
 
 - Promoted frame proof exists at `C:\Users\rkhol\AppData\Local\Temp\starfall-audit-20260523-screen-fill-frame-r3\report.json`.
 - The branch truth now includes the screen-fill frame pass, but mobile still has room for stronger close salvage silhouettes.

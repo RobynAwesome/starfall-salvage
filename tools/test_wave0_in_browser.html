@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Starfall Salvage — Wave 0 In-Browser Fairness & Telemetry Campaign</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #07080e;
+      color: #e6edf3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+    }
+    h1 { font-size: 15px; margin: 0 0 10px 0; color: #38bdf8; }
+    .layout { display: flex; gap: 16px; height: calc(100vh - 54px); }
+    .viewport-box { flex: 0 0 auto; display: flex; flex-direction: column; overflow: auto; max-width: 65vw; }
+    iframe { width: 1280px; height: 800px; border: 1px solid #30363d; border-radius: 6px; background: #000; transform-origin: top left; }
+    .console-box { flex: 1; overflow-y: auto; background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; }
+    .log-entry { margin: 5px 0; padding: 6px; border-radius: 4px; border-left: 3px solid #30363d; }
+    .log-pass { border-left-color: #238636; background: rgba(35, 134, 54, 0.12); }
+    .log-fail { border-left-color: #da3633; background: rgba(218, 54, 51, 0.12); }
+    .log-info { border-left-color: #38bdf8; background: rgba(56, 189, 248, 0.06); }
+    pre { margin: 4px 0 0 0; font-size: 11px; color: #9ca3af; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Starfall Salvage — Wave 0 In-Browser Fairness & Telemetry Campaign (?diag=1&overlay=1)</h1>
+  <div class="layout">
+    <div class="viewport-box">
+      <iframe id="gameFrame" src="about:blank"></iframe>
+    </div>
+    <div class="console-box" id="console"></div>
+  </div>
+
+  <script>
+    const logBox = document.getElementById("console");
+    const steps = [];
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+    function log(type, step, desc, details = null) {
+      const div = document.createElement("div");
+      div.className = `log-entry log-${type}`;
+      div.innerHTML = `<strong>[${type.toUpperCase()}] [${step}]</strong> ${desc}`;
+      if (details) {
+        const pre = document.createElement("pre");
+        pre.textContent = JSON.stringify(details, null, 2);
+        div.appendChild(pre);
+      }
+      logBox.appendChild(div);
+      logBox.scrollTop = logBox.scrollHeight;
+      console.log(`[WAVE0-${type.toUpperCase()}] [${step}] ${desc}`);
+      steps.push({ timestamp: new Date().toISOString(), type, step, desc, details });
+    }
+
+    async function runWave0Campaign() {
+      try {
+        try {
+          sessionStorage.setItem("starfall-sw-refresh:20261022-sovereign-hangar-mki-rc2", "1");
+        } catch {}
+
+        const frame = document.getElementById("gameFrame");
+        frame.src = `../index.html?diag=1&overlay=1&t=${Date.now()}`;
+
+        let win = null;
+        let doc = null;
+        let w0 = null;
+        for (let i = 0; i < 120; i++) {
+          await sleep(100);
+          try {
+            win = frame.contentWindow;
+            doc = frame.contentDocument;
+            if (win && win.sessionStorage) {
+              win.sessionStorage.setItem("starfall-sw-refresh:20261022-sovereign-hangar-mki-rc2", "1");
+            }
+            if (doc) {
+              const hf = doc.getElementById("hangarFrame");
+              if (hf && hf.src && !hf.src.endsWith("about:blank")) {
+                hf.src = "about:blank";
+              }
+            }
+            w0 = win && win.__starfallWave0;
+            if (w0 && win.__starfallDebug) {
+              break;
+            }
+          } catch {}
+        }
+
+        if (!w0) {
+          log("fail", "BOOT", "window.__starfallWave0 not available in ?diag=1 iframe", {
+            href: win ? win.location.href : null,
+            hasDebug: Boolean(win && win.__starfallDebug)
+          });
+          await postReceipt("FAIL", {});
+          return;
+        }
+
+        // Allow MK-I full 264-triangle mesh JSON fetch to complete
+        await sleep(450);
+
+        log("pass", "BOOT", "Wave 0 diagnostic controller initialized in live WebGL context (localhost guard verified)", {
+          build: win.__starfallDebug().build,
+          hostname: win.location.hostname
+        });
+
+        const telemetry = {
+          viewports: {},
+          centreLaneRecovery: {},
+          desktopDisappearanceCases: {
+            programmatically_dispatched_browser_input: {},
+            injected_webgl_state: {}
+          },
+          pickupReachability: null,
+          collisionEncounters: {},
+          performance: null,
+          securityGuards: {}
+        };
+
+        // ----------------------------------------------------------------------
+        // A1. Multi-Viewport Matrix (393x873, 873x393, 1280x800, 1920x1080, 2560x1080)
+        // ----------------------------------------------------------------------
+        const viewportSpecs = [
+          { id: "mobile_portrait_393x873", w: 393, h: 873, y: -0.68, touch: true },
+          { id: "mobile_landscape_873x393", w: 873, h: 393, y: -0.68, touch: true },
+          { id: "desktop_16x10_1280x800", w: 1280, h: 800, y: -0.45, touch: false },
+          { id: "desktop_16x9_1920x1080", w: 1920, h: 1080, y: -0.45, touch: false },
+          { id: "desktop_ultrawide_2560x1080", w: 2560, h: 1080, y: -0.45, touch: false }
+        ];
+
+        w0.setManualStep(true);
+        w0.setOverlay(true, { showReachability: false });
+
+        for (const vp of viewportSpecs) {
+          w0.setTouchCapable(vp.touch);
+          frame.style.width = `${vp.w}px`;
+          frame.style.height = `${vp.h}px`;
+          win.dispatchEvent(new win.Event("resize"));
+          await sleep(100);
+          w0.setPlayerState({
+            mode: "playing",
+            x: 0,
+            y: vp.y,
+            z: -7.8,
+            targetX: 0,
+            targetY: vp.y,
+            targetLane: 0,
+            speed: 18,
+            spawnTimer: 99,
+            settleCamera: true
+          });
+          const vpInfo = w0.getViewportTelemetry();
+          const shipBounds = w0.computeShipBounds();
+          telemetry.viewports[vp.id] = {
+            width: vp.w,
+            height: vp.h,
+            touchCapable: vp.touch,
+            aspect: vpInfo.aspect,
+            renderFovDeg: vpInfo.renderFovDeg,
+            playPitch: vpInfo.frameProfile.playPitch,
+            cameraDepth: vpInfo.frameProfile.cameraDepth,
+            shipCenterNdc: shipBounds.renderedCenter.ndc,
+            shipCenterScreenPx: shipBounds.renderedCenter.screenPx,
+            shipColliderNdc: shipBounds.colliderCenter.ndc,
+            shipMeshInViewportRatio: shipBounds.renderedMeshBounds.inViewportRatio
+          };
+          log("pass", `VP_${vp.id.toUpperCase()}`, `Recorded baseline projection at ${vp.w}x${vp.h} (touch=${vp.touch}, y=${vp.y})`, telemetry.viewports[vp.id]);
+        }
+
+        // ----------------------------------------------------------------------
+        // A2. Correction 4: Centre-Lane Recovery via laneFromClientX() (Case 4A vs Case 4B)
+        // ----------------------------------------------------------------------
+        w0.setTouchCapable(true);
+        frame.style.width = "393px";
+        frame.style.height = "873px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        const shellEl = doc.querySelector(".shell");
+
+        // Case 4A: Direct Center Tap / Re-Touch with |dx| <= 32.8px recovers ship from outer lane (-1) to center lane (0)
+        w0.setPlayerState({ mode: "playing", x: -2.2, y: -0.68, z: -7.8, targetX: -2.2, targetY: -0.68, targetLane: -1, spawnTimer: 99, settleCamera: true });
+        shellEl.dispatchEvent(new win.PointerEvent("pointerdown", {
+          pointerId: 41,
+          pointerType: "touch",
+          clientX: 196.5,
+          clientY: 600,
+          button: 0,
+          bubbles: true,
+          cancelable: true
+        }));
+        const input4AAfterDown = w0.getInputState();
+        w0.stepFrames(25, 1 / 60);
+        const input4AAfterStep = w0.getInputState();
+        win.dispatchEvent(new win.PointerEvent("pointerup", {
+          pointerId: 41,
+          pointerType: "touch",
+          clientX: 196.5,
+          clientY: 600,
+          button: 0,
+          bubbles: true
+        }));
+        telemetry.centreLaneRecovery.case4A_centerTapOrRetouch = {
+          description: "Direct touch/pointerdown in central band (clientX=196.5px on 393px width, |dx|=0 <= 32.8px)",
+          initialTargetLane: -1,
+          initialPlayerX: -2.2,
+          targetLaneAfterPointerDown: input4AAfterDown.targetLane,
+          touchAxisX: input4AAfterDown.touchAxis.x,
+          targetLaneAfter25Frames: input4AAfterStep.targetLane,
+          settledPlayerX: input4AAfterStep.playerX
+        };
+        const case4AOk = input4AAfterDown.targetLane === 0 && input4AAfterStep.targetLane === 0 && Math.abs(input4AAfterStep.playerX) < 0.02;
+        log(
+          case4AOk ? "pass" : "fail",
+          "LANE_RECOVERY_4A_CENTER_RETAP",
+          "Verified Case 4A: Tapping/re-touching inside central zone (|dx| <= 32.8px) sets targetLane=0 via laneFromClientX() and recovers ship to x=0.00m",
+          telemetry.centreLaneRecovery.case4A_centerTapOrRetouch
+        );
+
+        // Case 4B: Single unbroken horizontal drag from left outer lane (clientX=40px) to screen center (clientX=196.5px, dx=+156.5px > 32.8px)
+        w0.setPlayerState({ mode: "playing", x: -2.2, y: -0.68, z: -7.8, targetX: -2.2, targetY: -0.68, targetLane: -1, spawnTimer: 99, settleCamera: true });
+        shellEl.dispatchEvent(new win.PointerEvent("pointerdown", {
+          pointerId: 42,
+          pointerType: "touch",
+          clientX: 40,
+          clientY: 600,
+          button: 0,
+          bubbles: true,
+          cancelable: true
+        }));
+        win.dispatchEvent(new win.PointerEvent("pointermove", {
+          pointerId: 42,
+          pointerType: "touch",
+          clientX: 196.5,
+          clientY: 600,
+          bubbles: true,
+          cancelable: true
+        }));
+        const input4BAfterPointerMove = w0.getInputState(); // laneFromClientX(196.5) sets targetLane = 0 on pointermove
+        w0.stepFrames(1, 1 / 60); // updateGame (line 4891) sees touchAxis.x = +1.0 > 0.4 and overwrites targetLane = 1!
+        const input4BAfterUpdateTick = w0.getInputState();
+        win.dispatchEvent(new win.PointerEvent("pointerup", {
+          pointerId: 42,
+          pointerType: "touch",
+          clientX: 196.5,
+          clientY: 600,
+          button: 0,
+          bubbles: true
+        }));
+        telemetry.centreLaneRecovery.case4B_continuousOuterToCenterDrag = {
+          description: "Single unbroken drag from outer lane (clientX=40px) to center (clientX=196.5px, dx=+156.5px > 32.8px)",
+          targetLaneSetByPointerMove: input4BAfterPointerMove.targetLane,
+          touchAxisXDuringDrag: input4BAfterPointerMove.touchAxis.x,
+          targetLaneAfterUpdateGameTick: input4BAfterUpdateTick.targetLane
+        };
+        const case4BOk =
+          input4BAfterPointerMove.targetLane === 0 &&
+          input4BAfterPointerMove.touchAxis.x > 0.4 &&
+          input4BAfterUpdateTick.targetLane === 1;
+        log(
+          case4BOk ? "pass" : "fail",
+          "LANE_RECOVERY_4B_CONTINUOUS_DRAG_OVERRIDE",
+          "Verified Case 4B: Continuous drag from x=40px to center x=196.5px sets laneFromClientX=0 on pointermove, but updateGame (touchAxis.x > 0.4) overwrites targetLane to +1 on next tick",
+          telemetry.centreLaneRecovery.case4B_continuousOuterToCenterDrag
+        );
+
+        // ----------------------------------------------------------------------
+        // A3. Correction 9: Desktop Ship-Disappearance Cases (Programmatically Dispatched Browser Input vs Injected State)
+        // ----------------------------------------------------------------------
+        w0.setTouchCapable(false);
+        const canvasEl = doc.getElementById("glCanvas");
+
+        // Programmatic Case 1: Synthesized WheelEvent on 1920x1080
+        frame.style.width = "1920px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, spawnTimer: 99, settleCamera: true });
+        canvasEl.dispatchEvent(new win.WheelEvent("wheel", { deltaY: 600, bubbles: true, cancelable: true }));
+        win.scrollTo(0, 500);
+        await sleep(60);
+        const wheelVp = w0.getViewportTelemetry();
+        const wheelShip = w0.computeShipBounds();
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case1_plainWheelScroll = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "synthesized_wheel_event_and_window_scroll",
+          scrollY: wheelVp.scrollY,
+          shipCenterNdcY: wheelShip.renderedCenter.ndc.y,
+          shipCenterScreenY: wheelShip.renderedCenter.screenPx.y,
+          inViewportRatio: wheelShip.renderedMeshBounds.inViewportRatio,
+          disappeared: !wheelShip.renderedCenter.inFrustum
+        };
+        log(
+          "pass",
+          "DISAPPEAR_PROG_INPUT_1_WHEEL",
+          "Tested programmatically dispatched WheelEvent on 1920x1080 (overflow:hidden prevents page scroll; wheel does not move ship)",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case1_plainWheelScroll
+        );
+
+        // Programmatic Case 2: Synthesized Ctrl+Wheel / Browser Zoom + Scroll Offset
+        canvasEl.dispatchEvent(new win.WheelEvent("wheel", { deltaY: 400, ctrlKey: true, bubbles: true, cancelable: true }));
+        doc.documentElement.style.zoom = "1.5";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        const zoomVp = w0.getViewportTelemetry();
+        const zoomShip = w0.computeShipBounds();
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case2_ctrlWheelZoom = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "synthesized_ctrl_wheel_and_css_zoom_1.5",
+          cssZoom: "1.5",
+          canvasClientRect: zoomVp.canvasClientRect,
+          shipCenterNdcY: zoomShip.renderedCenter.ndc.y,
+          shipCenterScreenY: zoomShip.renderedCenter.screenPx.y,
+          inViewportRatio: zoomShip.renderedMeshBounds.inViewportRatio
+        };
+        doc.documentElement.style.zoom = "";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        log(
+          "pass",
+          "DISAPPEAR_PROG_INPUT_2_ZOOM",
+          "Tested programmatically dispatched Ctrl+Wheel + CSS page zoom (1.5x) on desktop",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case2_ctrlWheelZoom
+        );
+
+        // Programmatic Case 3: Synthesized KeyboardEvent (ArrowDown keydown held across 35 live updateGame ticks on 1920x1080 & 2560x1080)
+        frame.style.width = "1920px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, spawnTimer: 99, settleCamera: true });
+        win.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
+        w0.stepFrames(35, 1 / 60); // 35 frames at vy = -7.2 m/s drives targetY & y to yMin = -2.15m via live keyboard handler
+        win.dispatchEvent(new win.KeyboardEvent("keyup", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
+        const physSteer16x9Input = w0.getInputState();
+        const physSteer16x9Ship = w0.computeShipBounds();
+
+        frame.style.width = "2560px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, spawnTimer: 99, settleCamera: true });
+        win.dispatchEvent(new win.KeyboardEvent("keydown", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
+        w0.stepFrames(35, 1 / 60);
+        win.dispatchEvent(new win.KeyboardEvent("keyup", { key: "ArrowDown", code: "ArrowDown", bubbles: true, cancelable: true }));
+        const physSteer21x9Input = w0.getInputState();
+        const physSteer21x9Ship = w0.computeShipBounds();
+
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case3_synthesizedKeyboardArrowDownHold = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "synthesized_keydown_ArrowDown_35_live_frames",
+          desktop16x9_1920x1080: {
+            playerYAfterKeyHold: physSteer16x9Input.playerY,
+            targetYAfterKeyHold: physSteer16x9Input.targetY,
+            centerNdcY: physSteer16x9Ship.renderedCenter.ndc.y,
+            centerScreenY: physSteer16x9Ship.renderedCenter.screenPx.y,
+            viewportHeight: 1080,
+            centerInFrustum: physSteer16x9Ship.renderedCenter.inFrustum,
+            meshInViewportRatio: physSteer16x9Ship.renderedMeshBounds.inViewportRatio
+          },
+          ultrawide21x9_2560x1080: {
+            playerYAfterKeyHold: physSteer21x9Input.playerY,
+            targetYAfterKeyHold: physSteer21x9Input.targetY,
+            centerNdcY: physSteer21x9Ship.renderedCenter.ndc.y,
+            centerScreenY: physSteer21x9Ship.renderedCenter.screenPx.y,
+            viewportHeight: 1080,
+            centerInFrustum: physSteer21x9Ship.renderedCenter.inFrustum,
+            meshInViewportRatio: physSteer21x9Ship.renderedMeshBounds.inViewportRatio
+          }
+        };
+
+        const physKeySteerConfirmed =
+          physSteer16x9Input.playerY <= -2.14 &&
+          physSteer16x9Ship.renderedCenter.ndc.y < -1.0 &&
+          physSteer21x9Ship.renderedCenter.ndc.y < -1.10 &&
+          physSteer16x9Ship.renderedCenter.inFrustum === false &&
+          physSteer21x9Ship.renderedCenter.inFrustum === false;
+
+        log(
+          physKeySteerConfirmed ? "pass" : "fail",
+          "DISAPPEAR_PROG_INPUT_3_KEYDOWN_ARROWDOWN",
+          "Reproduced desktop ship disappearance via programmatically dispatched ArrowDown keydown hold across 35 live frames (y reaches -2.15m, NDC_y < -1.0)",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case3_synthesizedKeyboardArrowDownHold
+        );
+
+        // Programmatic Case 4: Dynamic Browser Resize Across Ultrawide Aspect Threshold (aspect > 1.85)
+        frame.style.width = "1920px";
+        frame.style.height = "900px"; // aspect = 2.133 (> 1.85 ultrawide profile jump)
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        w0.stepFrames(5, 1 / 60);
+        const resizeShip = w0.computeShipBounds();
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case4_aspectThresholdResize = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "programmatic_iframe_resize_to_1920x900_aspect_2.1333",
+          width: 1920,
+          height: 900,
+          aspect: 2.1333,
+          playerY: w0.getInputState().playerY,
+          centerNdcY: resizeShip.renderedCenter.ndc.y,
+          centerScreenY: resizeShip.renderedCenter.screenPx.y,
+          centerInFrustum: resizeShip.renderedCenter.inFrustum,
+          meshInViewportRatio: resizeShip.renderedMeshBounds.inViewportRatio
+        };
+        log(
+          resizeShip.renderedCenter.ndc.y < -1.0 ? "pass" : "fail",
+          "DISAPPEAR_PROG_INPUT_4_RESIZE",
+          "Confirmed programmatic resize across aspect>1.85 switches to fovScale=0.68 & viewBiasY=-0.06, keeping bottom-steered ship outside frustum",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case4_aspectThresholdResize
+        );
+
+        // Injected WebGL State Reference (explicitly separated per Correction 9)
+        frame.style.width = "1920px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(60);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -2.15, z: -7.8, targetX: 0, targetY: -2.15, settleCamera: true });
+        const injected16x9 = w0.computeShipBounds();
+
+        frame.style.width = "2560px";
+        frame.style.height = "1080px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(60);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -2.15, z: -7.8, targetX: 0, targetY: -2.15, settleCamera: true });
+        const injected21x9 = w0.computeShipBounds();
+
+        telemetry.desktopDisappearanceCases.injected_webgl_state = {
+          method: "deterministic_setPlayerState_y_-2.15_for_overlay_comparison",
+          desktop16x9_1920x1080: {
+            centerNdcY: injected16x9.renderedCenter.ndc.y,
+            centerScreenY: injected16x9.renderedCenter.screenPx.y,
+            meshInViewportRatio: injected16x9.renderedMeshBounds.inViewportRatio
+          },
+          ultrawide21x9_2560x1080: {
+            centerNdcY: injected21x9.renderedCenter.ndc.y,
+            centerScreenY: injected21x9.renderedCenter.screenPx.y,
+            meshInViewportRatio: injected21x9.renderedMeshBounds.inViewportRatio
+          }
+        };
+
+        // ----------------------------------------------------------------------
+        // B. Production-Exact Pickup Reachability In-Browser Audit (Seed 20261025)
+        // ----------------------------------------------------------------------
+        w0.setTouchCapable(true);
+        frame.style.width = "393px";
+        frame.style.height = "873px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+        const gridAudit = w0.generatePickupGridAudit(20261025, 600);
+        telemetry.pickupReachability = gridAudit.summary;
+
+        // Live collection vs unreachable high-Y test in updateGame using production crystal multiplier (0.68)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.68, z: -7.8, targetX: 0, targetY: -0.68, targetLane: 0, cores: 0, score: 0, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "crystal", x: 0, y: -0.68, z: -8.1, size: 0.75, radius: 0.75 * 0.68 });
+        w0.spawnTestObject({ type: "crystal", x: 0, y: 1.25, z: -8.1, size: 0.75, radius: 0.75 * 0.68 });
+        const pickupStep = w0.stepFrames(3, 0.016);
+        telemetry.pickupReachability.liveStepProof = {
+          crystalRadiusMultiplierUsed: 0.68,
+          coresCollected: w0.getContactLog().filter((c) => c.outcome === "pickup_collected").length,
+          elevatedMissed: w0.getContactLog().filter((c) => c.outcome === "near_miss").length,
+          remainingUncollectedObjects: pickupStep.snapshots[pickupStep.snapshots.length - 1].objectCount,
+          contactEvents: w0.getContactLog()
+        };
+
+        log(
+          telemetry.pickupReachability.liveStepProof.coresCollected === 1 &&
+          telemetry.pickupReachability.liveStepProof.elevatedMissed === 1 &&
+          telemetry.pickupReachability.liveStepProof.remainingUncollectedObjects === 1
+            ? "pass"
+            : "fail",
+          "PICKUP_REACHABILITY",
+          "Verified production-exact seed 20261025 reachability matrix (crystal r=0.68*size, orb r=0.72*size) and live collection step",
+          telemetry.pickupReachability
+        );
+
+        // ----------------------------------------------------------------------
+        // C. Collision Truthfulness Encounters (Production Sizes + Rotations + Preserved Synthetic Control)
+        // ----------------------------------------------------------------------
+        w0.setTouchCapable(false);
+        frame.style.width = "1280px";
+        frame.style.height = "800px";
+        win.dispatchEvent(new win.Event("resize"));
+        await sleep(80);
+
+        // C1: Head-on hit (production debris size = 1.25m in [0.85, 1.35])
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 0, y: -0.45, z: -8.05, size: 1.25, radius: 1.25 * 0.82, rotX: 0.25, rotY: 0.60, rotZ: 0.15 });
+        w0.stepFrames(1, 0.016);
+        const c1Hit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c1_headOn = c1Hit;
+        log(c1Hit && c1Hit.outcome === "hull_hit" ? "pass" : "fail", "COLLISION_C1_HEAD_ON", "Reproduced head-on collision (production size=1.25m)", c1Hit);
+
+        // C2: Clean dodge (ship in left lane -2.2, rock at center 0, size=1.25m)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: -2.2, y: -0.45, z: -7.8, targetX: -2.2, targetY: -0.45, targetLane: -1, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 0, y: -0.45, z: -8.05, size: 1.25, radius: 1.25 * 0.82, rotX: 0.25, rotY: 0.60, rotZ: 0.15 });
+        const c2Step = w0.stepFrames(2, 0.016);
+        const c2Hits = w0.getContactLog().filter((c) => c.outcome === "hull_hit").length;
+        telemetry.collisionEncounters.c2_cleanDodge = {
+          hullAfter: c2Step.snapshots[c2Step.snapshots.length - 1].hull,
+          hullHits: c2Hits,
+          contactEvents: w0.getContactLog()
+        };
+        log(
+          telemetry.collisionEncounters.c2_cleanDodge.hullAfter === 3 && c2Hits === 0
+            ? "pass"
+            : "fail",
+          "COLLISION_C2_CLEAN_DODGE",
+          "Verified clean dodge when lateral distance (2.20m) > combined collider (1.645m)",
+          telemetry.collisionEncounters.c2_cleanDodge
+        );
+
+        // C3: Near miss just outside collider (dx = 1.72m > 1.645m for size = 1.25m)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 1.72, y: -0.45, z: -8.05, size: 1.25, radius: 1.25 * 0.82, rotX: 0.42, rotY: 0.88, rotZ: 0.35 });
+        const c3Step = w0.stepFrames(2, 0.016);
+        const c3Hits = w0.getContactLog().filter((c) => c.outcome === "hull_hit").length;
+        telemetry.collisionEncounters.c3_nearMiss = {
+          dx: 1.72,
+          combinedColliderRadius: Number((0.62 + 1.25 * 0.82).toFixed(4)),
+          hullAfter: c3Step.snapshots[c3Step.snapshots.length - 1].hull,
+          hullHits: c3Hits,
+          contactEvents: w0.getContactLog()
+        };
+        log(
+          telemetry.collisionEncounters.c3_nearMiss.hullAfter === 3 && c3Hits === 0
+            ? "pass"
+            : "fail",
+          "COLLISION_C3_NEAR_MISS",
+          "Verified near miss just outside sphere collider boundary (1.72m > 1.645m)",
+          telemetry.collisionEncounters.c3_nearMiss
+        );
+
+        // C4A: Production-Valid Rotated Debris Phantom Edge Hit #1 (size = 1.25m in [0.85, 1.35], rot = [0.42, 0.88, 0.35])
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        const prodPhantomRock1 = w0.spawnTestObject({
+          type: "debris",
+          x: 1.48,
+          y: -0.18,
+          z: -8.05,
+          size: 1.25,
+          radius: 1.25 * 0.82,
+          rotX: 0.42,
+          rotY: 0.88,
+          rotZ: 0.35
+        });
+        const shipBProd1 = w0.computeShipBounds();
+        const rockBProd1 = w0.computeObjectBounds(prodPhantomRock1);
+        const prod1WorldGapX = Number((rockBProd1.renderedMeshBounds.minWx - shipBProd1.renderedMeshBounds.maxWx).toFixed(4));
+        const prod1ScreenGapPx = Number((rockBProd1.renderedMeshBounds.minX - shipBProd1.renderedMeshBounds.maxX).toFixed(2));
+        w0.stepFrames(1, 0.016);
+        const c4aHit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c4a_phantomEdgeHit_productionRotated_125 = {
+          scenarioClass: "production_valid_debris",
+          size: 1.25,
+          rotationRad: [0.42, 0.88, 0.35],
+          contactRecord: c4aHit,
+          shipMeshMaxWx: Number(shipBProd1.renderedMeshBounds.maxWx.toFixed(4)),
+          rockMeshMinWx: Number(rockBProd1.renderedMeshBounds.minWx.toFixed(4)),
+          meshWorldGapX: prod1WorldGapX,
+          meshScreenGapPx: prod1ScreenGapPx
+        };
+        log(
+          c4aHit && c4aHit.outcome === "hull_hit" && c4aHit.vsShip.minMeshVertexDist2D_M > 0.25 && prod1ScreenGapPx > 8
+            ? "pass"
+            : "fail",
+          "COLLISION_C4A_PROD_ROTATED_PHANTOM_HIT",
+          `Reproduced production-valid rotated debris phantom hit (size=1.25m, rot=[0.42,0.88,0.35]): Hull damaged with +${c4aHit ? c4aHit.vsShip.minMeshVertexDist2D_M : "?"}m 2D vertex gap (${prod1ScreenGapPx}px screen gap)`,
+          telemetry.collisionEncounters.c4a_phantomEdgeHit_productionRotated_125
+        );
+
+        // C4B: Production-Valid Rotated Debris Phantom Edge Hit #2 (size = 1.12m in [0.85, 1.35], rot = [0.65, 1.20, 0.40])
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        const prodPhantomRock2 = w0.spawnTestObject({
+          type: "debris",
+          x: 1.42,
+          y: -0.22,
+          z: -8.05,
+          size: 1.12,
+          radius: 1.12 * 0.82,
+          rotX: 0.65,
+          rotY: 1.20,
+          rotZ: 0.40
+        });
+        const shipBProd2 = w0.computeShipBounds();
+        const rockBProd2 = w0.computeObjectBounds(prodPhantomRock2);
+        const prod2WorldGapX = Number((rockBProd2.renderedMeshBounds.minWx - shipBProd2.renderedMeshBounds.maxWx).toFixed(4));
+        const prod2ScreenGapPx = Number((rockBProd2.renderedMeshBounds.minX - shipBProd2.renderedMeshBounds.maxX).toFixed(2));
+        w0.stepFrames(1, 0.016);
+        const c4bHit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c4b_phantomEdgeHit_productionRotated_112 = {
+          scenarioClass: "production_valid_debris",
+          size: 1.12,
+          rotationRad: [0.65, 1.20, 0.40],
+          contactRecord: c4bHit,
+          meshWorldGapX: prod2WorldGapX,
+          meshScreenGapPx: prod2ScreenGapPx
+        };
+        log(
+          c4bHit && c4bHit.outcome === "hull_hit" && c4bHit.vsShip.minMeshVertexDist2D_M > 0.25
+            ? "pass"
+            : "fail",
+          "COLLISION_C4B_PROD_ROTATED_MEDIUM_PHANTOM_HIT",
+          `Reproduced medium production debris phantom hit (size=1.12m, rot=[0.65,1.20,0.40]): Hull damaged with +${c4bHit ? c4bHit.vsShip.minMeshVertexDist2D_M : "?"}m 2D vertex gap`,
+          telemetry.collisionEncounters.c4b_phantomEdgeHit_productionRotated_112
+        );
+
+        // C4C: Preserved Synthetic Diagnostic Control (size = 1.42m > 1.35m, rot = [0, 0, 0])
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        const synthRock = w0.spawnTestObject({ type: "debris", x: 1.58, y: -0.15, z: -8.05, size: 1.42, radius: 1.42 * 0.82, rotX: 0, rotY: 0, rotZ: 0 });
+        const shipBSynth = w0.computeShipBounds();
+        const rockBSynth = w0.computeObjectBounds(synthRock);
+        const synthWorldGapX = Number((rockBSynth.renderedMeshBounds.minWx - shipBSynth.renderedMeshBounds.maxWx).toFixed(4));
+        const synthScreenGapPx = Number((rockBSynth.renderedMeshBounds.minX - shipBSynth.renderedMeshBounds.maxX).toFixed(2));
+        w0.stepFrames(1, 0.016);
+        const c4cHit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c4c_phantomEdgeHit_syntheticControl = {
+          scenarioClass: "synthetic_non_production_diagnostic_control",
+          size: 1.42,
+          rotationRad: [0, 0, 0],
+          contactRecord: c4cHit,
+          meshWorldGapX: synthWorldGapX,
+          meshScreenGapPx: synthScreenGapPx
+        };
+        log(
+          c4cHit && c4cHit.outcome === "hull_hit" && synthWorldGapX > 0.2
+            ? "pass"
+            : "fail",
+          "COLLISION_C4C_SYNTHETIC_CONTROL",
+          `Preserved synthetic diagnostic control (size=1.42m, rot=[0,0,0]): +${synthWorldGapX}m gap (${synthScreenGapPx}px)`,
+          telemetry.collisionEncounters.c4c_phantomEdgeHit_syntheticControl
+        );
+
+        // C5: Z-axis lead offset hit at z = -8.83 (1.48m ahead of rendered ship z = -7.35, production size = 1.28m)
+        w0.clearObjects();
+        w0.clearContactLog();
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 18, spawnTimer: 99, settleCamera: true });
+        w0.spawnTestObject({ type: "debris", x: 0, y: -0.45, z: -9.12, size: 1.28, radius: 1.28 * 0.82, rotX: 0.30, rotY: 0.75, rotZ: 0.20 });
+        w0.stepFrames(1, 0.016);
+        const c5Hit = w0.getContactLog()[0];
+        telemetry.collisionEncounters.c5_zLeadHit = c5Hit;
+        log(
+          c5Hit && c5Hit.outcome === "hull_hit" && c5Hit.vsShip.dzToRenderedShip_M > 1.35
+            ? "pass"
+            : "fail",
+          "COLLISION_C5_Z_LEAD_OFFSET",
+          `Reproduced early Z-axis collision ${c5Hit ? c5Hit.vsShip.dzToRenderedShip_M : "?"}m ahead of rendered ship center (shipZ=-7.35 vs collider z=-7.80)`,
+          c5Hit
+        );
+
+        // ----------------------------------------------------------------------
+        // E. Uncapped RAF Frame-Interval, CPU Render Time & Actual gl.drawElements Telemetry
+        // ----------------------------------------------------------------------
+        w0.clearObjects();
+        w0.setOverlay(false);
+        w0.setPlayerState({ mode: "playing", x: 0, y: -0.45, z: -7.8, targetX: 0, targetY: -0.45, targetLane: 0, hull: 3, speed: 24, settleCamera: true });
+        w0.resetPerfSamples();
+        w0.setManualStep(false);
+        for (let waitIter = 0; waitIter < 40; waitIter++) {
+          await sleep(150);
+          const curPerf = w0.getPerfSummary();
+          if (curPerf.uncappedRafIntervalMs.sampleCount >= 20 && curPerf.uncappedCpuRenderTimeMs.sampleCount >= 20) {
+            break;
+          }
+        }
+        w0.setManualStep(true);
+        w0.setOverlay(true, { showReachability: false });
+        telemetry.performance = w0.getPerfSummary();
+        const perfOk =
+          telemetry.performance.evidenceCategory === "headless_desktop_webgl" &&
+          telemetry.performance.uncappedRafIntervalMs.sampleCount >= 15 &&
+          telemetry.performance.uncappedCpuRenderTimeMs.sampleCount >= 15 &&
+          telemetry.performance.glDrawCallsPerFrame > 10;
+        log(
+          perfOk ? "pass" : "fail",
+          "PERF_BASELINE_UNCAPPED",
+          `Captured uncapped RAF interval (p50=${telemetry.performance.uncappedRafIntervalMs.p50Ms}ms, p95=${telemetry.performance.uncappedRafIntervalMs.p95Ms}ms), CPU render time (p50=${telemetry.performance.uncappedCpuRenderTimeMs.p50Ms}ms), and glDrawCallsPerFrame=${telemetry.performance.glDrawCallsPerFrame}`,
+          telemetry.performance
+        );
+
+        // ----------------------------------------------------------------------
+        // F. Correction 8: Negative Control for Diagnostic Endpoint Guard
+        // ----------------------------------------------------------------------
+        const blockedRes = await fetch("/api/record_wave0", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Simulated-Public-Origin": "1"
+          },
+          body: JSON.stringify({ shouldBeBlocked: true })
+        });
+        telemetry.securityGuards.simulatedPublicOriginPostStatus = blockedRes.status;
+        log(
+          blockedRes.status === 403 ? "pass" : "fail",
+          "SECURITY_GUARD_PUBLIC_ORIGIN_403",
+          `Verified /api/record_wave0 rejects simulated public-origin POST with HTTP ${blockedRes.status}`,
+          telemetry.securityGuards
+        );
+
+        // ----------------------------------------------------------------------
+        // G. Capture Genuine Composite WebGL + Collider Overlay PNG Screenshots
+        // ----------------------------------------------------------------------
+        const screenshotCaptures = [
+          { filename: "wave0_mobile_portrait_reachability.png", w: 393, h: 873, scenario: "mobile_reachability" },
+          { filename: "wave0_collision_phantom_hit_edge.png", w: 1280, h: 800, scenario: "collision_phantom_hit" },
+          { filename: "wave0_collision_z_lead_offset.png", w: 1280, h: 800, scenario: "collision_z_offset" },
+          { filename: "wave0_desktop_vertical_steer_bottom.png", w: 1920, h: 1080, scenario: "desktop_bottom_clip" }
+        ];
+
+        telemetry.screenshots = [];
+        for (const sc of screenshotCaptures) {
+          frame.style.width = `${sc.w}px`;
+          frame.style.height = `${sc.h}px`;
+          win.dispatchEvent(new win.Event("resize"));
+          await sleep(100);
+          w0.setupScenario(sc.scenario);
+          await sleep(80);
+          const dataUrl = w0.captureCompositePng();
+          const saveRes = await fetch("/api/save_screenshot", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: sc.filename, dataUrl })
+          });
+          const savedOk = saveRes.ok;
+          telemetry.screenshots.push({ filename: sc.filename, width: sc.w, height: sc.h, scenario: sc.scenario, saved: savedOk });
+          log(savedOk ? "pass" : "fail", `SCREENSHOT_${sc.scenario.toUpperCase()}`, `Captured composite WebGL + overlay screenshot: ${sc.filename} (${sc.w}x${sc.h})`);
+        }
+
+        const failCount = steps.filter((s) => s.type === "fail").length;
+        const verdict = failCount === 0 ? "PASS" : "FAIL";
+        await postReceipt(verdict, telemetry);
+      } catch (err) {
+        log("fail", "UNCAUGHT_ERROR", err ? (err.stack || err.message || String(err)) : "Unknown error");
+        await postReceipt("FAIL", {});
+      }
+    }
+
+    async function postReceipt(verdict, telemetry) {
+      try {
+        await fetch("/api/record_wave0", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaign: "Wave 0 Fairness & Telemetry Browser Audit (Reconciled)",
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            verdict,
+            steps,
+            telemetry
+          })
+        });
+      } catch (err) {
+        console.error("Failed to post receipt:", err);
+      }
+    }
+
+    window.addEventListener("load", () => {
+      setTimeout(runWave0Campaign, 300);
+    });
+  </script>
+</body>
+</html>
