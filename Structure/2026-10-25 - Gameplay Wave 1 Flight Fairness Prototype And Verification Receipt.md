@@ -2,14 +2,15 @@
 
 - **Date:** 25 October 2026 (SAST)
 - **Author:** AntiGravity (RTC Seat 10 / Lead Developer)
-- **Direction:** Forge CA Review (*Wave 1 CA Review: Prototype Accepted for Evaluation | Integration Correction Required*, 25 October 2026)
+- **Direction:** Forge CA Review Gate (*Wave 1 CA Decision: Prototype Accepted for Evaluation*, 25 October 2026)
 - **Release Authority:** Robyn (Owner)
 - **Governance:** `I_AM_STATELESS_RENTER_NOT_LANDLORD`
 - **Feature Branch:** `feat/gameplay-wave1-flight-fairness`
+- **Exact Verified Feature Commit SHA:** `a6883fb1fb15486d5c10a9a0915f27bc353b6c44`
 - **Reconciled Base Revision (`main`):** `dfa5c01e93703d826ebc06c7d4c11683381ff1a0` (Merged Wave 0 Baseline / PR #15)
 - **Draft Pull Request:** **[RobynAwesome/starfall-salvage#16](https://github.com/RobynAwesome/starfall-salvage/pull/16)**
 - **GitHub Mergeability:** Clean (`mergeable=true`, zero git conflicts against current `main`)
-- **Vercel Preview Deployment:** [starfall-salvage-git-feat-gamepla-872664-robynawesomes-projects.vercel.app](https://starfall-salvage-git-feat-gamepla-872664-robynawesomes-projects.vercel.app)
+- **Vercel Preview Deployment:** [starfall-salvage-2qw3i9c4i-robynawesomes-projects.vercel.app](https://starfall-salvage-2qw3i9c4i-robynawesomes-projects.vercel.app) (Branch Alias: [starfall-salvage-git-feat-gamepla-872664-robynawesomes-projects.vercel.app](https://starfall-salvage-git-feat-gamepla-872664-robynawesomes-projects.vercel.app))
 - **Execution Boundary:** Prototype development branch only. Draft PR #16 is not merge-approved or authorized for production release. Zero production writes (`starfallsalvage.kopanolabs.com`). Local Windows checkout untouched.
 
 ---
@@ -39,14 +40,20 @@ All Wave 0 diagnostics (`34/34` PASS in `test_gameplay_wave0_diagnostics.mjs`, `
 | **Hot-Path:Audit** | Zero allocations in active animation frame | `100%` score (`no_new_in_update_game`, `no_new_in_render_scene`, `make_model_reuses_matrix`) | **PASS** |
 | **KC:Audit** | Student-Teacher Curriculum & Mobile Stress | `7/7` checks passed, `38/38` mobile stress proofs passed ($100\%$) | **PASS** |
 
-### 1.2 Provisional Optimization Target vs. Hard Automated Gate (`W1-D`)
+### 1.2 WebGL Performance Benchmark: Disambiguated Draw-Call & State-Bind Metrics (`W1-D`)
 
-| Optimization Metric | Hard Gate Standard (`W1-D-BindCaching`) | Provisional Target (`W1-D-DrawCallTarget`) | Measured Value (Headless SwiftShader Linux) | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Buffer Bind Deduplication** | $< 30$ VBO/IBO binds per frame | Cache redundant binds across consecutive draws | **13 binds / frame** (reduced by **-98.1%** from 673 baseline) | **PASS (Hard Gate Met)** |
-| **Draw Call Reduction** | $\ge 40\%$ reduction vs Wave 0 baseline ($673$ draws) | $< 300$ draw calls per frame during flight | **345 mobile draws / frame** (**-48.7%** reduction vs 673)<br>**381 desktop draws / frame** (**-43.4%** reduction vs 673) | **PROVISIONAL TARGET NOT MET ($345$ vs $<300$)**<br>*Transparently reported; further batching slated for Wave 2 corridor refactoring.* |
-| **CPU Render Time** | Non-blocking execution ($< 16.6\text{ms}$) | $< 8.0\text{ms}$ CPU budget | **3.4ms mobile / 4.6ms desktop** (software WebGL SwiftShader on Linux runner) | **PASS (Informational)** |
-| **Sustained Frame Time & FPS** | Informational uncapped timestamp logging | Sustained 60 FPS on physical target | **Recorded sustained rolling average frame intervals:** $75.0\text{ms}$–$91.6\text{ms}$ on software SwiftShader CPU emulation. *(Note: previous $1349.9\text{ms}$ value was an automation artifact during CDP screenshot capture, now resolved).* | **PASS (Informational)** |
+> [!IMPORTANT]
+> **Measurement Disambiguation (Wave 0 Baseline vs. Wave 1 Prototype):**
+> Wave 0's `673` baseline measures **WebGL draw calls (`gl.drawElements`) per frame**, not buffer binds. In Wave 0, every draw call executed `bindMesh()` unconditionally, issuing 2 `gl.bindBuffer` calls per draw ($1,346$ total). Wave 1 introduces state-bind caching and draw-call reductions, which are benchmarked below as distinct metrics across the identical seeded scene and viewports:
+
+| Performance Metric | Wave 0 Baseline (`dfa5c01e`) | Wave 1 Mobile (`393×873`) | Wave 1 Desktop (`1280×800`) | Measured Delta (Mobile) | Evaluation Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **WebGL Draw Calls (`gl.drawElements`)** | 673 calls / frame | **345 calls / frame** | 381 calls / frame | **-48.7%** reduction | **PROVISIONAL TARGET NOT MET ($345$ vs $<300$)**<br>*Hard gate ($\ge 40\%$ reduction) MET; provisional target open.* |
+| **Mesh Buffer Binds (`bindMesh` invocations)** | 673 binds / frame | **13 binds / frame** | 17 binds / frame | **-98.1%** reduction | **PASS (Hard Gate Met: $<30$ binds)** |
+| **Individual `gl.bindBuffer` calls (VBO+IBO)** | 1,346 calls / frame | **26 calls / frame** | 34 calls / frame | **-98.1%** reduction | **PASS (Informational)** |
+| **Texture Binds (`gl.bindTexture`)** | 673 binds / frame | **97 binds / frame** | 105 binds / frame | **-85.6%** reduction | **PASS (Informational)** |
+| **Render CPU Execution Time** | 7.85ms avg (6.1ms p50) | **3.4ms** | 4.6ms | **-56.7%** CPU render time | **PASS (Within $<8.0	ext{ms}$ budget)** |
+| **Sustained Frame Interval (SwiftShader)** | 199.9ms p50 (3.6 FPS) | **91.6ms** (10.9 FPS) | 74.9ms (13.3 FPS) | Sustained rolling average | **PASS (Capture artifact eliminated)** |
 
 ---
 
