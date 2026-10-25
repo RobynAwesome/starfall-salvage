@@ -143,10 +143,14 @@ check("Production guard rejects public hostnames and accepts only loopback hostn
   );
 }, "localhost/127.0.0.1/::1 -> true; kopanolabs.com/*.vercel.app -> false");
 
-check("tools/serve_hangar.py restricts diagnostic POST endpoints to loopback clients and local Host headers", () => {
+check("tools/serve_hangar.py binds strictly to 127.0.0.1 loopback (no 0.0.0.0, no 172.* WSL IP allowance, no wildcard CORS) and rejects non-local POSTs", () => {
   return (
     serveHangarPy.includes("def _is_local_diagnostic_request(self):") &&
     serveHangarPy.includes('client_ip in ("127.0.0.1", "::1", "::ffff:127.0.0.1")') &&
+    serveHangarPy.includes('bind_host = "127.0.0.1"') &&
+    !serveHangarPy.includes("0.0.0.0") &&
+    !serveHangarPy.includes("172.") &&
+    !serveHangarPy.includes("Access-Control-Allow-Origin") &&
     serveHangarPy.includes("self.send_response(403)")
   );
 });
@@ -752,14 +756,14 @@ const timedDesktop = simulateTimedCollectionSuccess("desktop_current", 600);
 const timedWave1Full2D = simulateTimedCollectionSuccess("wave1_full2d_timed", 600);
 
 check(
-  "Diagnostic B7 (Correction 2 — Geometric Coverage vs. Timed Real-Time Collection): Full-2D static geometric coverage is 100.0%, but real-time timed collection under finite slew rates (vy=7.2 m/s, positionLerp) is < 100% (~82-92%)",
+  "Diagnostic B7 (Correction 2 — Geometric Coverage vs. Ideal-Lookahead Scripted Trajectory Simulation): Full-2D static geometric coverage is 100.0%, while ideal-lookahead scripted trajectory collection under finite slew rates (vy=7.2 m/s, positionLerp) is 93.83% (distinct from human player performance)",
   () =>
     weightedPickupStats.full2DGeometricPct === 100.0 &&
     timedWave1Full2D.timedCollectionPct < 96.0 &&
     timedWave1Full2D.timedCollectionPct > 75.0 &&
     timedMobile.timedCollectionPct < timedDesktop.timedCollectionPct &&
     timedDesktop.timedCollectionPct < timedWave1Full2D.timedCollectionPct,
-  `Static2DGeometric=100.0% vs TimedCollection: Mobile=${timedMobile.timedCollectionPct}% (${timedMobile.collected}/600), Desktop=${timedDesktop.timedCollectionPct}% (${timedDesktop.collected}/600), Wave1Full2D=${timedWave1Full2D.timedCollectionPct}% (${timedWave1Full2D.collected}/600)`
+  `Static2DGeometric=100.0% vs IdealLookaheadSimulation (not human performance): Mobile=${timedMobile.timedCollectionPct}% (${timedMobile.collected}/600), Desktop=${timedDesktop.timedCollectionPct}% (${timedDesktop.collected}/600), Wave1Full2D_IdealLookahead=${timedWave1Full2D.timedCollectionPct}% (${timedWave1Full2D.collected}/600)`
 );
 
 // ----------------------------------------------------------------------------

@@ -107,7 +107,7 @@
           viewports: {},
           centreLaneRecovery: {},
           desktopDisappearanceCases: {
-            physical_input_and_viewport: {},
+            programmatically_dispatched_browser_input: {},
             injected_webgl_state: {}
           },
           pickupReachability: null,
@@ -263,12 +263,12 @@
         );
 
         // ----------------------------------------------------------------------
-        // A3. Correction 9: Desktop Ship-Disappearance Cases (Physical Input vs Injected State)
+        // A3. Correction 9: Desktop Ship-Disappearance Cases (Programmatically Dispatched Browser Input vs Injected State)
         // ----------------------------------------------------------------------
         w0.setTouchCapable(false);
         const canvasEl = doc.getElementById("glCanvas");
 
-        // Physical Case 1: Plain Mouse Wheel Scrolling on 1920x1080
+        // Programmatic Case 1: Synthesized WheelEvent on 1920x1080
         frame.style.width = "1920px";
         frame.style.height = "1080px";
         win.dispatchEvent(new win.Event("resize"));
@@ -279,8 +279,9 @@
         await sleep(60);
         const wheelVp = w0.getViewportTelemetry();
         const wheelShip = w0.computeShipBounds();
-        telemetry.desktopDisappearanceCases.physical_input_and_viewport.case1_plainWheelScroll = {
-          method: "physical_wheel_event_and_window_scroll",
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case1_plainWheelScroll = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "synthesized_wheel_event_and_window_scroll",
           scrollY: wheelVp.scrollY,
           shipCenterNdcY: wheelShip.renderedCenter.ndc.y,
           shipCenterScreenY: wheelShip.renderedCenter.screenPx.y,
@@ -289,20 +290,21 @@
         };
         log(
           "pass",
-          "DISAPPEAR_PHYSICAL_1_WHEEL",
-          "Tested physical WheelEvent on 1920x1080 (overflow:hidden prevents page scroll; wheel does not move ship)",
-          telemetry.desktopDisappearanceCases.physical_input_and_viewport.case1_plainWheelScroll
+          "DISAPPEAR_PROG_INPUT_1_WHEEL",
+          "Tested programmatically dispatched WheelEvent on 1920x1080 (overflow:hidden prevents page scroll; wheel does not move ship)",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case1_plainWheelScroll
         );
 
-        // Physical Case 2: Ctrl+Wheel / Browser Zoom + Scroll Offset
+        // Programmatic Case 2: Synthesized Ctrl+Wheel / Browser Zoom + Scroll Offset
         canvasEl.dispatchEvent(new win.WheelEvent("wheel", { deltaY: 400, ctrlKey: true, bubbles: true, cancelable: true }));
         doc.documentElement.style.zoom = "1.5";
         win.dispatchEvent(new win.Event("resize"));
         await sleep(80);
         const zoomVp = w0.getViewportTelemetry();
         const zoomShip = w0.computeShipBounds();
-        telemetry.desktopDisappearanceCases.physical_input_and_viewport.case2_ctrlWheelZoom = {
-          method: "physical_ctrl_wheel_and_css_zoom_1.5",
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case2_ctrlWheelZoom = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "synthesized_ctrl_wheel_and_css_zoom_1.5",
           cssZoom: "1.5",
           canvasClientRect: zoomVp.canvasClientRect,
           shipCenterNdcY: zoomShip.renderedCenter.ndc.y,
@@ -314,12 +316,12 @@
         await sleep(80);
         log(
           "pass",
-          "DISAPPEAR_PHYSICAL_2_ZOOM",
-          "Tested physical Ctrl+Wheel + CSS page zoom (1.5x) on desktop",
-          telemetry.desktopDisappearanceCases.physical_input_and_viewport.case2_ctrlWheelZoom
+          "DISAPPEAR_PROG_INPUT_2_ZOOM",
+          "Tested programmatically dispatched Ctrl+Wheel + CSS page zoom (1.5x) on desktop",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case2_ctrlWheelZoom
         );
 
-        // Physical Case 3: Physical Keyboard Hold (ArrowDown keydown held across 30 live updateGame ticks on 1920x1080 & 2560x1080)
+        // Programmatic Case 3: Synthesized KeyboardEvent (ArrowDown keydown held across 35 live updateGame ticks on 1920x1080 & 2560x1080)
         frame.style.width = "1920px";
         frame.style.height = "1080px";
         win.dispatchEvent(new win.Event("resize"));
@@ -342,8 +344,9 @@
         const physSteer21x9Input = w0.getInputState();
         const physSteer21x9Ship = w0.computeShipBounds();
 
-        telemetry.desktopDisappearanceCases.physical_input_and_viewport.case3_physicalKeyboardArrowDownHold = {
-          method: "physical_keydown_ArrowDown_35_live_frames",
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case3_synthesizedKeyboardArrowDownHold = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "synthesized_keydown_ArrowDown_35_live_frames",
           desktop16x9_1920x1080: {
             playerYAfterKeyHold: physSteer16x9Input.playerY,
             targetYAfterKeyHold: physSteer16x9Input.targetY,
@@ -373,20 +376,21 @@
 
         log(
           physKeySteerConfirmed ? "pass" : "fail",
-          "DISAPPEAR_PHYSICAL_3_KEYDOWN_ARROWDOWN",
-          "Reproduced desktop ship disappearance via physical ArrowDown key hold across 35 live frames (y reaches -2.15m, NDC_y < -1.0)",
-          telemetry.desktopDisappearanceCases.physical_input_and_viewport.case3_physicalKeyboardArrowDownHold
+          "DISAPPEAR_PROG_INPUT_3_KEYDOWN_ARROWDOWN",
+          "Reproduced desktop ship disappearance via programmatically dispatched ArrowDown keydown hold across 35 live frames (y reaches -2.15m, NDC_y < -1.0)",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case3_synthesizedKeyboardArrowDownHold
         );
 
-        // Physical Case 4: Dynamic Browser Resize Across Ultrawide Aspect Threshold (aspect > 1.85)
+        // Programmatic Case 4: Dynamic Browser Resize Across Ultrawide Aspect Threshold (aspect > 1.85)
         frame.style.width = "1920px";
         frame.style.height = "900px"; // aspect = 2.133 (> 1.85 ultrawide profile jump)
         win.dispatchEvent(new win.Event("resize"));
         await sleep(80);
         w0.stepFrames(5, 1 / 60);
         const resizeShip = w0.computeShipBounds();
-        telemetry.desktopDisappearanceCases.physical_input_and_viewport.case4_aspectThresholdResize = {
-          method: "physical_window_resize_to_1920x900_aspect_2.1333",
+        telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case4_aspectThresholdResize = {
+          evidenceCategory: "programmatically_dispatched_browser_input",
+          method: "programmatic_iframe_resize_to_1920x900_aspect_2.1333",
           width: 1920,
           height: 900,
           aspect: 2.1333,
@@ -398,9 +402,9 @@
         };
         log(
           resizeShip.renderedCenter.ndc.y < -1.0 ? "pass" : "fail",
-          "DISAPPEAR_PHYSICAL_4_RESIZE",
-          "Confirmed physical resize across aspect>1.85 switches to fovScale=0.68 & viewBiasY=-0.06, keeping bottom-steered ship outside frustum",
-          telemetry.desktopDisappearanceCases.physical_input_and_viewport.case4_aspectThresholdResize
+          "DISAPPEAR_PROG_INPUT_4_RESIZE",
+          "Confirmed programmatic resize across aspect>1.85 switches to fovScale=0.68 & viewBiasY=-0.06, keeping bottom-steered ship outside frustum",
+          telemetry.desktopDisappearanceCases.programmatically_dispatched_browser_input.case4_aspectThresholdResize
         );
 
         // Injected WebGL State Reference (explicitly separated per Correction 9)

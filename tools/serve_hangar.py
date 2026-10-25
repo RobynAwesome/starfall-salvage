@@ -12,9 +12,6 @@ WAVE0_EVIDENCE_DIR = os.path.join(os.path.dirname(__file__), "..", "Structure", 
 class HangarHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -23,14 +20,17 @@ class HangarHandler(SimpleHTTPRequestHandler):
 
     def _is_local_diagnostic_request(self):
         client_ip = self.client_address[0] if self.client_address else ""
-        is_loopback_or_wsl_host = (
-            client_ip in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
-            or client_ip.startswith("172.")
-            or client_ip.startswith("::ffff:172.")
-        )
-        if not is_loopback_or_wsl_host:
+        is_strict_loopback = client_ip in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+        if not is_strict_loopback:
             return False
         if self.headers.get("X-Simulated-Public-Origin") == "1":
+            return False
+        origin_hdr = (self.headers.get("Origin") or "").strip().lower()
+        if origin_hdr and not (
+            origin_hdr.startswith("http://127.0.0.1:")
+            or origin_hdr.startswith("http://localhost:")
+            or origin_hdr.startswith("http://[::1]:")
+        ):
             return False
         host_hdr = (self.headers.get("Host") or "").split(":")[0].strip().lower()
         if host_hdr and host_hdr not in ("localhost", "127.0.0.1", "::1", "[::1]"):
@@ -116,7 +116,7 @@ class HangarHandler(SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8799
-    bind_host = os.environ.get("STARFALL_TEST_BIND_HOST", "0.0.0.0")
+    bind_host = "127.0.0.1"
     server = ThreadingHTTPServer((bind_host, port), HangarHandler)
     print(f"Threading HTTP Server running on {bind_host}:{port} in {os.getcwd()}", flush=True)
     server.serve_forever()
