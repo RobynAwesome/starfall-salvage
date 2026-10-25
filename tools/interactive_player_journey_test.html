@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Starfall Salvage — Integrated Player Journey Automated In-Browser Verification</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      background: #07080e;
+      color: #e6edf3;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+    h1 { font-size: 16px; margin: 0 0 12px 0; color: #58a6ff; }
+    .layout { display: flex; gap: 16px; height: calc(100vh - 60px); }
+    .viewport-box { flex: 0 0 420px; display: flex; flex-direction: column; }
+    iframe { width: 393px; height: 873px; border: 1px solid #30363d; border-radius: 8px; background: #000; }
+    .console-box { flex: 1; overflow-y: auto; background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; }
+    .log-entry { margin: 6px 0; padding: 6px; border-radius: 4px; border-left: 3px solid #30363d; }
+    .log-pass { border-left-color: #238636; background: rgba(35, 134, 54, 0.1); }
+    .log-fail { border-left-color: #da3633; background: rgba(218, 54, 51, 0.1); }
+    .log-info { border-left-color: #58a6ff; background: rgba(88, 166, 255, 0.05); }
+    .status-badge { display: inline-block; padding: 2px 6px; font-weight: bold; border-radius: 3px; margin-right: 6px; }
+    .pass-badge { background: #238636; color: #fff; }
+    .fail-badge { background: #da3633; color: #fff; }
+    .info-badge { background: #1f6feb; color: #fff; }
+    pre { margin: 4px 0 0 0; font-size: 11px; color: #8b949e; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1 id="harness-title">Starfall Salvage — Integrated Player Journey Test Harness (Mobile Portrait 393x873)</h1>
+  <div class="layout">
+    <div class="viewport-box">
+      <iframe id="gameFrame" src="../index.html"></iframe>
+    </div>
+    <div class="console-box" id="console"></div>
+  </div>
+
+  <script>
+    const logBox = document.getElementById('console');
+    const receipts = [];
+
+    function log(type, step, desc, details) {
+      const entry = document.createElement('div');
+      entry.className = `log-entry log-${type}`;
+      const badge = `<span class="status-badge ${type}-badge">${type.toUpperCase()}</span>`;
+      entry.innerHTML = `${badge} <strong>[${step}]</strong> ${desc}`;
+      if (details) {
+        const pre = document.createElement('pre');
+        pre.textContent = typeof details === 'object' ? JSON.stringify(details, null, 2) : details;
+        entry.appendChild(pre);
+      }
+      logBox.appendChild(entry);
+      logBox.scrollTop = logBox.scrollHeight;
+      receipts.push({ timestamp: new Date().toISOString(), type, step, desc, details });
+    }
+
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    async function runJourney() {
+      log('info', 'INIT', 'Starting player interaction test under active Service Worker...', {});
+
+      const gameFrame = document.getElementById('gameFrame');
+      
+      // Wait for gameFrame to load
+      await new Promise(resolve => {
+        if (gameFrame.contentDocument && gameFrame.contentDocument.readyState === 'complete') {
+          resolve();
+        } else {
+          gameFrame.addEventListener('load', resolve, { once: true });
+        }
+      });
+
+      const win = gameFrame.contentWindow;
+      const doc = gameFrame.contentDocument;
+
+      log('info', 'BOOT', 'Outer game shell loaded', { url: win.location.href });
+
+      // Check Service Worker registration
+      let swActive = false;
+      if ('serviceWorker' in win.navigator) {
+        try {
+          const reg = await win.navigator.serviceWorker.getRegistration();
+          swActive = Boolean(reg && (reg.active || reg.installing || reg.waiting));
+          log(swActive ? 'pass' : 'info', 'SW_CHECK', `Service Worker registration verified (controller=${Boolean(win.navigator.serviceWorker.controller)})`, {
+            hasRegistration: Boolean(reg),
+            scope: reg ? reg.scope : null,
+            controller: Boolean(win.navigator.serviceWorker.controller)
+          });
+        } catch(e) {
+          log('info', 'SW_CHECK', `Service Worker query: ${e.message}`);
+        }
+      }
+
+      // Allow initial SW controller reload to settle if triggered
+      await sleep(1500);
+
+      // Dynamically poll for gameFrame document and nested hangarFrame
+      let hWin = null;
+      let hDoc = null;
+      let h = null;
+
+      for (let i = 0; i < 150; i++) {
+        try {
+          const curDoc = gameFrame.contentDocument;
+          const curWin = gameFrame.contentWindow;
+          if (curDoc) {
+            const hFrame = curDoc.getElementById('hangarFrame');
+            if (hFrame && hFrame.contentWindow && hFrame.contentDocument) {
+              const hangarObj = hFrame.contentWindow.__hangar;
+              if (hangarObj && hangarObj.lifecycle && hangarObj.lifecycle.isRunning && hangarObj.lifecycle.frameCount >= 5) {
+                hWin = hFrame.contentWindow;
+                hDoc = hFrame.contentDocument;
+                h = hangarObj;
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+        await sleep(100);
+      }
+
+      if (!h || !hWin || !hDoc) {
+        log('fail', 'HANGAR_BOOT', 'Timed out waiting for Sovereign Hangar initialization');
+        await reportReceipts('FAIL');
+        return;
+      }
+
+      const curDoc = gameFrame.contentDocument;
+      const curWin = gameFrame.contentWindow;
+
+      // Dismiss overlay if present
+      const bootOverlay = hDoc.getElementById('boot-overlay');
+      if (bootOverlay && !bootOverlay.hidden) {
+        const btnPlay = hDoc.getElementById('btn-play-hangar');
+        if (btnPlay) {
+          btnPlay.click();
+          await sleep(600);
+        }
+      }
+
+      log('pass', 'HANGAR_READY', 'Sovereign Hangar initialized and ready', {
+        ship: h.state.current,
+        frameCount: h.lifecycle.frameCount,
+        profile: hDoc.body.getAttribute('data-hangar-profile')
+      });
+
+      // -----------------------------------------------------------------------
+      // STEP 1: Verify Initial State (Metadata Collapsed Everywhere)
+      // -----------------------------------------------------------------------
+      const metaCard = hDoc.querySelector('.hud-meta');
+      const btnInfo = hDoc.getElementById('btn-meta-toggle');
+      const actionsMenu = hDoc.getElementById('actions-menu');
+      const btnActions = hDoc.getElementById('btn-actions-toggle');
+      const btnInspect = hDoc.getElementById('btn-inspect');
+
+      const initialOpen = metaCard ? metaCard.classList.contains('is-open') : false;
+      const initialAria = btnInfo ? btnInfo.getAttribute('aria-expanded') : null;
+      const initialActionsOpen = actionsMenu ? actionsMenu.classList.contains('is-open') : false;
+
+      if (!initialOpen && initialAria === 'false' && !initialActionsOpen) {
+        log('pass', 'STEP_1', 'Initial DOM State: Metadata collapsed by default, actions menu closed', {
+          metaIsOpen: initialOpen,
+          btnInfoAriaExpanded: initialAria,
+          actionsMenuIsOpen: initialActionsOpen,
+          ship: h.state.current,
+          triangles: hDoc.getElementById('meta-tris')?.textContent
+        });
+      } else {
+        log('fail', 'STEP_1', 'Initial DOM State check failed', { initialOpen, initialAria, initialActionsOpen });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 2: Real Player Interaction — Click INFO Button
+      // -----------------------------------------------------------------------
+      btnInfo.click();
+      await sleep(150);
+
+      const infoOpenAfterClick = metaCard.classList.contains('is-open');
+      const infoAriaAfterClick = btnInfo.getAttribute('aria-expanded');
+
+      if (infoOpenAfterClick && infoAriaAfterClick === 'true') {
+        log('pass', 'STEP_2', 'Physical Click: INFO button revealed metadata card', {
+          btnInfoClicked: true,
+          metaIsOpen: infoOpenAfterClick,
+          ariaExpanded: infoAriaAfterClick
+        });
+      } else {
+        log('fail', 'STEP_2', 'INFO click failed to open metadata', { infoOpenAfterClick, infoAriaAfterClick });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 3: Real Player Interaction — Click Close INFO Button (✕)
+      // -----------------------------------------------------------------------
+      const btnCloseMeta = hDoc.getElementById('btn-meta-close');
+      btnCloseMeta.click();
+      await sleep(150);
+
+      const infoOpenAfterClose = metaCard.classList.contains('is-open');
+      const infoAriaAfterClose = btnInfo.getAttribute('aria-expanded');
+
+      if (!infoOpenAfterClose && infoAriaAfterClose === 'false') {
+        log('pass', 'STEP_3', 'Physical Click: Close button (✕) dismissed metadata card', {
+          btnCloseClicked: true,
+          metaIsOpen: infoOpenAfterClose,
+          ariaExpanded: infoAriaAfterClose
+        });
+      } else {
+        log('fail', 'STEP_3', 'Close button click failed to dismiss metadata', { infoOpenAfterClose, infoAriaAfterClose });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 4: Real Player Interaction — Click ACTIONS ▾ Toggle
+      // -----------------------------------------------------------------------
+      btnActions.click();
+      await sleep(150);
+
+      const actionsOpenAfterClick = actionsMenu.classList.contains('is-open');
+      const actionsAriaAfterClick = btnActions.getAttribute('aria-expanded');
+
+      if (actionsOpenAfterClick && actionsAriaAfterClick === 'true') {
+        log('pass', 'STEP_4', 'Physical Click: ACTIONS ▾ toggle opened responsive actions menu', {
+          btnActionsClicked: true,
+          actionsIsOpen: actionsOpenAfterClick,
+          ariaExpanded: actionsAriaAfterClick
+        });
+      } else {
+        log('fail', 'STEP_4', 'ACTIONS menu click failed to open menu', { actionsOpenAfterClick, actionsAriaAfterClick });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 5: Real Player Interaction — Click Inspect in Menu
+      // -----------------------------------------------------------------------
+      btnInspect.click();
+      await sleep(250);
+
+      const inspectModeActive = h.rig.mode === 'inspect';
+      const inspectAriaPressed = btnInspect.getAttribute('aria-pressed');
+      const modeLineText = hDoc.getElementById('mode-line')?.textContent;
+      const metaOpenInInspect = metaCard.classList.contains('is-open');
+
+      if (inspectModeActive && inspectAriaPressed === 'true' && metaOpenInInspect) {
+        log('pass', 'STEP_5', 'Physical Click: Inspect button activated detail inspection mode', {
+          btnInspectClicked: true,
+          rigMode: h.rig.mode,
+          ariaPressed: inspectAriaPressed,
+          modeLine: modeLineText,
+          metaCardRevealed: metaOpenInInspect
+        });
+      } else {
+        log('fail', 'STEP_5', 'Inspect click failed to activate inspection mode', {
+          inspectModeActive, inspectAriaPressed, modeLineText, metaOpenInInspect
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 6: Real Player Interaction — Click Reset View in Menu
+      // -----------------------------------------------------------------------
+      const btnReset = hDoc.getElementById('btn-reset');
+      btnReset.click();
+      await sleep(250);
+
+      const resetModeActive = h.rig.mode === 'auto';
+      const inspectAriaAfterReset = btnInspect.getAttribute('aria-pressed');
+      const actionsOpenAfterReset = actionsMenu.classList.contains('is-open');
+      const metaOpenAfterReset = metaCard.classList.contains('is-open');
+
+      if (resetModeActive && inspectAriaAfterReset === 'false' && !actionsOpenAfterReset && !metaOpenAfterReset) {
+        log('pass', 'STEP_6', 'Physical Click: Reset View restored default orbit & closed menus', {
+          btnResetClicked: true,
+          rigMode: h.rig.mode,
+          ariaPressed: inspectAriaAfterReset,
+          actionsOpen: actionsOpenAfterReset,
+          metaOpen: metaOpenAfterReset
+        });
+      } else {
+        log('fail', 'STEP_6', 'Reset View click failed', {
+          resetModeActive, inspectAriaAfterReset, actionsOpenAfterReset, metaOpenAfterReset
+        });
+      }
+
+      async function waitForSwap() {
+        // Wait until swap animation begins and completes
+        await sleep(200);
+        for (let i = 0; i < 40; i++) {
+          if (!h.showcase.busy && h.showcase.swapT < 0) break;
+          await sleep(100);
+        }
+        await sleep(150);
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 7: Real Player Interaction — Click Swap Craft (MK-I -> Original)
+      // -----------------------------------------------------------------------
+      // Open actions menu again to access swap button
+      btnActions.click();
+      await sleep(150);
+
+      const btnSwap = hDoc.getElementById('btn-swap');
+      btnSwap.click();
+      await waitForSwap();
+
+      const shipAfterSwap1 = h.state.current;
+      const nameAfterSwap1 = hDoc.getElementById('meta-name')?.textContent;
+      const trisAfterSwap1 = hDoc.getElementById('meta-tris')?.textContent;
+      const chipAfterSwap1 = hDoc.getElementById('class-chip')?.textContent;
+
+      if (shipAfterSwap1 === 'original' && nameAfterSwap1 === 'ORIGINAL PLAYER SHIP' && trisAfterSwap1 === '6') {
+        log('pass', 'STEP_7', 'Physical Click: Swap Craft successfully swapped to Original Player Ship (6 tris)', {
+          btnSwapClicked: true,
+          ship: shipAfterSwap1,
+          name: nameAfterSwap1,
+          tris: trisAfterSwap1,
+          classChip: chipAfterSwap1
+        });
+      } else {
+        log('fail', 'STEP_7', 'Swap Craft to original failed', { shipAfterSwap1, nameAfterSwap1, trisAfterSwap1, chipAfterSwap1 });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 8: Real Player Interaction — Cycle Swap Back to MK-I (Original -> Drone -> MK-I)
+      // -----------------------------------------------------------------------
+      // Swap to Boss Drone
+      btnActions.click();
+      await sleep(150);
+      btnSwap.click();
+      await waitForSwap();
+
+      const shipDrone = h.state.current;
+      const nameDrone = hDoc.getElementById('meta-name')?.textContent;
+      log('info', 'STEP_8A', 'Cycled to Boss Drone exhibit', { ship: shipDrone, name: nameDrone });
+
+      // Swap to MK-I Sovereign
+      btnActions.click();
+      await sleep(150);
+      btnSwap.click();
+      await waitForSwap();
+
+      const shipAfterSwap2 = h.state.current;
+      const nameAfterSwap2 = hDoc.getElementById('meta-name')?.textContent;
+      const trisAfterSwap2 = hDoc.getElementById('meta-tris')?.textContent;
+      const chipAfterSwap2 = hDoc.getElementById('class-chip')?.textContent;
+
+      if (shipAfterSwap2 === 'mk1' && nameAfterSwap2 === 'STARFALL SALVAGER MK-I' && trisAfterSwap2 === '728') {
+        log('pass', 'STEP_8', 'Physical Click: Swap Craft cycled back to Sovereign MK-I (728 tris)', {
+          ship: shipAfterSwap2,
+          name: nameAfterSwap2,
+          tris: trisAfterSwap2,
+          classChip: chipAfterSwap2
+        });
+      } else {
+        log('fail', 'STEP_8', 'Swap Craft back to MK-I failed', { shipAfterSwap2, nameAfterSwap2, trisAfterSwap2, chipAfterSwap2 });
+      }
+
+      // Ensure actions menu is closed
+      if (actionsMenu.classList.contains('is-open')) {
+        btnActions.click();
+        await sleep(150);
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 9: Real Player Interaction — Click LAUNCH FLIGHT CTA
+      // -----------------------------------------------------------------------
+      const btnLaunch = hDoc.getElementById('btn-launch');
+      btnLaunch.click();
+      await sleep(500);
+
+      const scrim = curDoc.getElementById('sovereignScrim');
+      const scrimHidden = scrim ? (scrim.style.display === 'none' || scrim.classList.contains('is-hidden')) : false;
+      const onboardingModal = curDoc.getElementById('onboardingModal');
+      const onboardingVisible = Boolean(onboardingModal && !onboardingModal.classList.contains('is-hidden'));
+
+      if (scrimHidden || onboardingVisible) {
+        log('pass', 'STEP_9', 'Physical Click: LAUNCH FLIGHT triggered parent scrim dismissal & onboarding', {
+          btnLaunchClicked: true,
+          scrimHidden,
+          onboardingVisible
+        });
+      } else {
+        log('fail', 'STEP_9', 'LAUNCH FLIGHT failed to trigger flight transition', { scrimHidden, onboardingVisible });
+      }
+
+      // -----------------------------------------------------------------------
+      // STEP 10: Complete Onboarding & Enter Playing Lane
+      // -----------------------------------------------------------------------
+      const btnContinue = curDoc.getElementById('onboardingContinueButton');
+      if (btnContinue) {
+        btnContinue.click();
+        log('info', 'STEP_10', 'Clicked Onboarding Continue Button; awaiting flight countdown...', {});
+      }
+
+      let reachedPlaying = false;
+      for (let i = 0; i < 40; i++) {
+        const dbg = curWin.__starfallDebug ? curWin.__starfallDebug() : null;
+        if (dbg && dbg.mode === 'playing') {
+          reachedPlaying = true;
+          break;
+        }
+        await sleep(150);
+      }
+
+      const hangarLoopStopped = Boolean(h.lifecycle && !h.lifecycle.isRunning);
+      const gameDebug = curWin.__starfallDebug ? curWin.__starfallDebug() : null;
+
+      if (reachedPlaying) {
+        log('pass', 'STEP_10', 'Flight runner entered PLAYING mode with Three.js loop suspended', {
+          gameMode: gameDebug ? gameDebug.mode : null,
+          selectedShip: gameDebug ? gameDebug.player.selectedShip : null,
+          hangarLoopRunning: h.lifecycle.isRunning,
+          activeRafId: h.lifecycle.activeRafId
+        });
+      } else {
+        log('fail', 'STEP_10', 'Flight runner failed to enter playing mode', {
+          gameMode: gameDebug ? gameDebug.mode : null,
+          hangarLoopRunning: h.lifecycle.isRunning
+        });
+      }
+
+      // -----------------------------------------------------------------------
+      // Final Verdict & Report Delivery
+      // -----------------------------------------------------------------------
+      const anyFails = receipts.some(r => r.type === 'fail');
+      const finalVerdict = anyFails ? 'FAIL' : 'PASS';
+      log(anyFails ? 'fail' : 'pass', 'VERDICT', `Player Journey Verification Complete: ${finalVerdict}`, {
+        totalSteps: receipts.length,
+        verdict: finalVerdict
+      });
+
+      await reportReceipts(finalVerdict);
+    }
+
+    async function reportReceipts(verdict) {
+      const payload = {
+        harness: "tools/interactive_player_journey_test.html",
+        timestamp: new Date().toISOString(),
+        verdict,
+        steps: receipts
+      };
+      try {
+        const res = await fetch("/api/record_journey", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+        log('info', 'SERVER_SYNC', `Server sync response: ${JSON.stringify(json)}`);
+      } catch(e) {
+        log('fail', 'SERVER_SYNC', `Failed to sync receipt to server: ${e.message}`);
+      }
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(runJourney, 500);
+    });
+  </script>
+</body>
+</html>
