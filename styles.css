@@ -2588,8 +2588,9 @@ select:focus {
  border-color: rgba(255, 255, 255, 0.14);
 }
 
+.pmh-control-scheme,
 .pmh-weapon {
- min-width: 74px;
+ min-width: 68px;
  min-height: 44px;
  padding: 0 10px;
  border-radius: 10px;
@@ -2601,6 +2602,11 @@ select:focus {
  letter-spacing: 0.05em;
  text-transform: uppercase;
  white-space: nowrap;
+}
+
+.pmh-control-scheme[data-control-scheme="candidate_b"] {
+ border-color: rgba(110, 198, 160, 0.48);
+ color: #6ec6a0;
 }
 
 .pmh-weapon[data-power="3"],
@@ -2636,23 +2642,25 @@ select:focus {
  }
 
  .pmh-pause {
-  min-width: 48px;
-  width: 48px;
-  flex: 0 0 48px;
+  min-width: 44px;
+  width: 44px;
+  flex: 0 0 44px;
  }
 
  .flight-menu-toggle,
+ .pmh-control-scheme,
  .pmh-weapon {
   min-width: 0;
  }
 
  .flight-menu-toggle {
-  padding: 0 10px;
+  padding: 0 8px;
  }
 
+ .pmh-control-scheme,
  .pmh-weapon {
-  padding: 0 8px;
-  font-size: 0.68rem;
+  padding: 0 7px;
+  font-size: 0.66rem;
  }
 
  .pmh-speed {

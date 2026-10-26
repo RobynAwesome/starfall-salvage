@@ -71,6 +71,9 @@
         <div class="flight-menu-panel is-hidden" id="flightMenuPanel" role="menu" aria-label="Flight menu">
           <button type="button" class="flight-menu-item" id="flightResumeItem" role="menuitem">Drop in — resume</button>
           <button type="button" class="flight-menu-item" id="flightStepOutItem" role="menuitem">Step out — hub pause</button>
+          <p class="flight-menu-heading" role="presentation">Flight control candidate</p>
+          <button type="button" class="flight-menu-item flight-control-option" data-control-scheme="candidate_a" role="menuitem" aria-pressed="true">Candidate A — 2D Free Steer</button>
+          <button type="button" class="flight-menu-item flight-control-option" data-control-scheme="candidate_b" role="menuitem" aria-pressed="false">Candidate B — Lane + Climb/Reach</button>
           <p class="flight-menu-heading" role="presentation">Weapon calibre</p>
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="bolt" role="menuitem" aria-pressed="true">Bolt lane</button>
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="scatter" role="menuitem" aria-pressed="false">Scatter burst</button>
@@ -79,6 +82,7 @@
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="nova" role="menuitem" aria-pressed="false">Nova fan</button>
         </div>
       </div>
+      <button type="button" class="pmh-control-scheme" id="flightControlToggle" aria-label="Switch flight control candidate">CTRL A</button>
       <button type="button" class="pmh-weapon" id="weaponCycleButton" aria-label="Cycle weapon">Bolt I</button>
       <div class="pmh-speed"><strong id="pmhSpeed">1.0x</strong></div>
       </div>

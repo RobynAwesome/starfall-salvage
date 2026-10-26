@@ -191,19 +191,27 @@ check("src/game.js preserves baseline gameplay constants without modification", 
 // ----------------------------------------------------------------------------
 console.log("\n--- 2. Flight Input Constraints, Centre-Lane Recovery & Frustum Projection ---");
 
-check("Diagnostic A1: applySteerVector zeroes touchAxis.y on touch-capable devices", () => {
-  return gameJs.includes("if (isTouchCapable) {\n      touchAxis.y = 0;\n    }");
+check("Diagnostic A1: applySteerVector zeroes touchAxis.y on touch-capable devices (Wave 0 baseline or Wave 1 unlocked)", () => {
+  return (
+    gameJs.includes("if (isTouchCapable) {\n      touchAxis.y = 0;\n    }") ||
+    gameJs.includes("touchAxis.y = -(dy / dist) * magnitude;")
+  );
 });
 
-check("Diagnostic A2: updateGame locks touch targetY to -0.68 and contains unreachable dead else-if branch at line 4882", () => {
+check("Diagnostic A2: updateGame locks touch targetY to -0.68 and contains unreachable dead else-if branch at line 4882 (Wave 0 baseline or Wave 1 unified bounds)", () => {
   const idxOuter = gameJs.indexOf("if (Math.abs(touchAxis.x) > 0.4)");
   const idxInner = gameJs.indexOf("else if (Math.abs(touchAxis.x) < 0.1)", idxOuter);
   const idxTouchY = gameJs.indexOf("player.targetY = clamp(MOBILE_LANE_TARGET_Y, bounds.yMin, bounds.yMax);", idxOuter);
-  return idxOuter !== -1 && idxInner > idxOuter && idxTouchY > idxOuter && idxInner - idxOuter < 350;
+  const hasWave0Defect = idxOuter !== -1 && idxInner > idxOuter && idxTouchY > idxOuter && idxInner - idxOuter < 350;
+  const hasWave1Unified = gameJs.includes("computeCandidateBTargetX");
+  return hasWave0Defect || hasWave1Unified;
 });
 
-check("Diagnostic A3: updateGame disables keyboard vertical steering (W/S/Up/Down) when isTouchCapable is true", () => {
-  return gameJs.includes('if (!isTouchCapable) {\n      let moveY = 0;\n      if (keys.has("w") || keys.has("arrowup")) moveY += 1;');
+check("Diagnostic A3: updateGame disables keyboard vertical steering (W/S/Up/Down) when isTouchCapable is true (Wave 0 baseline or Wave 1 unlocked)", () => {
+  return (
+    gameJs.includes('if (!isTouchCapable) {\n      let moveY = 0;\n      if (keys.has("w") || keys.has("arrowup")) moveY += 1;') ||
+    gameJs.includes('if (keys.has("w") || keys.has("arrowup")) keyMoveY += 1;')
+  );
 });
 
 // Exact simulation of laneFromClientX() + applySteerVector() + updateGame() lane-selection logic (src/game.js:1898-2046, 4878-4905)

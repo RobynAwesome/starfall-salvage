@@ -91,6 +91,7 @@
     flightMenuPanel: document.getElementById("flightMenuPanel"),
     flightResumeItem: document.getElementById("flightResumeItem"),
     flightStepOutItem: document.getElementById("flightStepOutItem"),
+    flightControlToggle: document.getElementById("flightControlToggle"),
     weaponCycleButton: document.getElementById("weaponCycleButton"),
     gameOverSovereign: document.getElementById("gameOverSovereign"),
     gameOverFinal: document.getElementById("gameOverFinal"),
@@ -883,7 +884,17 @@
     swipeTurnWindow: 0,
     pendingCorner: false,
     lastHudScore: -1,
-    lastHudSpeedLabel: ""
+    lastHudSpeedLabel: "",
+    controlScheme: "candidate_a",
+    frameDrawElementsCount: 0,
+    lastFrameDrawCalls: 0,
+    frameBufferBindCount: 0,
+    lastBufferBindCount: 0,
+    frameTextureBindCount: 0,
+    lastTextureBindCount: 0,
+    lastRenderCpuMs: 0,
+    lastRafTimestamp: 0,
+    lastUncappedRafMs: 16.67
   };
 
   const Mat4 = {
@@ -1171,6 +1182,7 @@
       indexBuffer,
       indexCount: indices.length,
       stride,
+      rawVertices: new Float32Array(vertices),
       rawPositions
     };
   }
@@ -1264,22 +1276,54 @@
     ]);
   }
 
+  const SHARD_BASE_POINTS = [
+    [0.2, 0.4, 0.1], [-0.3, 0.2, -0.2], [0.1, -0.4, 0.3],
+    [-0.2, -0.3, -0.1], [0, 0.75, 0], [0, -0.75, 0]
+  ];
+  const SHARD_TRIANGLES = [
+    [SHARD_BASE_POINTS[0], SHARD_BASE_POINTS[1], SHARD_BASE_POINTS[4]],
+    [SHARD_BASE_POINTS[1], SHARD_BASE_POINTS[2], SHARD_BASE_POINTS[4]],
+    [SHARD_BASE_POINTS[2], SHARD_BASE_POINTS[3], SHARD_BASE_POINTS[4]],
+    [SHARD_BASE_POINTS[3], SHARD_BASE_POINTS[0], SHARD_BASE_POINTS[4]],
+    [SHARD_BASE_POINTS[1], SHARD_BASE_POINTS[0], SHARD_BASE_POINTS[5]],
+    [SHARD_BASE_POINTS[2], SHARD_BASE_POINTS[1], SHARD_BASE_POINTS[5]],
+    [SHARD_BASE_POINTS[3], SHARD_BASE_POINTS[2], SHARD_BASE_POINTS[5]],
+    [SHARD_BASE_POINTS[0], SHARD_BASE_POINTS[3], SHARD_BASE_POINTS[5]]
+  ];
+  const SHARD_SAMPLE_COORDS = (function buildShardSampleCoords() {
+    const coords = [0, 0, 0];
+    for (let i = 0; i < SHARD_BASE_POINTS.length; i++) {
+      const p = SHARD_BASE_POINTS[i];
+      coords.push(p[0], p[1], p[2]);
+    }
+    const edges = [
+      [0, 1], [1, 2], [2, 3], [3, 0],
+      [0, 4], [1, 4], [2, 4], [3, 4],
+      [0, 5], [1, 5], [2, 5], [3, 5]
+    ];
+    for (let i = 0; i < edges.length; i++) {
+      const a = SHARD_BASE_POINTS[edges[i][0]];
+      const b = SHARD_BASE_POINTS[edges[i][1]];
+      coords.push((a[0] + b[0]) * 0.5, (a[1] + b[1]) * 0.5, (a[2] + b[2]) * 0.5);
+      if (edges[i][1] >= 4) {
+        coords.push(a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25, a[2] * 0.75 + b[2] * 0.25);
+        coords.push(a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75, a[2] * 0.25 + b[2] * 0.75);
+      }
+    }
+    for (let i = 0; i < SHARD_TRIANGLES.length; i++) {
+      const tri = SHARD_TRIANGLES[i];
+      coords.push(
+        (tri[0][0] + tri[1][0] + tri[2][0]) / 3,
+        (tri[0][1] + tri[1][1] + tri[2][1]) / 3,
+        (tri[0][2] + tri[1][2] + tri[2][2]) / 3
+      );
+    }
+    return new Float32Array(coords);
+  })();
+
   function createSalvageMesh() {
     // Stable "Shattered" Shard geometry
-    const pts = [
-      [0.2, 0.4, 0.1], [-0.3, 0.2, -0.2], [0.1, -0.4, 0.3],
-      [-0.2, -0.3, -0.1], [0, 0.75, 0], [0, -0.75, 0]
-    ];
-    return createFaceMesh([
-      [pts[0], pts[1], pts[4]],
-      [pts[1], pts[2], pts[4]],
-      [pts[2], pts[3], pts[4]],
-      [pts[3], pts[0], pts[4]],
-      [pts[1], pts[0], pts[5]],
-      [pts[2], pts[1], pts[5]],
-      [pts[3], pts[2], pts[5]],
-      [pts[0], pts[3], pts[5]]
-    ]);
+    return createFaceMesh(SHARD_TRIANGLES);
   }
 
   function createShipMesh() {
@@ -1493,6 +1537,8 @@
   let activeTouchId = null;
   let touchStartX = 0;
   let touchStartY = 0;
+  let steerLastClientX = 0;
+  let steerLastClientY = 0;
   let touchStartTime = 0;
   let touchMaxTravel = 0;
   const TOUCH_DEADZONE_PX = 8;
@@ -1510,6 +1556,65 @@
   applyDeckResonance(pilotProfile.deckResonance);
   let wasPlayingBeforeHidden = false;
   let contextLost = false;
+
+  const STARFLIGHT_CONTROL_STORAGE_KEY = "starfall_salvage_control_scheme_v1";
+  function normalizeControlScheme(raw) {
+    if (!raw || typeof raw !== "string") return "candidate_a";
+    const s = raw.trim().toLowerCase();
+    if (s === "b" || s === "candidate_b" || s === "lane" || s === "lanes") {
+      return "candidate_b";
+    }
+    return "candidate_a";
+  }
+
+  function readInitialControlScheme() {
+    try {
+      const urlControl = new URLSearchParams(window.location.search).get("control");
+      if (urlControl) {
+        const norm = normalizeControlScheme(urlControl);
+        window.localStorage.setItem(STARFLIGHT_CONTROL_STORAGE_KEY, norm);
+        return norm;
+      }
+      const stored = window.localStorage.getItem(STARFLIGHT_CONTROL_STORAGE_KEY);
+      if (stored) {
+        return normalizeControlScheme(stored);
+      }
+    } catch {}
+    return "candidate_a";
+  }
+  state.controlScheme = readInitialControlScheme();
+
+  function laneFromWorldX(worldX) {
+    const laneWidth = 2.2;
+    if (worldX < -laneWidth * 0.45) {
+      return -1;
+    }
+    if (worldX > laneWidth * 0.45) {
+      return 1;
+    }
+    return 0;
+  }
+
+  function computeCandidateBTargetX(worldX, bounds) {
+    const absX = Math.abs(worldX);
+    if (absX <= 0.48) {
+      return { lane: 0, targetX: 0 };
+    }
+    const sign = worldX < 0 ? -1 : 1;
+    if (absX < 1.72) {
+      const t = (absX - 0.48) / (1.72 - 0.48);
+      const tx = sign * t * 2.2;
+      return { lane: Math.abs(tx) < 0.99 ? 0 : sign, targetX: tx };
+    }
+    if (absX <= 2.68) {
+      return { lane: sign, targetX: sign * 2.2 };
+    }
+    const shoulderT = clamp((absX - 2.68) / Math.max(0.01, bounds.xMax - 2.68), 0, 1);
+    return {
+      lane: sign,
+      targetX: clamp(sign * (2.2 + shoulderT * (bounds.xMax - 2.2)), bounds.xMin, bounds.xMax)
+    };
+  }
 
   window.addEventListener("keydown", (event) => {
     if (isGuestCtaModalOpen()) {
@@ -1556,10 +1661,42 @@
       dashRequested = true;
     }
     if (key === "a" || key === "arrowleft") {
-      player.targetLane = Math.max(-1, player.targetLane - 1);
+      const bounds = getPlayerBounds();
+      if (state.controlScheme === "candidate_b") {
+        if (!event.repeat) {
+          if (player.targetX > 2.25) {
+            player.targetLane = 1;
+            player.targetX = 2.2;
+          } else if (player.targetLane > -1) {
+            player.targetLane = Math.max(-1, player.targetLane - 1);
+            player.targetX = player.targetLane * 2.2;
+          } else {
+            player.targetX = clamp(player.targetX - 0.8, bounds.xMin, bounds.xMax);
+          }
+        }
+      } else if (!event.repeat) {
+        player.targetX = clamp(player.targetX - 0.65, bounds.xMin, bounds.xMax);
+        player.targetLane = laneFromWorldX(player.targetX);
+      }
     }
     if (key === "d" || key === "arrowright") {
-      player.targetLane = Math.min(1, player.targetLane + 1);
+      const bounds = getPlayerBounds();
+      if (state.controlScheme === "candidate_b") {
+        if (!event.repeat) {
+          if (player.targetX < -2.25) {
+            player.targetLane = -1;
+            player.targetX = -2.2;
+          } else if (player.targetLane < 1) {
+            player.targetLane = Math.min(1, player.targetLane + 1);
+            player.targetX = player.targetLane * 2.2;
+          } else {
+            player.targetX = clamp(player.targetX + 0.8, bounds.xMin, bounds.xMax);
+          }
+        }
+      } else if (!event.repeat) {
+        player.targetX = clamp(player.targetX + 0.65, bounds.xMin, bounds.xMax);
+        player.targetLane = laneFromWorldX(player.targetX);
+      }
     }
     if (key === "enter" && state.mode !== "playing" && state.mode !== "relaunch") {
       startGame();
@@ -1593,6 +1730,8 @@
   function beginSteerInput(clientX, clientY) {
     touchStartX = clientX;
     touchStartY = clientY;
+    steerLastClientX = clientX;
+    steerLastClientY = clientY;
     touchStartTime = performance.now();
     touchMaxTravel = 0;
     touchAxis.x = 0;
@@ -1611,24 +1750,50 @@
       touchAxis.y = 0;
       return;
     }
-    const range = TOUCH_FULL_RANGE_PX - TOUCH_DEADZONE_PX;
+    const range = Math.max(12, TOUCH_FULL_RANGE_PX - TOUCH_DEADZONE_PX);
     const magnitude = Math.min(1, (dist - TOUCH_DEADZONE_PX) / range);
     touchAxis.x = (dx / dist) * magnitude;
     // Browser y-axis is inverted vs game world Y (up is negative pixel delta).
     touchAxis.y = -(dy / dist) * magnitude;
-    // Mobile salvage lane: absolute X tracking + lateral relative nudge — no vertical drag
     if (dist > TOUCH_DEADZONE_PX) {
       if (navigator.vibrate) navigator.vibrate(8); // Subtle haptic nudge
     }
-    // (Temple-runner sightline; avoids fighting camera bias — see MOBILE_LANE_TARGET_Y).
-    if (isTouchCapable) {
-      touchAxis.y = 0;
+  }
+
+  function applyPointerOrTouchSteer(clientX, clientY, isInitialDown) {
+    const bounds = getPlayerBounds();
+    const worldX = mapTouchClientXToWorld(clientX);
+    if (state.controlScheme === "candidate_b") {
+      const prevLane = player.targetLane;
+      const mapped = computeCandidateBTargetX(worldX, bounds);
+      player.targetLane = mapped.lane;
+      player.targetX = mapped.targetX;
+      if (mapped.lane !== prevLane) {
+        touchStartX = clientX;
+      }
+    } else {
+      player.targetX = clamp(worldX, bounds.xMin, bounds.xMax);
+      player.targetLane = laneFromWorldX(player.targetX);
     }
+    if (!isInitialDown) {
+      const rect = canvas.getBoundingClientRect();
+      const spanY = Math.max(120, (rect.height || window.innerHeight || 480) * 0.28);
+      const stepDy = clientY - steerLastClientY;
+      if (Math.abs(stepDy) > 0.25) {
+        player.targetY = clamp(
+          player.targetY - (stepDy / spanY) * (bounds.yMax - bounds.yMin),
+          bounds.yMin,
+          bounds.yMax
+        );
+      }
+    }
+    steerLastClientX = clientX;
+    steerLastClientY = clientY;
   }
 
   function applyTouchVector(touch) {
     applySteerVector(touch.clientX, touch.clientY);
-    player.targetLane = laneFromClientX(touch.clientX);
+    applyPointerOrTouchSteer(touch.clientX, touch.clientY, false);
   }
 
   function clearTouchAxis() {
@@ -1972,7 +2137,7 @@
       activePointerType = event.pointerType || "pointer";
       pointerStartedRun = state.mode !== "playing";
       beginSteerInput(event.clientX, event.clientY);
-      player.targetLane = laneFromClientX(event.clientX);
+      applyPointerOrTouchSteer(event.clientX, event.clientY, true);
       canvas.focus();
       if (state.mode === "ready" || state.mode === "gameover") {
         startGame();
@@ -1992,7 +2157,7 @@
       }
       event.preventDefault();
       applySteerVector(event.clientX, event.clientY);
-      player.targetLane = laneFromClientX(event.clientX);
+      applyPointerOrTouchSteer(event.clientX, event.clientY, false);
     }, { passive: false });
 
     const finishPointerSteer = (event) => {
@@ -2037,8 +2202,7 @@
       event.preventDefault();
       activeTouchId = touch.identifier;
       beginSteerInput(touch.clientX, touch.clientY);
-      player.targetX = mapTouchClientXToWorld(touch.clientX);
-      player.targetLane = laneFromClientX(touch.clientX);
+      applyPointerOrTouchSteer(touch.clientX, touch.clientY, true);
       const startBounds = getPlayerBounds();
       player.targetY = clamp(player.targetY, startBounds.yMin, startBounds.yMax);
     }, { passive: false });
@@ -2050,8 +2214,6 @@
       for (const touch of event.changedTouches) {
         if (touch.identifier === activeTouchId) {
           event.preventDefault();
-          player.targetX = mapTouchClientXToWorld(touch.clientX);
-          player.targetLane = laneFromClientX(touch.clientX);
           applyTouchVector(touch);
           break;
         }
@@ -2483,6 +2645,48 @@
     }
   } catch {}
 
+  function syncControlSchemeHud() {
+    const scheme = state.controlScheme || "candidate_a";
+    if (hud.flightControlToggle) {
+      hud.flightControlToggle.textContent = scheme === "candidate_b" ? "CTRL B" : "CTRL A";
+      hud.flightControlToggle.dataset.controlScheme = scheme;
+      hud.flightControlToggle.title = scheme === "candidate_b"
+        ? "Candidate B active (Lane + Shoulder Reach + Vertical). Click to switch to Candidate A (2D Free Steer)."
+        : "Candidate A active (2D Free Steer). Click to switch to Candidate B (Lane + Shoulder Reach + Vertical).";
+    }
+    if (hud.flightMenuPanel) {
+      hud.flightMenuPanel.querySelectorAll(".flight-control-option").forEach((btn) => {
+        const on = btn.dataset.controlScheme === scheme;
+        btn.classList.toggle("is-selected", on);
+        btn.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+  }
+
+  function setControlScheme(scheme, announce = true) {
+    const next = normalizeControlScheme(scheme);
+    state.controlScheme = next;
+    try {
+      window.localStorage.setItem(STARFLIGHT_CONTROL_STORAGE_KEY, next);
+    } catch {}
+    player.targetLane = laneFromWorldX(player.targetX);
+    syncControlSchemeHud();
+    if (announce) {
+      setEventMessage(
+        next === "candidate_b"
+          ? "Control B: Lane + Climb/Shoulder"
+          : "Control A: 2D Free Steer",
+        0.75
+      );
+    }
+    logEvent("control_scheme_set", { scheme: next });
+    return next;
+  }
+
+  function toggleControlScheme() {
+    return setControlScheme(state.controlScheme === "candidate_b" ? "candidate_a" : "candidate_b", true);
+  }
+
   function setWeaponMode(mode) {
     const next = isWeaponMode(mode) ? mode : "bolt";
     player.weaponMode = next;
@@ -2509,6 +2713,7 @@
       btn.classList.toggle("is-selected", on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    syncControlSchemeHud();
   }
 
   if (hud.flightMenuToggle && hud.flightMenuPanel) {
@@ -2542,6 +2747,15 @@
         closeFlightMenu();
       });
     });
+    hud.flightMenuPanel.querySelectorAll(".flight-control-option").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const cs = btn.dataset.controlScheme;
+        if (cs) {
+          setControlScheme(cs, true);
+        }
+        closeFlightMenu();
+      });
+    });
     document.addEventListener(
       "pointerdown",
       (event) => {
@@ -2558,6 +2772,14 @@
     );
     syncFlightWeaponButtons();
   }
+  if (hud.flightControlToggle) {
+    hud.flightControlToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleControlScheme();
+      closeFlightMenu();
+    });
+  }
   if (hud.weaponCycleButton) {
     hud.weaponCycleButton.addEventListener("click", (event) => {
       event.preventDefault();
@@ -2565,6 +2787,7 @@
       closeFlightMenu();
     });
   }
+  syncControlSchemeHud();
 
   const objects = [];
   const sparks = [];
@@ -2572,34 +2795,43 @@
   const screenViewMatrix = Mat4.create();
   const screenProjectionMatrix = Mat4.create();
   const screenSpaceField = Array.from(
-    { length: isTouchCapable ? 102 : 62 },
+    { length: isTouchCapable ? 36 : 28 },
     (_, index) => createScreenSpaceFieldParticle(index)
   );
   const screenSpaceSweepers = Array.from(
-    { length: isTouchCapable ? 7 : 5 },
+    { length: isTouchCapable ? 5 : 4 },
     (_, index) => createScreenSpaceSweeper(index)
   );
   const starLayers = [
-    createStarLayer(isTouchCapable ? 132 : 144, 20, 100, 0.18, 0.028, 0.09, isTouchCapable ? 0.86 : 0.66),
-    createStarLayer(isTouchCapable ? 92 : 102, 12, 76, 0.58, 0.05, 0.15, isTouchCapable ? 1 : 0.92),
-    createStarLayer(isTouchCapable ? 38 : 46, 8, 58, 0.92, 0.08, 0.22, 1)
+    createStarLayer(isTouchCapable ? 44 : 48, 20, 100, 0.18, 0.032, 0.095, isTouchCapable ? 0.9 : 0.72),
+    createStarLayer(isTouchCapable ? 32 : 34, 12, 76, 0.58, 0.055, 0.16, isTouchCapable ? 1 : 0.94),
+    createStarLayer(isTouchCapable ? 16 : 18, 8, 58, 0.92, 0.085, 0.22, 1)
   ];
-  const skySalvage = Array.from({ length: isTouchCapable ? 22 : 30 }, (_, index) => createSkySalvage(index));
-  const salvageDressing = Array.from({ length: isTouchCapable ? 18 : 28 }, (_, index) => createSalvageDressing(index));
+  const skySalvage = Array.from({ length: isTouchCapable ? 12 : 16 }, (_, index) => createSkySalvage(index));
+  const salvageDressing = Array.from({ length: isTouchCapable ? 12 : 16 }, (_, index) => createSalvageDressing(index));
 
   function readDebugState() {
     const bounds = getPlayerBounds();
     return {
       build: GAME_BUILD,
       mode: state.mode,
+      controlScheme: state.controlScheme,
       renderSuspended: Boolean(state.renderSuspended),
       rawDrawCalls: state.rawDrawCalls,
+      glDrawElementsPerFrame: state.lastFrameDrawCalls,
+      bufferBindsPerFrame: state.lastBufferBindCount,
+      textureBindsPerFrame: state.lastTextureBindCount,
+      renderCpuMs: Number((state.lastRenderCpuMs || 0).toFixed(4)),
+      uncappedRafMs: Number((state.lastUncappedRafMs || 16.67).toFixed(4)),
       landingSuspendedTicks: state.landingSuspendedTicks,
       player: {
         selectedShip: player.selectedShip,
         x: Number(player.x.toFixed(4)),
         y: Number(player.y.toFixed(4)),
+        z: Number(player.z.toFixed(4)),
+        shipZ: Number((player.z + 0.45).toFixed(4)),
         targetX: Number(player.targetX.toFixed(4)),
+        targetY: Number(player.targetY.toFixed(4)),
         targetLane: player.targetLane,
         vx: Number(player.vx.toFixed(4)),
         vy: Number(player.vy.toFixed(4)),
@@ -2636,42 +2868,34 @@
 
   function getPlayerBounds() {
     const base = (SIM.lanes && SIM.lanes.playerBounds) || SIM_LAW_DEFAULT.lanes.playerBounds;
-    if (!isTouchCapable) {
-      return base;
-    }
     return {
-      xMin: base.xMin * 0.7,
-      xMax: base.xMax * 0.7,
-      yMin: base.yMin * 0.62,
-      yMax: base.yMax * 0.62
+      xMin: base.xMin,
+      xMax: base.xMax,
+      yMin: base.yMin,
+      yMax: base.yMax
     };
   }
 
   function getCameraFollow() {
     if (isTouchCapable) {
-      // Relaxed follow — ship stays visible but player sees further ahead.
-      return { x: 0.42, y: 0.22 };
+      return { x: 0.52, y: 0.52 };
     }
-    return { x: 0.018, y: 0.016 };
+    return { x: 0.36, y: 0.52 };
   }
 
   function mapTouchClientXToWorld(clientX) {
     const rect = canvas.getBoundingClientRect();
-    const t = clamp((clientX - rect.left) / Math.max(1, rect.width), 0, 1);
+    const width = Math.max(1, rect.width);
+    const padX = width * 0.08;
+    const usable = Math.max(1, width - padX * 2);
+    const t = clamp((clientX - rect.left - padX) / usable, 0, 1);
     const bounds = getPlayerBounds();
     return bounds.xMin + t * (bounds.xMax - bounds.xMin);
   }
 
   function laneFromClientX(clientX) {
     const worldX = mapTouchClientXToWorld(clientX);
-    const laneWidth = 2.2;
-    if (worldX < -laneWidth * 0.45) {
-      return -1;
-    }
-    if (worldX > laneWidth * 0.45) {
-      return 1;
-    }
-    return 0;
+    return laneFromWorldX(worldX);
   }
 
   function getViewportCssSize() {
@@ -2794,7 +3018,7 @@
         // Mobile Landscape (e.g. Redmi 13 rotated 873x393, aspect ~2.22)
         return {
           fovScale: 0.82,
-          viewBiasY: -0.04,
+          viewBiasY: 0.28,
           cameraDepth: -2.55,
           readyPitch: 0.22,
           playPitch: 0.18,
@@ -2810,7 +3034,7 @@
         // Tall Mobile Portrait (e.g. 20:9, 19.5:9, Redmi 13 393x873)
         return {
           fovScale: 0.74,
-          viewBiasY: 0.08,
+          viewBiasY: 0.32,
           cameraDepth: -2.75,
           readyPitch: 0.24,
           playPitch: 0.19,
@@ -2826,7 +3050,7 @@
         // Standard Mobile Portrait (e.g. 9:16)
         return {
           fovScale: 0.78,
-          viewBiasY: 0.12,
+          viewBiasY: 0.32,
           cameraDepth: -2.9,
           readyPitch: 0.28,
           playPitch: 0.22,
@@ -2841,7 +3065,7 @@
       // Tablet / squarish touch screen
       return {
         fovScale: 0.82,
-        viewBiasY: 0.14,
+        viewBiasY: 0.3,
         cameraDepth: -3.05,
         readyPitch: 0.3,
         playPitch: 0.24,
@@ -2857,7 +3081,7 @@
       // Ultrawide desktop (21:9+)
       return {
         fovScale: 0.68,
-        viewBiasY: -0.06,
+        viewBiasY: 0.28,
         cameraDepth: -2.48,
         readyPitch: 0.22,
         playPitch: 0.18,
@@ -2873,7 +3097,7 @@
       // Standard desktop (16:9, 16:10)
       return {
         fovScale: 0.76,
-        viewBiasY: 0.02,
+        viewBiasY: 0.28,
         cameraDepth: -2.72,
         readyPitch: 0.26,
         playPitch: 0.21,
@@ -2888,7 +3112,7 @@
     // Desktop squarish or portrait monitor
     return {
       fovScale: 0.88,
-      viewBiasY: 0.12,
+      viewBiasY: 0.3,
       cameraDepth: -2.95,
       readyPitch: 0.32,
       playPitch: 0.26,
@@ -4793,6 +5017,126 @@
     }
   }
 
+  function evaluateDebrisHullContact(object, prevObjZ, prevPlayerX, prevPlayerY, dt) {
+    const shipZ = player.z + 0.45;
+    const size = object.size || 0.7;
+    const isBoss = object.type === "boss";
+    const scaleX = isBoss ? size * 1.2 : size;
+    const maxObjReach = scaleX * 0.78;
+    const zMin = Math.min(prevObjZ, object.z);
+    const zMax = Math.max(prevObjZ, object.z);
+    if (zMax + maxObjReach < shipZ - 0.84 || zMin - maxObjReach > shipZ + 0.70) {
+      return false;
+    }
+
+    const dzTravel = object.z - prevObjZ;
+    const uClosest = Math.abs(dzTravel) > 1e-5 ? clamp((shipZ - prevObjZ) / dzTravel, 0, 1) : 1;
+    const shipWingHalfX = isTouchCapable ? 0.60 : 0.54;
+    const shipHalfY = isTouchCapable ? 0.23 : 0.21;
+    const coreR = isBoss ? size * 0.48 : size * 0.22;
+    const spinX = object.spinX || 0;
+    const spinY = object.spinY || 0;
+    const spinZ = object.spinZ || 0;
+
+    for (let step = 0; step < 6; step++) {
+      const u = step === 0 ? uClosest : (step - 1) * 0.25;
+      const oz = prevObjZ + dzTravel * u;
+      const sx = prevPlayerX + (player.x - prevPlayerX) * u;
+      const sy = prevPlayerY + (player.y - prevPlayerY) * u;
+
+      let ox = object.x;
+      let oy = object.y;
+      if (oz < -7.8) {
+        const pose = corridorPose(oz, state.time);
+        const cp = Math.cos(pose.roll);
+        const sp = Math.sin(pose.roll);
+        ox = pose.x + object.x * cp - object.y * sp;
+        oy = pose.y + object.x * sp + object.y * cp;
+      }
+
+      if (Math.abs(ox - sx) > shipWingHalfX + maxObjReach || Math.abs(oy - sy) > shipHalfY + maxObjReach) {
+        continue;
+      }
+
+      const dzCore = oz - shipZ;
+      if (
+        dzCore >= -0.78 - coreR &&
+        dzCore <= 0.64 + coreR &&
+        Math.abs(oy - sy) <= shipHalfY + coreR &&
+        Math.abs(ox - sx) <= shipWingHalfX + coreR
+      ) {
+        return true;
+      }
+
+      const backDt = (1 - u) * dt;
+      const rx = (object.rotX || 0) - spinX * backDt + (isBoss ? state.time * 0.4 : 0);
+      const ry = (object.rotY || 0) - spinY * backDt + (isBoss ? state.time * 0.5 : 0);
+      const rz = (object.rotZ || 0) - spinZ * backDt;
+      const cx = Math.cos(rx), sxRot = Math.sin(rx);
+      const cy = Math.cos(ry), syRot = Math.sin(ry);
+      const cz = Math.cos(rz), szRot = Math.sin(rz);
+
+      for (let p = 0; p < SHARD_SAMPLE_COORDS.length; p += 3) {
+        const x0 = SHARD_SAMPLE_COORDS[p] * scaleX;
+        const y0 = SHARD_SAMPLE_COORDS[p + 1] * size;
+        const z0 = SHARD_SAMPLE_COORDS[p + 2] * size;
+
+        const x1 = x0 * cz - y0 * szRot;
+        const y1 = x0 * szRot + y0 * cz;
+        const z1 = z0;
+
+        const x2 = x1 * cy + z1 * syRot;
+        const y2 = y1;
+        const z2 = -x1 * syRot + z1 * cy;
+
+        const wx = ox + x2;
+        const wy = oy + (y2 * cx - z2 * sxRot);
+        const wz = oz + (y2 * sxRot + z2 * cx);
+
+        const relZ = wz - shipZ;
+        if (relZ < -0.82 || relZ > 0.68) {
+          continue;
+        }
+        const relY = Math.abs(wy - sy);
+        if (relY > shipHalfY) {
+          continue;
+        }
+        const relX = Math.abs(wx - sx);
+        let hullHalfX = shipWingHalfX;
+        if (relZ < -0.42) {
+          hullHalfX = 0.16 + ((relZ + 0.82) / 0.40) * (shipWingHalfX - 0.16);
+        } else if (relZ > 0.56) {
+          hullHalfX = 0.28;
+        }
+        if (relX <= hullHalfX) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  function evaluateSweptPickupContact(object, prevObjZ, prevPlayerX, prevPlayerY) {
+    const zMin = Math.min(prevObjZ, object.z);
+    const zMax = Math.max(prevObjZ, object.z);
+    const hitZ = player.z;
+    if (zMax < hitZ - 1.1 || zMin > hitZ + 1.1) {
+      return false;
+    }
+    const combinedRadius = (object.radius || 0.35) + player.radius;
+    const dzTravel = object.z - prevObjZ;
+    const uStar = Math.abs(dzTravel) > 1e-5 ? clamp((hitZ - prevObjZ) / dzTravel, 0, 1) : 1;
+    const pxStar = prevPlayerX + (player.x - prevPlayerX) * uStar;
+    const pyStar = prevPlayerY + (player.y - prevPlayerY) * uStar;
+    if (Math.hypot(object.x - pxStar, object.y - pyStar) < combinedRadius) {
+      return true;
+    }
+    if (Math.abs(object.z - hitZ) < 1.1 && Math.hypot(object.x - player.x, object.y - player.y) < combinedRadius) {
+      return true;
+    }
+    return false;
+  }
+
   function updateGame(dt) {
     if (state.mode !== "playing") {
       return;
@@ -4875,37 +5219,54 @@
 
     const laneWidth = 2.2;
     const bounds = getPlayerBounds();
-    player.targetX = player.targetLane * laneWidth;
+    const pointerOrTouchActive = activePointerId !== null || activeTouchId !== null;
 
-    if (!isTouchCapable) {
-      let moveY = 0;
-      if (keys.has("w") || keys.has("arrowup")) moveY += 1;
-      if (keys.has("s") || keys.has("arrowdown")) moveY -= 1;
-      player.vy = moveY * 7.2;
-      player.targetY = clamp(player.targetY + player.vy * dt, bounds.yMin, bounds.yMax);
-    } else {
-      // moveX += touchAxis.x; // Legacy proof: touch movement logic
-      if (Math.abs(touchAxis.x) > 0.4) {
-        if (touchAxis.x < -0.4 && player.targetLane > -1) {
-          player.targetLane = -1;
-        } else if (touchAxis.x > 0.4 && player.targetLane < 1) {
-          player.targetLane = 1;
-        } else if (Math.abs(touchAxis.x) < 0.1) {
-          player.targetLane = 0;
+    let keyMoveX = 0;
+    if (keys.has("a") || keys.has("arrowleft")) keyMoveX -= 1;
+    if (keys.has("d") || keys.has("arrowright")) keyMoveX += 1;
+
+    let keyMoveY = 0;
+    if (keys.has("w") || keys.has("arrowup")) keyMoveY += 1;
+    if (keys.has("s") || keys.has("arrowdown")) keyMoveY -= 1;
+
+    let moveX = keyMoveX;
+    moveX += touchAxis.x;
+
+    if (!pointerOrTouchActive) {
+      if (state.controlScheme === "candidate_b") {
+        if (keyMoveX < 0 && player.targetLane === -1) {
+          player.targetX = clamp(player.targetX + keyMoveX * 7.6 * dt, bounds.xMin, bounds.xMax);
+        } else if (keyMoveX > 0 && player.targetLane === 1) {
+          player.targetX = clamp(player.targetX + keyMoveX * 7.6 * dt, bounds.xMin, bounds.xMax);
+        } else if (Math.abs(player.targetX) <= laneWidth + 0.05) {
+          player.targetX = player.targetLane * laneWidth;
+        }
+      } else {
+        if (Math.abs(moveX) > 0.01) {
+          player.targetX = clamp(player.targetX + moveX * 8.8 * dt, bounds.xMin, bounds.xMax);
+          player.targetLane = laneFromWorldX(player.targetX);
         }
       }
-      player.targetY = clamp(MOBILE_LANE_TARGET_Y, bounds.yMin, bounds.yMax);
     }
 
-    const positionLerp = isTouchCapable ? 0.68 : 0.32; // 2.4x responsiveness boost for mobile
+    const moveY = keyMoveY !== 0 ? keyMoveY : (!pointerOrTouchActive ? touchAxis.y : 0);
+    if (Math.abs(moveY) > 0.01) {
+      player.vy = moveY * 7.6;
+      player.targetY = clamp(player.targetY + player.vy * dt, bounds.yMin, bounds.yMax);
+    } else {
+      player.targetY = clamp(player.targetY, bounds.yMin, bounds.yMax);
+    }
+
+    const positionLerp = isTouchCapable ? 0.68 : 0.36;
     const oldX = player.x;
+    const oldY = player.y;
     player.x += (player.targetX - player.x) * positionLerp;
     player.y += (player.targetY - player.y) * positionLerp;
 
     // Banking & Tilt (Roll/Pitch) — 80%+ Fluidity Tuning
     const dx = player.x - oldX;
-    player.vx = dx / dt; // Capture instantaneous horizontal velocity
-    player.vy = (player.targetY - player.y) / dt;
+    player.vx = dt > 1e-5 ? dx / dt : 0; // Capture instantaneous horizontal velocity
+    player.vy = dt > 1e-5 ? (player.y - oldY) / dt : 0;
     player.viewRoll = lerp(player.viewRoll || 0, dx * 0.72, 0.18);
     player.viewPitch = lerp(player.viewPitch || 0, (state.speed - 20) * 0.002, 0.12);
 
@@ -4930,6 +5291,7 @@
 
     for (let i = objects.length - 1; i >= 0; i--) {
       const object = objects[i];
+      const prevObjZ = object.z;
       // Treadmill: ship Z stays fixed; scrap streams toward the camera (+Z), then pools out past z>8.
       object.z += state.speed * dt * (object.type === "boss" ? 0.55 : 1);
       object.rotX += object.spinX * dt;
@@ -4989,9 +5351,15 @@
         object.passed = true;
       }
 
-      if (object.type !== "rangeTarget" && object.type !== "laneGate" && dz < 1.1) {
-        const distance = Math.hypot(object.x - player.x, object.y - player.y);
-        if (distance < object.radius + player.radius) {
+      if (object.type !== "rangeTarget" && object.type !== "laneGate") {
+        const isPickup =
+          object.type === "buffOrb" ||
+          object.type === "powerOrb" ||
+          object.type === "crystal";
+        const isHit = isPickup
+          ? evaluateSweptPickupContact(object, prevObjZ, oldX, oldY)
+          : evaluateDebrisHullContact(object, prevObjZ, oldX, oldY, dt);
+        if (isHit) {
           if (object.type === "boss") {
             if (player.dash > 0) {
               object.hp = (object.hp || 1) - 1;
@@ -5206,7 +5574,15 @@
     syncShellPlayState();
   }
 
+  let activeBoundMesh = null;
+  let activeBoundTexture = null;
+
   function bindMesh(mesh) {
+    if (activeBoundMesh === mesh) {
+      return;
+    }
+    activeBoundMesh = mesh;
+    state.frameBufferBindCount++;
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.vertexBuffer);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
     gl.vertexAttribPointer(locations.position, 3, gl.FLOAT, false, mesh.stride, 0);
@@ -5225,7 +5601,12 @@
     gl.uniform1f(locations.textureMix, options.textureMix ?? 0.65);
     gl.uniform2fv(locations.uvScale, options.uvScale ?? [1, 1]);
     gl.uniform1f(locations.pulse, options.pulse ?? 0);
-    gl.bindTexture(gl.TEXTURE_2D, options.texture);
+    if (activeBoundTexture !== options.texture) {
+      activeBoundTexture = options.texture;
+      state.frameTextureBindCount++;
+      gl.bindTexture(gl.TEXTURE_2D, options.texture);
+    }
+    state.frameDrawElementsCount++;
     gl.drawElements(gl.TRIANGLES, mesh.indexCount, gl.UNSIGNED_SHORT, 0);
     if (DIAG_ENABLED) {
       diagGlDrawElementsCount++;
@@ -5233,7 +5614,13 @@
   }
 
   function renderScene(alphaTime) {
+    const renderStartMs = performance.now();
     state.rawDrawCalls++;
+    state.frameDrawElementsCount = 0;
+    state.frameBufferBindCount = 0;
+    state.frameTextureBindCount = 0;
+    activeBoundMesh = null;
+    activeBoundTexture = null;
     resizeCanvas();
     const aspect = canvas.width / Math.max(1, canvas.height);
     const frameProfile = getFrameProfile(aspect);
@@ -5247,7 +5634,7 @@
     const follow = getCameraFollow();
     const viewBiasY = frameProfile.viewBiasY;
     const cameraDepth = frameProfile.cameraDepth;
-    const camTrackX = isTouchCapable ? 0.34 : Math.max(follow.x * 0.72, 0.06);
+    const camTrackX = aspect < 0.65 ? 0.82 : (aspect < 0.95 ? 0.72 : (isTouchCapable ? 0.52 : Math.max(follow.x, 0.36)));
     const bendHeading = state.mode === "playing"
       ? corridorHeading(CORRIDOR_LOOKAHEAD_Z, alphaTime)
       : 0;
@@ -5263,7 +5650,7 @@
         ? frameProfile.readyPitch
         : frameProfile.playPitch
     ) + Math.abs(targetViewYaw) * 0.22;
-    const camLerp = 0.1;
+    const camLerp = isTouchCapable ? 0.24 : 0.2;
     state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
     state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
     state.viewPitch += (targetViewPitch - state.viewPitch) * camLerp;
@@ -5312,6 +5699,11 @@
     renderObjects(alphaTime);
     renderPlayer(alphaTime);
     renderGlowPass(alphaTime);
+
+    state.lastFrameDrawCalls = state.frameDrawElementsCount;
+    state.lastBufferBindCount = state.frameBufferBindCount;
+    state.lastTextureBindCount = state.frameTextureBindCount;
+    state.lastRenderCpuMs = performance.now() - renderStartMs;
   }
 
   function renderScreenSpaceSpacefield(alphaTime) {
@@ -5626,16 +6018,18 @@
         uvScale: [7.5, 1],
         pulse
       });
-      [-1.35, 1.35].forEach((laneX) => {
-        drawCorridorMesh(meshes.cube, laneX, -3.04, z - 0.06, alphaTime, {
-          rotation: [0, 0, 0],
-          scale: [0.045, 0.055, 1.08],
-          color: markerColor,
-          texture: starTexture,
-          textureMix: 0.7,
-          pulse: pulse + 0.22
+      if (z > -52) {
+        [-1.35, 1.35].forEach((laneX) => {
+          drawCorridorMesh(meshes.cube, laneX, -3.04, z - 0.06, alphaTime, {
+            rotation: [0, 0, 0],
+            scale: [0.045, 0.055, 1.08],
+            color: markerColor,
+            texture: starTexture,
+            textureMix: 0.7,
+            pulse: pulse + 0.22
+          });
         });
-      });
+      }
       [-3.25, 3.25].forEach((railX) => {
         drawCorridorMesh(meshes.cube, railX, -2.64, z, alphaTime, {
           rotation: [0, 0, 0],
@@ -6157,6 +6551,91 @@
       });
     });
   }
+
+  function transformVec3ByMat4(m, vx, vy, vz) {
+    const x = m[0] * vx + m[4] * vy + m[8] * vz + m[12];
+    const y = m[1] * vx + m[5] * vy + m[9] * vz + m[13];
+    const z = m[2] * vx + m[6] * vy + m[10] * vz + m[14];
+    const w = m[3] * vx + m[7] * vy + m[11] * vz + m[15];
+    return [x, y, z, w];
+  }
+
+  function projectMeshListBounds(meshEntries, position, rotation, scale) {
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(1, rect.width || canvas.clientWidth || window.innerWidth || 1280);
+    const cssH = Math.max(1, rect.height || canvas.clientHeight || window.innerHeight || 800);
+    const mModel = makeModel(position, rotation, scale);
+    let minNdcX = Infinity, maxNdcX = -Infinity;
+    let minNdcY = Infinity, maxNdcY = -Infinity;
+    let minPxX = Infinity, maxPxX = -Infinity;
+    let minPxY = Infinity, maxPxY = -Infinity;
+    let totalVertices = 0;
+    let totalTriangles = 0;
+    let inViewportCount = 0;
+
+    for (let mIdx = 0; mIdx < meshEntries.length; mIdx++) {
+      const m = meshEntries[mIdx];
+      const raw = m && m.rawVertices;
+      if (!raw) continue;
+      totalTriangles += (m.indexCount || 0) / 3;
+      for (let i = 0; i < raw.length; i += 8) {
+        totalVertices++;
+        const world = transformVec3ByMat4(mModel, raw[i], raw[i + 1], raw[i + 2]);
+        const view = transformVec3ByMat4(viewMatrix, world[0], world[1], world[2]);
+        const clip = transformVec3ByMat4(projectionMatrix, view[0], view[1], view[2]);
+        const w = Math.abs(clip[3]) < 1e-6 ? 1e-6 : clip[3];
+        const ndcX = clip[0] / w;
+        const ndcY = clip[1] / w;
+        const ndcZ = clip[2] / w;
+        const pxX = (ndcX * 0.5 + 0.5) * cssW;
+        const pxY = (0.5 - ndcY * 0.5) * cssH;
+        if (ndcX < minNdcX) minNdcX = ndcX;
+        if (ndcX > maxNdcX) maxNdcX = ndcX;
+        if (ndcY < minNdcY) minNdcY = ndcY;
+        if (ndcY > maxNdcY) maxNdcY = ndcY;
+        if (pxX < minPxX) minPxX = pxX;
+        if (pxX > maxPxX) maxPxX = pxX;
+        if (pxY < minPxY) minPxY = pxY;
+        if (pxY > maxPxY) maxPxY = pxY;
+        if (clip[3] > 0 && ndcX >= -1 && ndcX <= 1 && ndcY >= -1 && ndcY <= 1 && ndcZ >= -1 && ndcZ <= 1) {
+          inViewportCount++;
+        }
+      }
+    }
+
+    const inViewportRatio = totalVertices > 0 ? inViewportCount / totalVertices : 0;
+    return {
+      totalVertices,
+      totalTriangles,
+      inViewportCount,
+      clippedVertexCount: totalVertices - inViewportCount,
+      inViewportRatio: Number(inViewportRatio.toFixed(4)),
+      minNdcX: Number(minNdcX.toFixed(4)),
+      maxNdcX: Number(maxNdcX.toFixed(4)),
+      minNdcY: Number(minNdcY.toFixed(4)),
+      maxNdcY: Number(maxNdcY.toFixed(4)),
+      minPxX: Number(minPxX.toFixed(2)),
+      maxPxX: Number(maxPxX.toFixed(2)),
+      minPxY: Number(minPxY.toFixed(2)),
+      maxPxY: Number(maxPxY.toFixed(2))
+    };
+  }
+
+  function projectFullShipBounds() {
+    const shipZ = player.z + 0.45;
+    const scale = isTouchCapable ? [0.82, 0.76, 0.96] : [0.72, 0.66, 0.88];
+    const rotation = [player.viewPitch || 0, 0, player.viewRoll || 0];
+    const isOriginal = player.selectedShip === "original";
+    const isFaceted = player.selectedShip === "mk1-158" || player.selectedShip === "mk1-low";
+    let meshEntries = [meshes.shipMk1 || meshes.ship];
+    if (isOriginal) {
+      meshEntries = [meshes.ship];
+    } else if (!isFaceted && meshes.shipMk1Full && meshes.shipMk1Full.lit && meshes.shipMk1Full.lit.length > 0) {
+      meshEntries = meshes.shipMk1Full.lit.map((g) => g.mesh);
+    }
+    return projectMeshListBounds(meshEntries, [player.x, player.y, shipZ], rotation, scale);
+  }
+
 
   // =========================================================================
   // WAVE 0 OPT-IN DIAGNOSTIC TELEMETRY & COLLIDER OVERLAY (?diag=1 ONLY)
@@ -7324,12 +7803,196 @@
     }
   }
 
+
+  const isLocalWave1Host =
+    typeof window !== "undefined" &&
+    window.location &&
+    (window.location.hostname === "127.0.0.1" ||
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "::1");
+
+  if (typeof window !== "undefined") {
+    const wave1Api = {
+      getControlScheme: () => state.controlScheme,
+      setControlScheme: (scheme) => setControlScheme(scheme, true),
+      toggleControlScheme: () => toggleControlScheme(),
+      getPlayerBounds: () => getPlayerBounds(),
+      projectFullShipBounds: () => projectFullShipBounds(),
+      getPerfSnapshot: () => ({
+        rawDrawCalls: state.rawDrawCalls,
+        glDrawElementsPerFrame: state.lastFrameDrawCalls || state.frameDrawElementsCount,
+        bufferBindsPerFrame: state.lastBufferBindCount || state.frameBufferBindCount,
+        textureBindsPerFrame: state.lastTextureBindCount || state.frameTextureBindCount,
+        renderCpuMs: Number((state.renderCpuMs || state.lastRenderCpuMs || 0).toFixed(2)),
+        uncappedRafMs: Number((state.uncappedRafMs || 16.67).toFixed(2)),
+        fps: Number((state.fps || 60).toFixed(1))
+      })
+    };
+
+    if (isLocalWave1Host) {
+      Object.assign(wave1Api, {
+        preparePlayState() {
+          onboardingSessionCleared = true;
+          markOnboardingDone();
+          syncHangarLifecycle(false);
+          if (hud.sovereignScrim) {
+            hud.sovereignScrim.hidden = true;
+            hud.sovereignScrim.setAttribute("aria-hidden", "true");
+          }
+          if (hud.countdownOverlay) {
+            hud.countdownOverlay.classList.add("is-hidden");
+          }
+          resetGame();
+          syncHangarLifecycle(false);
+          if (hud.sovereignScrim) {
+            hud.sovereignScrim.hidden = true;
+            hud.sovereignScrim.setAttribute("aria-hidden", "true");
+          }
+          state.mode = "playing";
+          state.hull = 5;
+          state.spawnTimer = 999;
+          objects.length = 0;
+          sparks.length = 0;
+          trailParticles.length = 0;
+          syncShellPlayState();
+          renderScene(state.time);
+          return readDebugState();
+        },
+        setPlayerState(opts = {}) {
+          if (typeof opts.controlScheme === "string") {
+            setControlScheme(opts.controlScheme, false);
+          }
+          if (typeof opts.x === "number") {
+            player.x = opts.x;
+            player.targetX = opts.x;
+          }
+          if (typeof opts.y === "number") {
+            player.y = opts.y;
+            player.targetY = opts.y;
+          }
+          if (typeof opts.targetX === "number") player.targetX = opts.targetX;
+          if (typeof opts.targetY === "number") player.targetY = opts.targetY;
+          if (typeof opts.targetLane === "number") player.targetLane = opts.targetLane;
+          if (opts.settleCamera) {
+            const aspect = canvas.width / Math.max(1, canvas.height);
+            const fp = getFrameProfile(aspect);
+            const follow = getCameraFollow();
+            const camTrackX = aspect < 0.65 ? 0.82 : (aspect < 0.95 ? 0.72 : (isTouchCapable ? 0.52 : Math.max(follow.x, 0.36)));
+            const camLerp = isTouchCapable ? 0.24 : 0.2;
+            for (let i = 0; i < 45; i++) {
+              const targetCamX = -player.x * camTrackX;
+              const targetCamY = -player.y * follow.y + fp.viewBiasY;
+              const targetPitch = state.mode === "ready" ? fp.readyPitch : fp.playPitch;
+              const targetRoll = -player.x * 0.065;
+              state.smoothCamX += (targetCamX - state.smoothCamX) * camLerp;
+              state.smoothCamY += (targetCamY - state.smoothCamY) * camLerp;
+              state.viewPitch += (targetPitch - state.viewPitch) * camLerp;
+              state.viewYaw *= 0.8;
+              state.viewRoll += (targetRoll - state.viewRoll) * camLerp;
+            }
+          }
+          renderScene(state.time);
+          return {
+            debug: readDebugState(),
+            shipBounds: projectFullShipBounds()
+          };
+        },
+        stepCollisionScenario(spec = {}) {
+          wave1Api.preparePlayState();
+          player.x = typeof spec.playerX === "number" ? spec.playerX : 0;
+          player.y = typeof spec.playerY === "number" ? spec.playerY : -0.68;
+          player.targetX = player.x;
+          player.targetY = player.y;
+          player.dash = spec.dash ? 0.3 : 0;
+          state.hull = 3;
+          state.speed = typeof spec.speed === "number" ? spec.speed : 18;
+          const dt = typeof spec.dt === "number" ? spec.dt : 0.016;
+          const targetZ = typeof spec.z === "number" ? spec.z : (player.z + 0.45);
+          const startZ = typeof spec.prevZ === "number" ? spec.prevZ : (targetZ - state.speed * dt);
+          const size = typeof spec.size === "number" ? spec.size : 0.76;
+          const type = spec.type || "debris";
+          const obj = {
+            type,
+            x: typeof spec.x === "number" ? spec.x : 0,
+            y: typeof spec.y === "number" ? spec.y : player.y,
+            z: startZ,
+            size,
+            radius: type === "crystal" ? size * 0.68 : (type === "debris" ? size * 0.82 : size * 0.72),
+            rotX: typeof spec.rotX === "number" ? spec.rotX : 0,
+            rotY: typeof spec.rotY === "number" ? spec.rotY : 0,
+            rotZ: typeof spec.rotZ === "number" ? spec.rotZ : 0,
+            spinX: 0,
+            spinY: 0,
+            spinZ: 0
+          };
+          objects.push(obj);
+          wave1Api.setPlayerState({ x: player.x, y: player.y, settleCamera: true });
+          const shardPos = corridorPoint(obj.x, obj.y, targetZ, state.time);
+          const shardBounds = projectMeshListBounds(
+            [type === "debris" || type === "boss" ? meshes.shard : meshes.crystal],
+            shardPos,
+            [obj.rotX, obj.rotY, obj.rotZ],
+            [size, size, size]
+          );
+          const shipBounds = projectFullShipBounds();
+          const gapPxX = Math.max(0, shardBounds.minPxX - shipBounds.maxPxX, shipBounds.minPxX - shardBounds.maxPxX);
+          const hullBefore = state.hull;
+          const coresBefore = state.cores;
+          updateGame(dt);
+          renderScene(state.time);
+          return {
+            hit: state.hull < hullBefore || state.cores > coresBefore || objects.length === 0,
+            hullDamaged: state.hull < hullBefore,
+            pickupCollected: state.cores > coresBefore,
+            hullBefore,
+            hullAfter: state.hull,
+            gapPxX: Number(gapPxX.toFixed(2)),
+            shipBounds,
+            shardBounds
+          };
+        },
+        stepSimulation(frames = 20, dt = 0.016) {
+          for (let i = 0; i < frames; i++) {
+            state.spawnTimer = 999;
+            updateGame(dt);
+          }
+          renderScene(state.time);
+          return {
+            debug: readDebugState(),
+            shipBounds: projectFullShipBounds(),
+            perf: wave1Api.getPerfSnapshot()
+          };
+        }
+      });
+    }
+
+    window.__starfallWave1 = wave1Api;
+  }
+
+
   function frame(time) {
     const rawRafIntervalMs =
       DIAG_ENABLED && diagLastRawRafMs > 0 ? time - diagLastRawRafMs : 0;
     if (DIAG_ENABLED) {
       diagLastRawRafMs = time;
     }
+    if (state.lastRafTimestamp > 0) {
+      state.lastUncappedRafMs = time - state.lastRafTimestamp;
+    }
+    const rawInterval = state.lastRafTimestamp > 0 ? (time - state.lastRafTimestamp) : 16.6;
+    state.lastRafTimestamp = time;
+    if (!state.recentRafIntervals) state.recentRafIntervals = [];
+    if (rawInterval > 0 && rawInterval < 250) {
+      state.recentRafIntervals.push(rawInterval);
+      if (state.recentRafIntervals.length > 60) state.recentRafIntervals.shift();
+    }
+    state.uncappedRafMs = state.recentRafIntervals.length > 0
+      ? Number((state.recentRafIntervals.reduce((a, b) => a + b, 0) / state.recentRafIntervals.length).toFixed(2))
+      : Number(rawInterval.toFixed(2));
+    state.fps = state.uncappedRafMs > 0 ? Math.round(1000 / state.uncappedRafMs) : 60;
+    state.frameDrawElementsCount = 0;
+    state.frameBufferBindCount = 0;
+    state.frameTextureBindCount = 0;
     const seconds = time * 0.001;
     const dt = Math.min(0.033, seconds - (state.lastTime || seconds));
     state.lastTime = seconds;
@@ -7372,7 +8035,12 @@
       updateGame(dt);
     }
     updatePresentation(dt);
+    const tRenderStart = performance.now();
     renderScene(seconds);
+    state.renderCpuMs = Number((performance.now() - tRenderStart).toFixed(2));
+    state.lastFrameDrawCalls = state.frameDrawElementsCount;
+    state.lastBufferBindCount = state.frameBufferBindCount;
+    state.lastTextureBindCount = state.frameTextureBindCount;
     if (DIAG_ENABLED) {
       const cpuRenderMs = performance.now() - diagCpuStartMs;
       diagPostFrame(dt, seconds, rawRafIntervalMs, cpuRenderMs);
