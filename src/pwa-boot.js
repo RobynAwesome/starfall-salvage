@@ -1,6 +1,6 @@
 import { KopanoVault } from "./kopano-vault.js";
 
-const BUILD = "20261022-sovereign-hangar-mki-rc2";
+const BUILD = "20261027-wave2-stage1-rc1";
 const SW_URL = `/service-worker.js?v=${encodeURIComponent(BUILD)}`;
 const SW_RELOAD_KEY = `starfall-sw-refresh:${BUILD}`;
 

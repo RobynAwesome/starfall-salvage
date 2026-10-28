@@ -18,13 +18,37 @@
   <link rel="icon" href="data:,">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="starfall-smoke.png">
-  <link rel="stylesheet" href="styles.css?v=20261022-sovereign-hangar-mki-rc2">
-  <script type="module" src="src/pwa-boot.js?v=20261022-sovereign-hangar-mki-rc2"></script>
-  <script src="src/game.js?v=20261022-sovereign-hangar-mki-rc2" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261027-wave2-stage1-rc1">
+  <script type="module" src="src/pwa-boot.js?v=20261027-wave2-stage1-rc1"></script>
+  <script src="src/game.js?v=20261027-wave2-stage1-rc1" defer></script>
 </head>
 <body>
   <main class="shell is-ready" data-ui-state="ready">
     <canvas id="glCanvas" tabindex="0" aria-label="Starfall Salvage WebGL game canvas"></canvas>
+
+    <!-- Low-End Android / WebGL Resilience Fallback -->
+    <div class="webgl-fallback-card is-hidden" id="webglFallbackCard" role="alert" aria-live="assertive" aria-hidden="true">
+      <div class="webgl-fallback-inner">
+        <div class="webgl-fallback-icon" aria-hidden="true">🛰️</div>
+        <h2 id="webglFallbackTitle">Graphics Initialization Required</h2>
+        <p class="webgl-fallback-lead" id="webglFallbackLead">Starfall Salvage was unable to establish a WebGL 3D context on this browser/device.</p>
+        <pre class="webgl-fallback-detail is-hidden" id="webglFallbackDetail" aria-label="Technical error details"></pre>
+        <div class="webgl-fallback-steps">
+          <p><strong>Recommended Recovery:</strong></p>
+          <ol>
+            <li>Launch in <strong>Eco mode</strong> (minimal shaders & lower GPU overhead).</li>
+            <li>Ensure <strong>Hardware Acceleration</strong> is turned ON in Chrome / browser settings.</li>
+            <li>Close heavy background tabs to free mobile GPU memory.</li>
+            <li>Update Android System WebView / Chrome to the latest release.</li>
+          </ol>
+        </div>
+        <div class="webgl-fallback-actions">
+          <button type="button" class="fallback-btn is-primary" id="webglRetryBtn" onclick="window.location.reload()">Retry Launch</button>
+          <button type="button" class="fallback-btn is-eco" id="webglEcoLaunchBtn" onclick="window.location.search = '?tier=eco'">Launch in Eco Mode</button>
+          <a class="fallback-btn is-secondary" href="https://get.webgl.org/" target="_blank" rel="noopener">Check WebGL Support</a>
+        </div>
+      </div>
+    </div>
 
     <!-- Protocol 13 / Sovereign Hangar — 3D Showcase & Flight Deck at / -->
     <div class="sovereign-scrim" id="sovereignScrim" aria-hidden="false">
@@ -52,7 +76,11 @@
     </div>
 
     <header class="playing-minimal-hud" id="playingMinimalHud" hidden aria-hidden="true">
-      <div class="pmh-score"><span class="pmh-label">Score</span><strong id="pmhScore">0</strong></div>
+      <div class="pmh-score-wrap">
+        <div class="pmh-score"><span class="pmh-label">Score</span><strong id="pmhScore">0</strong></div>
+        <div class="pickup-edge-chip is-hidden" id="pickupEdgeChip" aria-live="polite"></div>
+      </div>
+      <div class="pmh-center-pill is-hidden" id="flightEventPill" aria-live="polite"></div>
       <div class="pmh-controls">
       <button type="button" class="pmh-pause" id="pauseMinimalButton" aria-label="Pause or resume">||</button>
       <div class="flight-menu-wrap">
@@ -71,6 +99,10 @@
         <div class="flight-menu-panel is-hidden" id="flightMenuPanel" role="menu" aria-label="Flight menu">
           <button type="button" class="flight-menu-item" id="flightResumeItem" role="menuitem">Drop in — resume</button>
           <button type="button" class="flight-menu-item" id="flightStepOutItem" role="menuitem">Step out — hub pause</button>
+          <p class="flight-menu-heading" role="presentation">Adaptive render tier</p>
+          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="eco" role="menuitem" aria-pressed="false">Eco (30 FPS target, battery/low-end)</button>
+          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="balanced" role="menuitem" aria-pressed="true">Balanced (60 FPS target, default)</button>
+          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="high" role="menuitem" aria-pressed="false">High (60 FPS target, max fidelity)</button>
           <p class="flight-menu-heading" role="presentation">Flight control candidate</p>
           <button type="button" class="flight-menu-item flight-control-option" data-control-scheme="candidate_a" role="menuitem" aria-pressed="true">Candidate A — 2D Free Steer</button>
           <button type="button" class="flight-menu-item flight-control-option" data-control-scheme="candidate_b" role="menuitem" aria-pressed="false">Candidate B — Lane + Climb/Reach</button>
@@ -82,11 +114,15 @@
           <button type="button" class="flight-menu-item flight-weapon" data-weapon="nova" role="menuitem" aria-pressed="false">Nova fan</button>
         </div>
       </div>
+      <button type="button" class="pmh-render-tier" id="renderTierToggle" aria-label="Toggle render performance tier">BAL</button>
       <button type="button" class="pmh-control-scheme" id="flightControlToggle" aria-label="Switch flight control candidate">CTRL A</button>
       <button type="button" class="pmh-weapon" id="weaponCycleButton" aria-label="Cycle weapon">Bolt I</button>
       <div class="pmh-speed"><strong id="pmhSpeed">1.0x</strong></div>
       </div>
     </header>
+
+    <!-- Top Boss & Sector Alert Banner (Prominent, safe from active flight corridor sightline) -->
+    <div class="boss-alert-banner is-hidden" id="bossAlertBanner" role="alert" aria-live="assertive"></div>
 
     <section class="game-over-sovereign" id="gameOverSovereign" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
       <div class="game-over-sovereign-inner">
@@ -212,7 +248,7 @@
         <p><strong>What works now:</strong> Open this URL on a laptop or desktop &mdash; full game with onboarding, danger zone, shooting, and bosses.</p>
         <p><strong>Mobile is being rebuilt</strong> against the Asymmetric Edge Reality test (low-end Android, township infrastructure, zero-budget hardware). Re-open this page after the next deploy.</p>
         <p><strong>Got a mobile-perf fix or upgrade idea?</strong> Email <a href="mailto:rkholofelo@kopanolabs.com">rkholofelo@kopanolabs.com</a> &mdash; Sovereign Tech bounty applies (Tier 2, R500&ndash;R1500 ZAR via Yoco / PayFast / EFT).</p>
-        <p class="mobile-lockdown-meta">Build: 20261022-sovereign-hangar-mki-rc2 &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
+        <p class="mobile-lockdown-meta">Build: 20261027-wave2-stage1-rc1 &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
       </div>
     </section>
 

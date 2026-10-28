@@ -6,7 +6,69 @@
     console.error("starfall: #glCanvas missing — abort");
     return;
   }
-  const gl = canvas.getContext("webgl", { antialias: true });
+
+  function showWebGLFallback(title, lead, detail) {
+    const fallback = document.getElementById("webglFallbackCard");
+    if (fallback) {
+      if (title) {
+        const titleEl = document.getElementById("webglFallbackTitle");
+        if (titleEl) titleEl.textContent = title;
+      }
+      if (lead) {
+        const leadEl = document.getElementById("webglFallbackLead");
+        if (leadEl) leadEl.textContent = lead;
+      }
+      const detailEl = document.getElementById("webglFallbackDetail");
+      if (detailEl) {
+        if (detail) {
+          detailEl.textContent = typeof detail === "string" ? detail : (detail.stack || detail.message || String(detail));
+          detailEl.classList.remove("is-hidden");
+        } else {
+          detailEl.classList.add("is-hidden");
+          detailEl.textContent = "";
+        }
+      }
+      fallback.classList.remove("is-hidden");
+      fallback.removeAttribute("hidden");
+      fallback.setAttribute("aria-hidden", "false");
+    }
+    const scrim = document.getElementById("sovereignScrim");
+    if (scrim) {
+      scrim.style.display = "none";
+    }
+  }
+
+  function createGameContext(targetCanvas) {
+    const opts = {
+      antialias: false,
+      alpha: false,
+      depth: true,
+      stencil: false,
+      preserveDrawingBuffer: false,
+      powerPreference: "default"
+    };
+    let ctx = null;
+    const names = ["webgl2", "webgl", "experimental-webgl"];
+    for (const name of names) {
+      try {
+        ctx = targetCanvas.getContext(name, opts);
+        if (ctx) break;
+      } catch (err) {
+        console.warn(`starfall: getContext("${name}") fallback notice:`, err);
+      }
+    }
+    return ctx;
+  }
+
+  const gl = createGameContext(canvas);
+  if (!gl) {
+    showWebGLFallback(
+      "Graphics Initialization Required",
+      "Starfall Salvage was unable to establish a WebGL 3D context on this browser/device.",
+      "WebGL context creation failed across 'webgl2', 'webgl', and 'experimental-webgl'."
+    );
+    return;
+  }
 
   const hud = {
     shell: document.querySelector(".shell"),
@@ -92,6 +154,11 @@
     flightResumeItem: document.getElementById("flightResumeItem"),
     flightStepOutItem: document.getElementById("flightStepOutItem"),
     flightControlToggle: document.getElementById("flightControlToggle"),
+    renderTierToggle: document.getElementById("renderTierToggle"),
+    pickupEdgeChip: document.getElementById("pickupEdgeChip"),
+    flightEventPill: document.getElementById("flightEventPill"),
+    bossAlertBanner: document.getElementById("bossAlertBanner"),
+    webglFallbackCard: document.getElementById("webglFallbackCard"),
     weaponCycleButton: document.getElementById("weaponCycleButton"),
     gameOverSovereign: document.getElementById("gameOverSovereign"),
     gameOverFinal: document.getElementById("gameOverFinal"),
@@ -347,6 +414,51 @@
     hud.ecosystemToggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
   }
 
+  const notificationState = {
+    pickup: {
+      timer: 0,
+      baseLabel: "",
+      count: 1
+    },
+    eventPill: {
+      timer: 0
+    },
+    bossAlert: {
+      timer: 0
+    }
+  };
+
+  function triggerPickupChip(label, count = 1) {
+    if (!hud.pickupEdgeChip) return;
+    if (notificationState.pickup.timer > 0 && notificationState.pickup.baseLabel === label) {
+      notificationState.pickup.count += count;
+      hud.pickupEdgeChip.textContent = `${label} +${notificationState.pickup.count}`;
+    } else {
+      notificationState.pickup.baseLabel = label;
+      notificationState.pickup.count = count;
+      hud.pickupEdgeChip.textContent = count > 1 ? `${label} +${count}` : label;
+    }
+    notificationState.pickup.timer = 1.1;
+    hud.pickupEdgeChip.classList.remove("is-hidden");
+    hud.pickupEdgeChip.style.animation = "none";
+    void hud.pickupEdgeChip.offsetWidth;
+    hud.pickupEdgeChip.style.animation = "";
+  }
+
+  function triggerFlightEventPill(text, duration = 1.2) {
+    if (!hud.flightEventPill) return;
+    hud.flightEventPill.textContent = text;
+    hud.flightEventPill.classList.remove("is-hidden");
+    notificationState.eventPill.timer = duration;
+  }
+
+  function triggerBossAlert(title, subtitle = "", duration = 2.6) {
+    if (!hud.bossAlertBanner) return;
+    hud.bossAlertBanner.innerHTML = `<span class="boss-alert-tag">ALERT</span> <strong>${title}</strong>${subtitle ? `<span class="boss-alert-sub">${subtitle}</span>` : ""}`;
+    hud.bossAlertBanner.classList.remove("is-hidden");
+    notificationState.bossAlert.timer = duration;
+  }
+
   function applyBuff(kind) {
     const def = BUFF_DEFS[kind];
     if (!def) {
@@ -360,7 +472,7 @@
     if (kind === "aegis") {
       player.aegisHits = 1;
     }
-    setEventMessage(def.label);
+    triggerFlightEventPill(def.label);
     logEvent("buff_collected", { kind });
   }
 
@@ -368,7 +480,7 @@
     const nextPower = clamp((player.weaponPower || 1) + amount, 1, WEAPON_POWER_MAX);
     player.weaponPower = nextPower;
     player.weaponPowerTimer = WEAPON_POWER_SECONDS;
-    setEventMessage(`Weapon power ${romanPower(nextPower)}`);
+    triggerFlightEventPill(`Weapon power ${romanPower(nextPower)}`);
     logEvent("weapon_power_collected", { power: nextPower });
     updateHud();
   }
@@ -432,6 +544,8 @@
 
 
   const vertexShaderSource = `
+    precision mediump float;
+
     attribute vec3 aPosition;
     attribute vec3 aNormal;
     attribute vec2 aTexCoord;
@@ -488,27 +602,46 @@
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const log = gl.getShaderInfoLog(shader);
+      const log = gl.getShaderInfoLog(shader) || "Unknown shader compilation failure";
       gl.deleteShader(shader);
-      throw new Error(log);
+      const shaderName = type === gl.VERTEX_SHADER ? "Vertex Shader" : "Fragment Shader";
+      showWebGLFallback(
+        "Shader Compilation Error",
+        `A critical flight shader (${shaderName}) failed to compile on this GPU driver.`,
+        log
+      );
+      throw new Error(`Shader compilation failed (${shaderName}): ${log}`);
     }
     return shader;
   }
 
   function createProgram(vertexSource, fragmentSource) {
     const program = gl.createProgram();
-    gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vertexSource));
-    gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fragmentSource));
+    const vs = compileShader(gl.VERTEX_SHADER, vertexSource);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fragmentSource);
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      const log = gl.getProgramInfoLog(program);
+      const log = gl.getProgramInfoLog(program) || "Unknown program linking error";
       gl.deleteProgram(program);
-      throw new Error(log);
+      showWebGLFallback(
+        "Graphics Program Link Error",
+        "Failed to link the flight deck shader program on this graphics driver.",
+        log
+      );
+      throw new Error(`Program link failed: ${log}`);
     }
     return program;
   }
 
-  const program = createProgram(vertexShaderSource, fragmentShaderSource);
+  let program;
+  try {
+    program = createProgram(vertexShaderSource, fragmentShaderSource);
+  } catch (err) {
+    console.error("starfall: shader program initialization failed:", err);
+    return;
+  }
   gl.useProgram(program);
 
   const locations = {
@@ -555,7 +688,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20261022-sovereign-hangar-mki-rc2";
+  const GAME_BUILD = "20261027-wave2-stage1-rc1";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -709,27 +842,177 @@
     }
   }
 
-  function getRenderBudgetTier() {
-    const dpr = window.devicePixelRatio || 1;
-    const tiers = (SIM.renderBudget && SIM.renderBudget.tiers) || SIM_LAW_DEFAULT.renderBudget.tiers;
-    let chosen = tiers[0];
-    tiers.forEach((tier) => {
-      if (dpr <= tier.maxDpr) {
-        chosen = tier;
+  let isTouchCapable =
+    typeof window !== "undefined" &&
+    ("ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+
+  let TOUCH_FULL_RANGE_PX = 70;
+
+  const RENDER_POLICY_STORAGE_KEY = "starfall_render_tier";
+  // Graphics performance budget tiers.
+  // Note: targetFps values represent runtime pacing targets and benchmarks,
+  // not hardware-locked throttles or guaranteed fixed refresh rates.
+  const RENDER_TIERS = {
+    eco: {
+      id: "eco",
+      label: "ECO",
+      maxDpr: isTouchCapable ? 1.0 : 1.25,
+      minDpr: 0.85,
+      particleScale: 0.45,
+      sparksMax: 60,
+      trailMax: 45,
+      tunnelDecorScale: 0.55,
+      skySalvageCount: 12,
+      fieldParticleCount: 16,
+      rotateTopology: false,
+      targetFps: 30 // Target pacing benchmark
+    },
+    balanced: {
+      id: "balanced",
+      label: "BAL",
+      maxDpr: isTouchCapable ? 1.35 : 1.75,
+      minDpr: 1.0,
+      particleScale: 0.8,
+      sparksMax: 120,
+      trailMax: 90,
+      tunnelDecorScale: 0.85,
+      skySalvageCount: 20,
+      fieldParticleCount: 28,
+      rotateTopology: false,
+      targetFps: 60 // Target pacing benchmark
+    },
+    high: {
+      id: "high",
+      label: "HIGH",
+      maxDpr: 2.0,
+      minDpr: 1.25,
+      particleScale: 1.0,
+      sparksMax: 200,
+      trailMax: 150,
+      tunnelDecorScale: 1.0,
+      skySalvageCount: 30,
+      fieldParticleCount: 42,
+      rotateTopology: true,
+      targetFps: 60 // Target pacing benchmark
+    }
+  };
+
+  function detectInitialRenderTier() {
+    try {
+      const urlTier = new URLSearchParams(window.location.search).get("tier");
+      if (urlTier && RENDER_TIERS[urlTier.toLowerCase()]) {
+        return urlTier.toLowerCase();
       }
-    });
-    return chosen || tiers[tiers.length - 1];
+      const stored = window.localStorage.getItem(RENDER_POLICY_STORAGE_KEY);
+      if (stored && RENDER_TIERS[stored]) {
+        return stored;
+      }
+    } catch {}
+    if (isTouchCapable) {
+      const cores = (typeof navigator !== "undefined" && navigator.hardwareConcurrency) || 4;
+      const mem = (typeof navigator !== "undefined" && navigator.deviceMemory) || 4;
+      if (cores <= 4 || mem <= 3) {
+        return "eco";
+      }
+      return "balanced";
+    }
+    return "balanced";
+  }
+
+  const renderPolicy = {
+    currentTier: detectInitialRenderTier(),
+    userLocked: false,
+    frameIntervalHistory: [],
+    historyLength: 120,
+    upgradeCounter: 0,
+    downgradeCounter: 0
+  };
+
+  function setRenderTier(tierName, save = true) {
+    if (!RENDER_TIERS[tierName]) return;
+    renderPolicy.currentTier = tierName;
+    if (save) {
+      renderPolicy.userLocked = true;
+      try {
+        window.localStorage.setItem(RENDER_POLICY_STORAGE_KEY, tierName);
+      } catch {}
+    }
+    refreshRenderBudgetLimits();
+    resizeCanvas();
+    syncRenderTierHud();
+  }
+
+  function syncRenderTierHud() {
+    const tier = renderPolicy.currentTier;
+    const def = RENDER_TIERS[tier] || RENDER_TIERS.balanced;
+    if (hud.renderTierToggle) {
+      hud.renderTierToggle.textContent = def.label;
+      hud.renderTierToggle.dataset.tier = tier;
+    }
+    if (hud.flightMenuPanel) {
+      const options = hud.flightMenuPanel.querySelectorAll(".flight-tier-option");
+      options.forEach((opt) => {
+        const matches = opt.dataset.renderTier === tier;
+        opt.setAttribute("aria-pressed", matches ? "true" : "false");
+        opt.classList.toggle("is-active", matches);
+      });
+    }
+  }
+
+  function getRenderBudgetTier() {
+    return RENDER_TIERS[renderPolicy.currentTier] || RENDER_TIERS.balanced;
   }
 
   function refreshRenderBudgetLimits() {
     const tier = getRenderBudgetTier();
     const scale = tier.particleScale || 1;
-    sparksMax = Math.max(80, Math.floor(200 * scale));
-    trailMax = Math.max(60, Math.floor(150 * scale));
-    if (isTouchCapable) {
-      sparksMax = Math.max(72, Math.floor(sparksMax * 0.88));
-      trailMax = Math.max(52, Math.floor(trailMax * 0.88));
-      TOUCH_FULL_RANGE_PX = Math.floor(70 * (scale < 1 ? 0.85 : 1));
+    sparksMax = tier.sparksMax || Math.max(60, Math.floor(200 * scale));
+    trailMax = tier.trailMax || Math.max(45, Math.floor(150 * scale));
+    // Touch flight sensitivity is strictly decoupled from graphics quality tiers.
+    // Full steering range remains constant (70px) across Eco, Balanced, and High presets.
+    TOUCH_FULL_RANGE_PX = Math.floor(70 * 1);
+  }
+
+  function monitorAdaptivePacing(intervalMs) {
+    if (renderPolicy.userLocked || state.mode !== "playing") return;
+    renderPolicy.frameIntervalHistory.push(intervalMs);
+    if (renderPolicy.frameIntervalHistory.length > renderPolicy.historyLength) {
+      renderPolicy.frameIntervalHistory.shift();
+    }
+    if (renderPolicy.frameIntervalHistory.length < 60) return;
+
+    let sum = 0;
+    for (let i = 0; i < renderPolicy.frameIntervalHistory.length; i++) {
+      sum += renderPolicy.frameIntervalHistory[i];
+    }
+    const avg = sum / renderPolicy.frameIntervalHistory.length;
+
+    if (avg > 34.0) {
+      renderPolicy.downgradeCounter++;
+      renderPolicy.upgradeCounter = 0;
+      if (renderPolicy.downgradeCounter > 60) {
+        renderPolicy.downgradeCounter = 0;
+        if (renderPolicy.currentTier === "high") {
+          setRenderTier("balanced", false);
+          logEvent("adaptive_render_downgrade", { to: "balanced", avgIntervalMs: avg });
+        } else if (renderPolicy.currentTier === "balanced") {
+          setRenderTier("eco", false);
+          logEvent("adaptive_render_downgrade", { to: "eco", avgIntervalMs: avg });
+        }
+      }
+    } else if (avg < 17.0) {
+      renderPolicy.upgradeCounter++;
+      renderPolicy.downgradeCounter = 0;
+      if (renderPolicy.upgradeCounter > 300) {
+        renderPolicy.upgradeCounter = 0;
+        if (renderPolicy.currentTier === "eco") {
+          setRenderTier("balanced", false);
+          logEvent("adaptive_render_upgrade", { to: "balanced", avgIntervalMs: avg });
+        }
+      }
+    } else {
+      renderPolicy.downgradeCounter = Math.max(0, renderPolicy.downgradeCounter - 1);
+      renderPolicy.upgradeCounter = Math.max(0, renderPolicy.upgradeCounter - 1);
     }
   }
 
@@ -1542,10 +1825,10 @@
   let touchStartTime = 0;
   let touchMaxTravel = 0;
   const TOUCH_DEADZONE_PX = 8;
-  let TOUCH_FULL_RANGE_PX = 70;
   const TOUCH_TAP_MAX_PX = 14;
   const TOUCH_TAP_MAX_MS = 260;
-  let isTouchCapable = (typeof window !== "undefined") && (
+  // isTouchCapable initialized early for render tier detection
+  isTouchCapable = (typeof window !== "undefined") && (
     "ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0)
   );
   const supportsPointerEvents = (typeof window !== "undefined") && "PointerEvent" in window;
@@ -2692,7 +2975,7 @@
     player.weaponMode = next;
     persistWeaponMode(next);
     syncFlightWeaponButtons();
-    setEventMessage((WEAPON_DEFS[next] || WEAPON_DEFS.bolt).label, 0.55);
+    triggerFlightEventPill((WEAPON_DEFS[next] || WEAPON_DEFS.bolt).label, 0.75);
     updateHud();
     logEvent("weapon_mode_set", { mode: next });
   }
@@ -2756,6 +3039,15 @@
         closeFlightMenu();
       });
     });
+    hud.flightMenuPanel.querySelectorAll(".flight-tier-option").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tier = btn.dataset.renderTier;
+        if (tier) {
+          setRenderTier(tier, true);
+        }
+        closeFlightMenu();
+      });
+    });
     document.addEventListener(
       "pointerdown",
       (event) => {
@@ -2771,6 +3063,17 @@
       true
     );
     syncFlightWeaponButtons();
+    syncRenderTierHud();
+  }
+  if (hud.renderTierToggle) {
+    hud.renderTierToggle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const order = ["eco", "balanced", "high"];
+      const nextIdx = (order.indexOf(renderPolicy.currentTier) + 1) % order.length;
+      setRenderTier(order[nextIdx], true);
+      closeFlightMenu();
+    });
   }
   if (hud.flightControlToggle) {
     hud.flightControlToggle.addEventListener("click", (event) => {
@@ -2858,12 +3161,22 @@
       },
       bounds,
       touchCapable: Boolean(isTouchCapable),
-      pointerEvents: Boolean(supportsPointerEvents)
+      pointerEvents: Boolean(supportsPointerEvents),
+      renderTier: renderPolicy.currentTier,
+      renderPolicy: {
+        currentTier: renderPolicy.currentTier,
+        userLocked: renderPolicy.userLocked
+      }
     };
   }
 
   if (typeof window !== "undefined") {
     window.__starfallDebug = readDebugState;
+    window.__starfallRenderPolicy = {
+      getTier: () => renderPolicy.currentTier,
+      setTier: (tier, save) => setRenderTier(tier, save),
+      getPolicy: () => ({ ...renderPolicy, tierDef: getRenderBudgetTier() })
+    };
   }
 
   function getPlayerBounds() {
@@ -3032,31 +3345,33 @@
       }
       if (aspect < 0.52) {
         // Tall Mobile Portrait (e.g. 20:9, 19.5:9, Redmi 13 393x873)
+        // Anchors ship at ~64-68% down viewport, clearing lower touch zone
         return {
           fovScale: 0.74,
-          viewBiasY: 0.32,
-          cameraDepth: -2.75,
-          readyPitch: 0.24,
-          playPitch: 0.19,
-          backdropLift: -1.15,
+          viewBiasY: 0.58,
+          cameraDepth: -2.85,
+          readyPitch: 0.22,
+          playPitch: 0.16,
+          backdropLift: -1.35,
           backdropScale: 1.26,
-          canopyZShift: 2.4,
+          canopyZShift: 2.6,
           canopyScale: 1.24,
           screenFieldAlpha: 1.18,
           starDrift: 1.2
         };
       }
       if (aspect < 0.82) {
-        // Standard Mobile Portrait (e.g. 9:16)
+        // Standard Mobile Portrait (e.g. 9:16, 720x1280, 360x640)
+        // Anchors ship at ~65-68% down viewport, leaving spacious thumb zone
         return {
           fovScale: 0.78,
-          viewBiasY: 0.32,
-          cameraDepth: -2.9,
-          readyPitch: 0.28,
-          playPitch: 0.22,
-          backdropLift: -0.92,
+          viewBiasY: 0.58,
+          cameraDepth: -2.95,
+          readyPitch: 0.25,
+          playPitch: 0.18,
+          backdropLift: -1.12,
           backdropScale: 1.16,
-          canopyZShift: 1.7,
+          canopyZShift: 1.9,
           canopyScale: 1.14,
           screenFieldAlpha: 1.08,
           starDrift: 1.12
@@ -3486,6 +3801,14 @@
     hud.shell.classList.remove("is-hit");
     hud.eventToast.classList.remove("is-visible");
     hud.eventToast.textContent = "";
+    notificationState.pickup.timer = 0;
+    notificationState.pickup.baseLabel = "";
+    notificationState.pickup.count = 1;
+    notificationState.eventPill.timer = 0;
+    notificationState.bossAlert.timer = 0;
+    if (hud.pickupEdgeChip) hud.pickupEdgeChip.classList.add("is-hidden");
+    if (hud.flightEventPill) hud.flightEventPill.classList.add("is-hidden");
+    if (hud.bossAlertBanner) hud.bossAlertBanner.classList.add("is-hidden");
     closeFlightMenu();
     if (hud.shareWhatsappButton) {
       hud.shareWhatsappButton.classList.add("is-hidden");
@@ -5159,7 +5482,7 @@
       state.lastBossWaveIndex = Math.max(state.lastBossWaveIndex || 0, 1);
       state.forceBossSpawn = true;
       logEvent("danger_zone_entered", { speedMultiplier: Number(speedMultiplier.toFixed(2)) });
-      setEventMessage("Danger zone — boss wave");
+      triggerBossAlert("DANGER ZONE", "Boss wave approaching", 2.6);
     }
     if (previousMultiplier >= 2 && speedMultiplier < 2) {
       state.dangerZoneActive = false;
@@ -5169,7 +5492,7 @@
       state.lastBossWaveIndex = bossWave;
       state.forceBossSpawn = true;
       logEvent("boss_wave_milestone", { wave: bossWave, speedMultiplier: Number(speedMultiplier.toFixed(2)) });
-      setEventMessage(`Boss wave at ${(bossWave * 2).toFixed(0)}x thrust`);
+      triggerBossAlert("BOSS WAVE", `${(bossWave * 2).toFixed(0)}x thrust`, 2.6);
     }
     const sector = getSectorForMultiplier(speedMultiplier);
     if (sector && sector.id !== state.sectorIndex) {
@@ -5182,7 +5505,7 @@
       });
       if (sector.bossGate) {
         state.forceBossSpawn = true;
-        setEventMessage(`${state.sectorLabel} — boss gate`);
+        triggerBossAlert(state.sectorLabel ? state.sectorLabel.toUpperCase() : "SECTOR BREACH", "Boss gate active", 2.6);
       }
     }
     player.fireBoostTimer = Math.max(0, (player.fireBoostTimer || 0) - dt);
@@ -5275,7 +5598,6 @@
     if (dashRequested && player.dashCooldown <= 0) {
       player.dash = DASH_DURATION;
       player.dashCooldown = DASH_COOLDOWN;
-      setEventMessage("Phase dash");
       spawnSparks(player.x, player.y, player.z + 0.4, [0.25, 0.95, 1, 0.9], 18);
       for (let i = 0; i < 8; i++) {
         spawnTrailParticle(true);
@@ -5338,14 +5660,14 @@
             state.hitShakeStrength = 1.2;
             state.hitFlashTimer = 0.45;
             hud.shell.classList.add("is-hit");
-            setEventMessage("Gate impact — wrong lane");
+            triggerFlightEventPill("Gate impact — wrong lane", 1.2);
             spawnSparks(player.x, player.y, player.z, [1, 0.1, 0.2, 1], 30);
             if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
           }
         } else {
           // CLEARED
           state.score += 250;
-          setEventMessage("Gate synchronized");
+          triggerFlightEventPill("Gate synchronized", 0.9);
           spawnSparks(object.x, object.y, object.z, [0.2, 1.0, 0.4, 0.8], 15);
         }
         object.passed = true;
@@ -5366,7 +5688,7 @@
               spawnSparks(player.x, player.y, player.z, [1, 0.95, 0.32, 1], 12);
               if (object.hp <= 0) {
                 state.score += 320;
-                setEventMessage("Boss down!");
+                triggerBossAlert("BOSS DOWN!", "Sector Cleared", 2.2);
                 spawnSparks(object.x, object.y, object.z, [1, 0.4, 0.92, 1], 30);
                 removeObject = true;
                 logEvent("boss_destroyed", { method: "ram-dash" });
@@ -5378,7 +5700,6 @@
                 state.hitShakeStrength = 1;
                 state.hitFlashTimer = 0.42;
                 hud.shell.classList.add("is-hit");
-                setEventMessage("Boss collision");
                 spawnSparks(object.x, object.y, object.z, [1, 0.4, 0.92, 0.95], 26);
                 if (navigator.vibrate) {
                   navigator.vibrate([260, 120, 260]);
@@ -5404,14 +5725,14 @@
               state.score += 140;
               if (state.cores % 7 === 0) {
                 state.hull = Math.min(5, state.hull + 1);
-                setEventMessage("Hull restored");
+                triggerPickupChip("Hull +1");
               } else {
-                setEventMessage("+ Core");
+                triggerPickupChip("+ Core");
               }
               spawnSparks(object.x, object.y, object.z, [0.45, 0.95, 1, 0.9], 18);
             } else if (player.dash > 0) {
               state.score += 90;
-              setEventMessage("Debris phased");
+              triggerFlightEventPill("Debris phased", 0.6);
               spawnSparks(object.x, object.y, object.z, [1, 0.82, 0.28, 0.86], 20);
             } else {
               if (!absorbHullHit()) {
@@ -5420,7 +5741,6 @@
                 state.hitShakeStrength = 1;
                 state.hitFlashTimer = 0.42;
                 hud.shell.classList.add("is-hit");
-                setEventMessage("Hull damaged");
                 spawnSparks(object.x, object.y, object.z, [1, 0.25, 0.34, 0.94], 26);
                 if (navigator.vibrate) {
                   navigator.vibrate([200, 100, 200]);
@@ -5483,7 +5803,7 @@
             spawnSparks(spark.x, spark.y, spark.z, [1, 0.72, 0.2, 1], 10);
             if (obj.hp <= 0) {
               state.score += 150;
-              setEventMessage("Target cleared");
+              triggerFlightEventPill("Target cleared", 0.8);
               spawnSparks(obj.x, obj.y, obj.z, [1, 0.5, 0.15, 0.95], 20);
               objects[j] = objects[objects.length - 1];
               objects.pop();
@@ -5497,7 +5817,7 @@
             spawnSparks(spark.x, spark.y, spark.z, [1, 0.95, 0.32, 1], 8);
             if (obj.hp <= 0) {
               state.score += 320;
-              setEventMessage("Boss down!");
+              triggerBossAlert("BOSS DOWN!", "Sector Cleared", 2.2);
               spawnSparks(obj.x, obj.y, obj.z, [1, 0.4, 0.92, 1], 30);
               objects[j] = objects[objects.length - 1];
               objects.pop();
@@ -5517,7 +5837,6 @@
               state.hitShakeStrength = 1;
               state.hitFlashTimer = 0.42;
               hud.shell.classList.add("is-hit");
-              setEventMessage("Boss hit!");
               spawnSparks(spark.x, spark.y, spark.z, [1, 0.32, 0.46, 0.95], 18);
               if (navigator.vibrate) {
                 navigator.vibrate([200, 100, 200]);
@@ -5560,6 +5879,25 @@
     if (state.eventTimer <= 0 && state.eventMessage) {
       state.eventMessage = "";
       hud.eventToast.classList.remove("is-visible");
+    }
+
+    if (notificationState.pickup.timer > 0) {
+      notificationState.pickup.timer -= dt;
+      if (notificationState.pickup.timer <= 0 && hud.pickupEdgeChip) {
+        hud.pickupEdgeChip.classList.add("is-hidden");
+      }
+    }
+    if (notificationState.eventPill.timer > 0) {
+      notificationState.eventPill.timer -= dt;
+      if (notificationState.eventPill.timer <= 0 && hud.flightEventPill) {
+        hud.flightEventPill.classList.add("is-hidden");
+      }
+    }
+    if (notificationState.bossAlert.timer > 0) {
+      notificationState.bossAlert.timer -= dt;
+      if (notificationState.bossAlert.timer <= 0 && hud.bossAlertBanner) {
+        hud.bossAlertBanner.classList.add("is-hidden");
+      }
     }
 
     state.targetFov = player.dash > 0 ? DASH_FOV : BASE_FOV;
@@ -7962,6 +8300,19 @@
             shipBounds: projectFullShipBounds(),
             perf: wave1Api.getPerfSnapshot()
           };
+        },
+        setRenderTier(tier, save = false) {
+          setRenderTier(tier, save);
+          return { currentTier: renderPolicy.currentTier };
+        },
+        getRenderPolicy() {
+          return { ...renderPolicy, tierDef: getRenderBudgetTier() };
+        },
+        getTouchRangePx() {
+          return TOUCH_FULL_RANGE_PX;
+        },
+        triggerFallbackUI(title, lead, detail) {
+          showWebGLFallback(title, lead, detail);
         }
       });
     }
@@ -7990,6 +8341,9 @@
       ? Number((state.recentRafIntervals.reduce((a, b) => a + b, 0) / state.recentRafIntervals.length).toFixed(2))
       : Number(rawInterval.toFixed(2));
     state.fps = state.uncappedRafMs > 0 ? Math.round(1000 / state.uncappedRafMs) : 60;
+    if (state.mode === "playing") {
+      monitorAdaptivePacing(rawInterval);
+    }
     state.frameDrawElementsCount = 0;
     state.frameBufferBindCount = 0;
     state.frameTextureBindCount = 0;
@@ -8081,23 +8435,32 @@
   }
 
   async function boot() {
-    refreshRenderBudgetLimits();
-    await loadSimLaw();
-    initIdentity();
-    applyPilotPalette(pilotProfile.palette || "default");
-    const squadParam = new URLSearchParams(window.location.search).get("squad");
-    if (squadParam && hud.accessCodeInput) {
-      hud.accessCodeInput.value = squadParam.slice(0, 32);
-      setEventMessage(`Squad lane opened — code ${squadParam}`);
+    try {
+      refreshRenderBudgetLimits();
+      await loadSimLaw();
+      initIdentity();
+      applyPilotPalette(pilotProfile.palette || "default");
+      const squadParam = new URLSearchParams(window.location.search).get("squad");
+      if (squadParam && hud.accessCodeInput) {
+        hud.accessCodeInput.value = squadParam.slice(0, 32);
+        setEventMessage(`Squad lane opened — code ${squadParam}`);
+      }
+      updatePilotBadge();
+      resetGame();
+      syncFlightWeaponButtons();
+      wireSurveyUi();
+      if (typeof window !== "undefined") {
+        window.__starfallBooted = true;
+      }
+      requestAnimationFrame(frame);
+    } catch (err) {
+      console.error("starfall: flight deck startup exception:", err);
+      showWebGLFallback(
+        "Flight Deck Startup Error",
+        "Starfall Salvage encountered an unexpected exception while booting flight systems.",
+        err && (err.stack || err.message || String(err))
+      );
     }
-    updatePilotBadge();
-    resetGame();
-    syncFlightWeaponButtons();
-    wireSurveyUi();
-    if (typeof window !== "undefined") {
-      window.__starfallBooted = true;
-    }
-    requestAnimationFrame(frame);
   }
 
   window.requestAnimationFrame(() => {
