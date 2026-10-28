@@ -16,3 +16,7 @@ temp/
 __pycache__/
 *.pyc
 .vercel/
+
+# Large local media artifacts
+artifacts/owner_videos/
+artifacts/owner_video_frames/

@@ -33,7 +33,7 @@ Compatibility rule: these folders organize access without moving the legacy root
 - GitHub repo: `https://github.com/Kopano-Labs/starfall-salvage`
 - Local static proof URL: `http://127.0.0.1:5180/`
 - Local backend proof URL: `http://127.0.0.1:8765/` (optional Python backend lane)
-- Live public URL: `https://starfallsalvage.kopanolabs.com` (Vercel Hobby + IONOS CNAME; current runtime target is build `20261022-sovereign-hangar-mki-rc2` once deployed on the production alias).
+- Live public URL: `https://starfallsalvage.kopanolabs.com` (Vercel Hobby + IONOS CNAME; current runtime target is build `20261027-wave2-stage1-rc1` once deployed on the production alias).
 - Main Brain root: `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics`
 - KC implementation: `C:\Users\rkhol\OneDrive\Documents\Anthropic\Introduction to MCP\Schematics\06-Reference\kopano-code-implementation`
 
@@ -41,12 +41,12 @@ Compatibility rule: these folders organize access without moving the legacy root
 
 - Sovereign Hangar RC2 milestone: **OWNER ACCEPTED & MERGED** on 2026-10-25 via PR #13 (`8df8b320dccae9f890f23e05c4542fdd86236269`).
 - Production observed at commit `128dca4bb1e092b9a1aaa904d38bc9d95771d8fd` (READY on Vercel).
-- Build marker `20261022-sovereign-hangar-mki-rc2` is live and verified across manifests, service worker cache, and bundle.
+- Build marker `20261027-wave2-stage1-rc1` is live and verified across manifests, service worker cache, and bundle.
 - Further Sovereign Hangar implementation is frozen/parked. Active lane transitions to **gameplay discovery and evaluation** (awaiting owner diagnostic assessment of footage).
 - The game is live on the public Kopano Labs GitHub repo (public 2026-05-06 per Sovereign Tech / CONTRIBUTING.md doctrine).
-- The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; the current runtime branch build is `20261022-sovereign-hangar-mki-rc2`.
+- The IONOS subdomain `starfallsalvage.kopanolabs.com` is proven live with HTTPS + Vercel edge serving; the current runtime branch build is `20261027-wave2-stage1-rc1`.
 - The older mobile-lockdown notes are historical context, not the current branch truth. Current work unifies PC, Android, Xiaomi, and Apple browser gameplay under one ruleset and adapts only presentation density, safe-area, and touch affordances.
-- Build `20261022-sovereign-hangar-mki-rc2` is the current branch gameplay truth. It keeps controls intact, strengthens full-screen framing, lowers dead black space, and preserves one ruleset across mobile and desktop.
+- Build `20261027-wave2-stage1-rc1` is the current branch gameplay truth. It keeps controls intact, strengthens full-screen framing, lowers dead black space, and preserves one ruleset across mobile and desktop.
 - Product doctrine is now explicit: `mobile-primary, device-complete, realism-first`. See `docs/REALISM-RUBRIC.md`.
 - Root node alignment: 5 Pillars, 15 Commandments, CRUD-only mandate, 80% Optimal Threshold, Asymmetric Edge Reality, Testimony Delta.
 - Thesis alignment: Starfall demonstrates Pillar 5 (Expansion) — raw WebGL under township constraints proves Commandment 9 (Offline-First Mandate) and the AER test.

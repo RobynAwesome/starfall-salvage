@@ -139,6 +139,7 @@ def main() -> int:
                 "--disable-dev-shm-usage",
                 "--use-gl=angle",
                 "--use-angle=swiftshader",
+                "--enable-unsafe-swiftshader",
                 "--enable-webgl",
                 "--ignore-gpu-blocklist",
                 "--window-size=1280,800",
