@@ -7,9 +7,27 @@
     return;
   }
 
-  function showWebGLFallback() {
+  function showWebGLFallback(title, lead, detail) {
     const fallback = document.getElementById("webglFallbackCard");
     if (fallback) {
+      if (title) {
+        const titleEl = document.getElementById("webglFallbackTitle");
+        if (titleEl) titleEl.textContent = title;
+      }
+      if (lead) {
+        const leadEl = document.getElementById("webglFallbackLead");
+        if (leadEl) leadEl.textContent = lead;
+      }
+      const detailEl = document.getElementById("webglFallbackDetail");
+      if (detailEl) {
+        if (detail) {
+          detailEl.textContent = typeof detail === "string" ? detail : (detail.stack || detail.message || String(detail));
+          detailEl.classList.remove("is-hidden");
+        } else {
+          detailEl.classList.add("is-hidden");
+          detailEl.textContent = "";
+        }
+      }
       fallback.classList.remove("is-hidden");
       fallback.removeAttribute("hidden");
       fallback.setAttribute("aria-hidden", "false");
@@ -44,7 +62,11 @@
 
   const gl = createGameContext(canvas);
   if (!gl) {
-    showWebGLFallback();
+    showWebGLFallback(
+      "Graphics Initialization Required",
+      "Starfall Salvage was unable to establish a WebGL 3D context on this browser/device.",
+      "WebGL context creation failed across 'webgl2', 'webgl', and 'experimental-webgl'."
+    );
     return;
   }
 
@@ -580,27 +602,46 @@
     gl.shaderSource(shader, source);
     gl.compileShader(shader);
     if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      const log = gl.getShaderInfoLog(shader);
+      const log = gl.getShaderInfoLog(shader) || "Unknown shader compilation failure";
       gl.deleteShader(shader);
-      throw new Error(log);
+      const shaderName = type === gl.VERTEX_SHADER ? "Vertex Shader" : "Fragment Shader";
+      showWebGLFallback(
+        "Shader Compilation Error",
+        `A critical flight shader (${shaderName}) failed to compile on this GPU driver.`,
+        log
+      );
+      throw new Error(`Shader compilation failed (${shaderName}): ${log}`);
     }
     return shader;
   }
 
   function createProgram(vertexSource, fragmentSource) {
     const program = gl.createProgram();
-    gl.attachShader(program, compileShader(gl.VERTEX_SHADER, vertexSource));
-    gl.attachShader(program, compileShader(gl.FRAGMENT_SHADER, fragmentSource));
+    const vs = compileShader(gl.VERTEX_SHADER, vertexSource);
+    const fs = compileShader(gl.FRAGMENT_SHADER, fragmentSource);
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      const log = gl.getProgramInfoLog(program);
+      const log = gl.getProgramInfoLog(program) || "Unknown program linking error";
       gl.deleteProgram(program);
-      throw new Error(log);
+      showWebGLFallback(
+        "Graphics Program Link Error",
+        "Failed to link the flight deck shader program on this graphics driver.",
+        log
+      );
+      throw new Error(`Program link failed: ${log}`);
     }
     return program;
   }
 
-  const program = createProgram(vertexShaderSource, fragmentShaderSource);
+  let program;
+  try {
+    program = createProgram(vertexShaderSource, fragmentShaderSource);
+  } catch (err) {
+    console.error("starfall: shader program initialization failed:", err);
+    return;
+  }
   gl.useProgram(program);
 
   const locations = {
@@ -805,7 +846,12 @@
     typeof window !== "undefined" &&
     ("ontouchstart" in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
 
+  let TOUCH_FULL_RANGE_PX = 70;
+
   const RENDER_POLICY_STORAGE_KEY = "starfall_render_tier";
+  // Graphics performance budget tiers.
+  // Note: targetFps values represent runtime pacing targets and benchmarks,
+  // not hardware-locked throttles or guaranteed fixed refresh rates.
   const RENDER_TIERS = {
     eco: {
       id: "eco",
@@ -819,7 +865,7 @@
       skySalvageCount: 12,
       fieldParticleCount: 16,
       rotateTopology: false,
-      targetFps: 30
+      targetFps: 30 // Target pacing benchmark
     },
     balanced: {
       id: "balanced",
@@ -833,7 +879,7 @@
       skySalvageCount: 20,
       fieldParticleCount: 28,
       rotateTopology: false,
-      targetFps: 60
+      targetFps: 60 // Target pacing benchmark
     },
     high: {
       id: "high",
@@ -847,7 +893,7 @@
       skySalvageCount: 30,
       fieldParticleCount: 42,
       rotateTopology: true,
-      targetFps: 60
+      targetFps: 60 // Target pacing benchmark
     }
   };
 
@@ -922,9 +968,9 @@
     const scale = tier.particleScale || 1;
     sparksMax = tier.sparksMax || Math.max(60, Math.floor(200 * scale));
     trailMax = tier.trailMax || Math.max(45, Math.floor(150 * scale));
-    if (isTouchCapable) {
-      TOUCH_FULL_RANGE_PX = Math.floor(70 * (scale < 1 ? 0.85 : 1));
-    }
+    // Touch flight sensitivity is strictly decoupled from graphics quality tiers.
+    // Full steering range remains constant (70px) across Eco, Balanced, and High presets.
+    TOUCH_FULL_RANGE_PX = Math.floor(70 * 1);
   }
 
   function monitorAdaptivePacing(intervalMs) {
@@ -1779,7 +1825,6 @@
   let touchStartTime = 0;
   let touchMaxTravel = 0;
   const TOUCH_DEADZONE_PX = 8;
-  let TOUCH_FULL_RANGE_PX = 70;
   const TOUCH_TAP_MAX_PX = 14;
   const TOUCH_TAP_MAX_MS = 260;
   // isTouchCapable initialized early for render tier detection
@@ -8262,6 +8307,12 @@
         },
         getRenderPolicy() {
           return { ...renderPolicy, tierDef: getRenderBudgetTier() };
+        },
+        getTouchRangePx() {
+          return TOUCH_FULL_RANGE_PX;
+        },
+        triggerFallbackUI(title, lead, detail) {
+          showWebGLFallback(title, lead, detail);
         }
       });
     }
@@ -8384,23 +8435,32 @@
   }
 
   async function boot() {
-    refreshRenderBudgetLimits();
-    await loadSimLaw();
-    initIdentity();
-    applyPilotPalette(pilotProfile.palette || "default");
-    const squadParam = new URLSearchParams(window.location.search).get("squad");
-    if (squadParam && hud.accessCodeInput) {
-      hud.accessCodeInput.value = squadParam.slice(0, 32);
-      setEventMessage(`Squad lane opened — code ${squadParam}`);
+    try {
+      refreshRenderBudgetLimits();
+      await loadSimLaw();
+      initIdentity();
+      applyPilotPalette(pilotProfile.palette || "default");
+      const squadParam = new URLSearchParams(window.location.search).get("squad");
+      if (squadParam && hud.accessCodeInput) {
+        hud.accessCodeInput.value = squadParam.slice(0, 32);
+        setEventMessage(`Squad lane opened — code ${squadParam}`);
+      }
+      updatePilotBadge();
+      resetGame();
+      syncFlightWeaponButtons();
+      wireSurveyUi();
+      if (typeof window !== "undefined") {
+        window.__starfallBooted = true;
+      }
+      requestAnimationFrame(frame);
+    } catch (err) {
+      console.error("starfall: flight deck startup exception:", err);
+      showWebGLFallback(
+        "Flight Deck Startup Error",
+        "Starfall Salvage encountered an unexpected exception while booting flight systems.",
+        err && (err.stack || err.message || String(err))
+      );
     }
-    updatePilotBadge();
-    resetGame();
-    syncFlightWeaponButtons();
-    wireSurveyUi();
-    if (typeof window !== "undefined") {
-      window.__starfallBooted = true;
-    }
-    requestAnimationFrame(frame);
   }
 
   window.requestAnimationFrame(() => {

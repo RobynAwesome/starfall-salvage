@@ -30,11 +30,13 @@
     <div class="webgl-fallback-card is-hidden" id="webglFallbackCard" role="alert" aria-live="assertive" aria-hidden="true">
       <div class="webgl-fallback-inner">
         <div class="webgl-fallback-icon" aria-hidden="true">🛰️</div>
-        <h2>Graphics Initialization Required</h2>
-        <p class="webgl-fallback-lead">Starfall Salvage was unable to establish a WebGL 3D context on this browser/device.</p>
+        <h2 id="webglFallbackTitle">Graphics Initialization Required</h2>
+        <p class="webgl-fallback-lead" id="webglFallbackLead">Starfall Salvage was unable to establish a WebGL 3D context on this browser/device.</p>
+        <pre class="webgl-fallback-detail is-hidden" id="webglFallbackDetail" aria-label="Technical error details"></pre>
         <div class="webgl-fallback-steps">
           <p><strong>Recommended Recovery:</strong></p>
           <ol>
+            <li>Launch in <strong>Eco mode</strong> (minimal shaders & lower GPU overhead).</li>
             <li>Ensure <strong>Hardware Acceleration</strong> is turned ON in Chrome / browser settings.</li>
             <li>Close heavy background tabs to free mobile GPU memory.</li>
             <li>Update Android System WebView / Chrome to the latest release.</li>
@@ -42,6 +44,7 @@
         </div>
         <div class="webgl-fallback-actions">
           <button type="button" class="fallback-btn is-primary" id="webglRetryBtn" onclick="window.location.reload()">Retry Launch</button>
+          <button type="button" class="fallback-btn is-eco" id="webglEcoLaunchBtn" onclick="window.location.search = '?tier=eco'">Launch in Eco Mode</button>
           <a class="fallback-btn is-secondary" href="https://get.webgl.org/" target="_blank" rel="noopener">Check WebGL Support</a>
         </div>
       </div>
@@ -97,9 +100,9 @@
           <button type="button" class="flight-menu-item" id="flightResumeItem" role="menuitem">Drop in — resume</button>
           <button type="button" class="flight-menu-item" id="flightStepOutItem" role="menuitem">Step out — hub pause</button>
           <p class="flight-menu-heading" role="presentation">Adaptive render tier</p>
-          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="eco" role="menuitem" aria-pressed="false">Eco (30 FPS, battery/low-end)</button>
-          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="balanced" role="menuitem" aria-pressed="true">Balanced (default)</button>
-          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="high" role="menuitem" aria-pressed="false">High (max fidelity)</button>
+          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="eco" role="menuitem" aria-pressed="false">Eco (30 FPS target, battery/low-end)</button>
+          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="balanced" role="menuitem" aria-pressed="true">Balanced (60 FPS target, default)</button>
+          <button type="button" class="flight-menu-item flight-tier-option" data-render-tier="high" role="menuitem" aria-pressed="false">High (60 FPS target, max fidelity)</button>
           <p class="flight-menu-heading" role="presentation">Flight control candidate</p>
           <button type="button" class="flight-menu-item flight-control-option" data-control-scheme="candidate_a" role="menuitem" aria-pressed="true">Candidate A — 2D Free Steer</button>
           <button type="button" class="flight-menu-item flight-control-option" data-control-scheme="candidate_b" role="menuitem" aria-pressed="false">Candidate B — Lane + Climb/Reach</button>

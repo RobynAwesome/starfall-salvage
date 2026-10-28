@@ -3585,6 +3585,28 @@ select:focus {
   margin-bottom: 12px;
 }
 
+.webgl-fallback-detail {
+  display: block;
+  text-align: left;
+  max-height: 120px;
+  overflow-y: auto;
+  margin: 14px 0 10px;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 99, 132, 0.45);
+  border-radius: 6px;
+  color: #ff9999;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.webgl-fallback-detail.is-hidden {
+  display: none !important;
+}
+
 .webgl-fallback-steps {
   text-align: left;
   margin: 16px 0;
@@ -3622,6 +3644,16 @@ select:focus {
   background: var(--cyan);
   color: #03131e;
   border-color: #3be3ff;
+}
+
+.fallback-btn.is-eco {
+  background: rgba(78, 205, 196, 0.2);
+  color: #4ecdc4;
+  border-color: #4ecdc4;
+}
+
+.fallback-btn.is-eco:hover {
+  background: rgba(78, 205, 196, 0.35);
 }
 
 .fallback-btn.is-secondary {
