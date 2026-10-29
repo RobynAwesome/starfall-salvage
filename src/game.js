@@ -1853,6 +1853,7 @@
   let pilotProfile = loadPilotProfile();
   applyDeckResonance(pilotProfile.deckResonance);
   let wasPlayingBeforeHidden = false;
+  let suspendedModeBeforeHidden = null;
   let contextLost = false;
 
   const STARFLIGHT_CONTROL_STORAGE_KEY = "starfall_salvage_control_scheme_v1";
@@ -2568,7 +2569,7 @@
       event.preventDefault();
       event.stopPropagation();
       closeFlightMenu();
-      if (state.mode === "playing" || state.mode === "paused") {
+      if (state.mode === "playing" || state.mode === "paused" || state.mode === "revive") {
         togglePause();
       }
     });
@@ -2703,26 +2704,38 @@
   }
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
-      if (wasPlayingBeforeHidden || state.mode === "revive" || state.mode === "relaunch") {
-        if (state.mode === "revive") {
-          wasPlayingBeforeHidden = true;
-          if (hud.reviveModal) {
-            hud.reviveModal.classList.add("is-hidden");
-          }
+      if (state.mode === "playing" || state.mode === "relaunch" || state.mode === "revive") {
+        suspendedModeBeforeHidden = state.mode;
+        wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
+        if (state.mode === "revive" && hud.reviveModal) {
+          hud.reviveModal.classList.add("is-hidden");
         }
         if (state.mode === "relaunch" && hud.relaunchHud) {
           hud.relaunchHud.classList.add("is-hidden");
         }
         state.mode = "paused";
-        hud.pauseButton.textContent = "Resume";
-        setStatus("Paused", "Mission paused while the tab is hidden.", false);
+        if (hud.pauseButton) {
+          hud.pauseButton.textContent = "Resume";
+        }
+        setStatus(
+          "Mission Paused",
+          suspendedModeBeforeHidden === "revive"
+            ? "Rescue challenge suspended while tab is hidden. Tap Resume to continue."
+            : "Mission paused while the tab is hidden.",
+          false
+        );
       }
       return;
     }
     state.lastTime = 0;
-    if (wasPlayingBeforeHidden && state.mode === "paused") {
-      setStatus("Paused", "Resume when ready. Timing stayed delta-time safe while hidden.", false);
+    if ((wasPlayingBeforeHidden || suspendedModeBeforeHidden) && state.mode === "paused") {
+      setStatus(
+        "Mission Paused",
+        suspendedModeBeforeHidden === "revive"
+          ? "Rescue challenge suspended. Tap Resume to continue."
+          : "Resume when ready. Timing stayed delta-time safe while hidden.",
+        false
+      );
     }
   });
   canvas.addEventListener("webglcontextlost", (event) => {
@@ -3753,18 +3766,22 @@
   // --- RESCUE MINIGAME 3: SALVAGE GLIDE (Emergency Obstacle Course) ---
   function initSalvageGlide() {
     rescueState.variant = "salvage_glide";
-    rescueState.timer = 4.8;
-    rescueState.maxTimer = 4.8;
+    rescueState.timer = 5.4;
+    rescueState.maxTimer = 5.4;
     const sg = rescueState.salvageGlide;
     sg.droneX = 50;
     sg.courseTime = 0;
     sg.totalDuration = 4.5;
     sg.passedWaves = 0;
 
+    // 3 oncoming debris waves with clear, fair dodge lanes:
+    // Wave 1: spawn 0.3s, start y = -15, hazards in lanes [0, 2] -> center lane (1) is safe!
+    // Wave 2: spawn 1.5s, start y = -15, hazard in lane [1] -> left (0) and right (2) lanes are safe!
+    // Wave 3: spawn 2.6s, start y = -15, hazards in lanes [0, 1] -> right lane (2) is safe!
     sg.obstacles = [
-      { id: 1, spawnTime: 0.5, y: -20, lanes: [0, 2], passed: false }, // Center (1) open!
-      { id: 2, spawnTime: 1.8, y: -20, lanes: [1], passed: false },    // Left (0) and Right (2) open!
-      { id: 3, spawnTime: 3.0, y: -20, lanes: [0, 1], passed: false }  // Right (2) open!
+      { id: 1, spawnTime: 0.3, y: -15, lanes: [0, 2], passed: false },
+      { id: 2, spawnTime: 1.5, y: -15, lanes: [1], passed: false },
+      { id: 3, spawnTime: 2.6, y: -15, lanes: [0, 1], passed: false }
     ];
 
     setReviveCopy(
@@ -3821,22 +3838,28 @@
     const container = document.getElementById("glideObstacleContainer");
     const droneEl = document.getElementById("glideDrone");
     const wrap = document.getElementById("salvageGlideWrap");
-    if (!container || !droneEl || !wrap) return;
 
     const droneWidthPct = 14;
     const droneY = 85;
+    const speed = 64;
 
     let allPassed = true;
     for (const wave of sg.obstacles) {
       if (sg.courseTime >= wave.spawnTime) {
-        wave.y += 56 * dt;
-        if (wave.y < 115) {
-          allPassed = false;
-        } else {
+        const prevY = wave.y;
+        wave.y += speed * dt;
+
+        // Wave has safely passed player drone once y >= 96
+        if (wave.y >= 96) {
           wave.passed = true;
+        } else {
+          allPassed = false;
         }
 
-        if (Math.abs(wave.y - droneY) < 10) {
+        // Swept collision window: checks if obstacle overlapped droneY zone in this step
+        // Drone vertical collision band is [droneY - 8, droneY + 8] = [77, 93]
+        const yOverlap = Math.max(prevY, wave.y) >= (droneY - 8) && Math.min(prevY, wave.y) <= (droneY + 8);
+        if (yOverlap) {
           for (const lane of wave.lanes) {
             const laneCenterXPct = lane === 0 ? 20 : (lane === 1 ? 50 : 80);
             if (Math.abs(sg.droneX - laneCenterXPct) < (droneWidthPct / 2 + 10)) {
@@ -3851,16 +3874,18 @@
       }
     }
 
-    let html = "";
-    for (const wave of sg.obstacles) {
-      if (sg.courseTime >= wave.spawnTime && wave.y < 115 && wave.y > -20) {
-        for (const lane of wave.lanes) {
-          const laneCenterXPct = lane === 0 ? 20 : (lane === 1 ? 50 : 80);
-          html += `<div class="glide-hazard" style="left: ${laneCenterXPct}%; top: ${wave.y}%;"></div>`;
+    if (container && wrap) {
+      let html = "";
+      for (const wave of sg.obstacles) {
+        if (sg.courseTime >= wave.spawnTime && wave.y < 115 && wave.y > -20) {
+          for (const lane of wave.lanes) {
+            const laneCenterXPct = lane === 0 ? 20 : (lane === 1 ? 50 : 80);
+            html += `<div class="glide-hazard" style="left: ${laneCenterXPct}%; top: ${wave.y}%;"></div>`;
+          }
         }
       }
+      container.innerHTML = html;
     }
-    container.innerHTML = html;
 
     if (allPassed && sg.courseTime >= sg.totalDuration) {
       completeRevive(true);
@@ -4058,6 +4083,10 @@
     if (hud.flightEventPill) hud.flightEventPill.classList.add("is-hidden");
     if (hud.bossAlertBanner) hud.bossAlertBanner.classList.add("is-hidden");
     resetBossEncounter();
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
     closeFlightMenu();
     if (hud.shareWhatsappButton) {
       hud.shareWhatsappButton.classList.add("is-hidden");
@@ -4127,30 +4156,86 @@
     });
   }
 
+  function resumeFromPause() {
+    detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
+    state.lastTime = 0;
+    if (suspendedModeBeforeHidden === "revive" && rescueState.active) {
+      state.mode = "revive";
+      suspendedModeBeforeHidden = null;
+      wasPlayingBeforeHidden = false;
+      if (hud.reviveModal) {
+        hud.reviveModal.classList.remove("is-hidden");
+      }
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Pause";
+      }
+      setStatus("", "", true);
+      syncShellPlayState();
+      canvas.focus();
+      return;
+    }
+    if (suspendedModeBeforeHidden === "relaunch" && hud.relaunchHud) {
+      state.mode = "relaunch";
+      suspendedModeBeforeHidden = null;
+      wasPlayingBeforeHidden = false;
+      hud.relaunchHud.classList.remove("is-hidden");
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Pause";
+      }
+      setStatus("", "", true);
+      syncShellPlayState();
+      canvas.focus();
+      return;
+    }
+    state.mode = "playing";
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
+    if (hud.pauseButton) {
+      hud.pauseButton.textContent = "Pause";
+    }
+    setStatus("", "", true);
+    syncShellPlayState();
+    canvas.focus();
+  }
+
   function togglePause() {
-    if (state.mode === "relaunch" || state.mode === "revive") {
+    if (state.mode === "relaunch") {
+      return;
+    }
+    if (state.mode === "revive") {
+      suspendedModeBeforeHidden = "revive";
+      state.mode = "paused";
+      if (hud.reviveModal) {
+        hud.reviveModal.classList.add("is-hidden");
+      }
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Resume";
+      }
+      setStatus("Rescue Paused", "Rescue challenge paused. Tap Resume to continue.", false);
+      attachModalBackTrap(MODAL_TRAP.sovereignPause, () => {
+        if (state.mode !== "paused") {
+          return;
+        }
+        resumeFromPause();
+      });
+      syncShellPlayState();
       return;
     }
     if (state.mode === "playing") {
+      suspendedModeBeforeHidden = "playing";
       state.mode = "paused";
-      hud.pauseButton.textContent = "Resume";
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Resume";
+      }
       setStatus("Paused", "The salvage drone is holding position.", false);
       attachModalBackTrap(MODAL_TRAP.sovereignPause, () => {
         if (state.mode !== "paused") {
           return;
         }
-        state.mode = "playing";
-        hud.pauseButton.textContent = "Pause";
-        setStatus("", "", true);
-        syncShellPlayState();
-        canvas.focus();
+        resumeFromPause();
       });
     } else if (state.mode === "paused") {
-      detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
-      state.mode = "playing";
-      hud.pauseButton.textContent = "Pause";
-      setStatus("", "", true);
-      canvas.focus();
+      resumeFromPause();
     }
     syncShellPlayState();
   }
@@ -5134,6 +5219,8 @@
     clearReviveArena();
     closeFlightMenu();
     resetBossEncounter();
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
     if (hud.pauseButton) {
       hud.pauseButton.textContent = "Pause";
     }
@@ -9084,6 +9171,65 @@
           rescueState.salvageGlide.droneX = pct;
           const el = document.getElementById("glideDrone");
           if (el) el.style.left = `${pct}%`;
+        },
+        stepRescue(dt = 0.016) {
+          tickRevive(dt);
+          return {
+            active: rescueState.active,
+            mode: state.mode,
+            timer: Number(rescueState.timer.toFixed(3)),
+            variant: rescueState.variant,
+            salvageGlide: {
+              courseTime: Number(rescueState.salvageGlide.courseTime.toFixed(3)),
+              droneX: rescueState.salvageGlide.droneX,
+              obstacles: rescueState.salvageGlide.obstacles.map(o => ({
+                id: o.id,
+                y: Number(o.y.toFixed(2)),
+                passed: o.passed
+              }))
+            }
+          };
+        },
+        simulateVisibilityChange(hidden) {
+          if (hidden) {
+            if (state.mode === "playing" || state.mode === "relaunch" || state.mode === "revive") {
+              suspendedModeBeforeHidden = state.mode;
+              wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
+              if (state.mode === "revive" && hud.reviveModal) {
+                hud.reviveModal.classList.add("is-hidden");
+              }
+              if (state.mode === "relaunch" && hud.relaunchHud) {
+                hud.relaunchHud.classList.add("is-hidden");
+              }
+              state.mode = "paused";
+              if (hud.pauseButton) {
+                hud.pauseButton.textContent = "Resume";
+              }
+            }
+          } else {
+            state.lastTime = 0;
+          }
+          return { mode: state.mode, suspendedMode: suspendedModeBeforeHidden };
+        },
+        resumeGame() {
+          resumeFromPause();
+          return {
+            mode: state.mode,
+            suspendedMode: suspendedModeBeforeHidden,
+            rescueActive: rescueState.active,
+            rescueModalVisible: hud.reviveModal ? !hud.reviveModal.classList.contains("is-hidden") : false
+          };
+        },
+        pauseGame() {
+          togglePause();
+          return {
+            mode: state.mode,
+            suspendedMode: suspendedModeBeforeHidden,
+            rescueActive: rescueState.active
+          };
+        },
+        getSuspendedMode() {
+          return suspendedModeBeforeHidden;
         },
         simulateFinalDeath() {
           state.reviveUsedThisRun = true;
