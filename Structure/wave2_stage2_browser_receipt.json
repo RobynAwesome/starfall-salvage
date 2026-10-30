@@ -1,0 +1,252 @@
+{
+  "harness": "tools/test_wave2_stage2_browser_runtime.py",
+  "timestamp": "2026-10-30T18:55:09Z",
+  "target": "http://127.0.0.1:8996/?control=a",
+  "verdict": "PASS",
+  "summary": {
+    "passed": 25,
+    "failed": 0,
+    "total": 25
+  },
+  "checks": [
+    {
+      "id": "BOOT-01",
+      "desc": "Live window.__starfallWave2 API mounted and functional",
+      "ok": true,
+      "details": null
+    },
+    {
+      "id": "CS-WIN-01",
+      "desc": "Core Surge rescue triggered with variant 'core_surge' and active status",
+      "ok": true,
+      "details": {
+        "variant": "core_surge",
+        "active": true,
+        "timer": 4.5
+      }
+    },
+    {
+      "id": "CS-WIN-02",
+      "desc": "First live DOM pointerdown+click registers hit 1/2",
+      "ok": true,
+      "details": {
+        "hits": 1,
+        "need": 2,
+        "active": true
+      }
+    },
+    {
+      "id": "CS-WIN-03",
+      "desc": "Second live DOM tap completes Core Surge: restored mode 'playing'/'countdown', hull 1, reviveUsed=true",
+      "ok": true,
+      "details": {
+        "hits": 2,
+        "active": false,
+        "mode": "countdown",
+        "hull": 1,
+        "reviveUsed": true
+      }
+    },
+    {
+      "id": "CS-TIMEOUT",
+      "desc": "Core Surge timer expiry (>=4.8s) closes rescue and transitions to 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "timer": -0.5,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "CS-SKIP",
+      "desc": "Clicking live DOM #reviveSkipButton aborts Core Surge to 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "RL-WIN-01",
+      "desc": "Reaction Lock rescue active with 3 calibration nodes required",
+      "ok": true,
+      "details": null
+    },
+    {
+      "id": "RL-WIN-02",
+      "desc": "Sequential DOM taps advance calibration (1->2->3) and restore 'playing'/'countdown' mode with hull=1",
+      "ok": true,
+      "details": {
+        "s1": 1,
+        "s2": 2,
+        "s3": 3,
+        "active": false,
+        "mode": "countdown",
+        "hull": 1
+      }
+    },
+    {
+      "id": "RL-TIMEOUT",
+      "desc": "Reaction Lock timer expiry closes rescue and transitions to 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "RL-SKIP",
+      "desc": "Reaction Lock skip button transitions to 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "SG-WIN-01",
+      "desc": "Salvage Glide rescue initialized with 3 debris obstacles",
+      "ok": true,
+      "details": null
+    },
+    {
+      "id": "SG-WIN-02",
+      "desc": "Salvage Glide completed under 4.8s timeout: restored mode 'playing'/'countdown', hull 1",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "countdown",
+        "hull": 1,
+        "timerRemaining": 0.89
+      }
+    },
+    {
+      "id": "SG-COLLISION",
+      "desc": "Debris collision triggers immediate rescue failure and mode 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "SG-TIMEOUT",
+      "desc": "Salvage Glide timeout triggers 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "SG-SKIP",
+      "desc": "Salvage Glide skip button triggers 'gameover'",
+      "ok": true,
+      "details": {
+        "active": false,
+        "mode": "gameover"
+      }
+    },
+    {
+      "id": "SUSPEND-CS-01",
+      "desc": "Core Surge tab hidden: mode becomes 'paused', suspendedMode='revive', modal hidden",
+      "ok": true,
+      "details": {
+        "mode": "paused",
+        "suspendedMode": "revive",
+        "modalHidden": true
+      }
+    },
+    {
+      "id": "RESUME-CS-02",
+      "desc": "Core Surge resumed: mode restored to 'revive', modal visible, hit count (1) & timer preserved",
+      "ok": true,
+      "details": {
+        "mode": "revive",
+        "suspendedMode": null,
+        "rescueActive": true,
+        "modalVisible": true,
+        "hitsPreserved": 1,
+        "timer": 4.5
+      }
+    },
+    {
+      "id": "RESUME-CS-03",
+      "desc": "Core Surge completes successfully after background resume: restored 'playing'/'countdown' mode",
+      "ok": true,
+      "details": {
+        "mode": "countdown",
+        "hull": 1
+      }
+    },
+    {
+      "id": "RESUME-RL",
+      "desc": "Reaction Lock background resume preserves active status and calibration step (1)",
+      "ok": true,
+      "details": {
+        "mode": "revive",
+        "step": 1,
+        "active": true
+      }
+    },
+    {
+      "id": "RESUME-SG",
+      "desc": "Salvage Glide background resume preserves active status and drone positioning",
+      "ok": true,
+      "details": {
+        "mode": "revive",
+        "active": true,
+        "droneX": 50
+      }
+    },
+    {
+      "id": "DEATH-01",
+      "desc": "Final fatal death triggers clean gameover without obsolete #gameOverSovereign modal",
+      "ok": true,
+      "details": {
+        "mode": "gameover",
+        "isFinalizingDeath": true,
+        "gameOverSectionPresent": false,
+        "surveyVisible": false
+      }
+    },
+    {
+      "id": "DEATH-02",
+      "desc": "Intrusive discovery survey modal is NOT automatically displayed on death",
+      "ok": true,
+      "details": {
+        "mode": "gameover",
+        "isFinalizingDeath": true,
+        "gameOverSectionPresent": false,
+        "surveyVisible": false
+      }
+    },
+    {
+      "id": "HUB-RETURN",
+      "desc": "Death transitions smoothly to Sovereign Hangar Hub: scrim active, Three.js hangar running",
+      "ok": true,
+      "details": {
+        "scrimVisible": true,
+        "hangarRunning": true,
+        "currentCraft": "mk1"
+      }
+    },
+    {
+      "id": "SURVEY-API",
+      "desc": "Intentional survey open API (window.__starfallWave2.openSurvey) functions cleanly",
+      "ok": true,
+      "details": null
+    },
+    {
+      "id": "FRESH-LAUNCH",
+      "desc": "Hub LAUNCH FLIGHT starts fresh playing lane: scrim hidden, reviveUsed reset to false, hull intact",
+      "ok": true,
+      "details": {
+        "mode": "playing",
+        "scrimHidden": true,
+        "reviveUsedThisRun": false,
+        "hull": 3
+      }
+    }
+  ]
+}

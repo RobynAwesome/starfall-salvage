@@ -364,7 +364,7 @@ check("W2-CORR-03B", "UI: Flight menu adaptive tier options explicitly state tar
 // ═════════════════════════════════════════════════════════════════════════════
 
 check("W2-CORR-04A", "Cache: All canonical touchpoints match the active release build marker", () => {
-  const BUILD = "20261027-wave2-stage1-rc1";
+  const BUILD = "20261029-wave2-stage2-rc1";
 
   const touchpoints = [
     { name: "src/game.js GAME_BUILD", ok: gameJs.includes(`const GAME_BUILD = "${BUILD}";`) },
@@ -387,8 +387,8 @@ check("W2-CORR-04A", "Cache: All canonical touchpoints match the active release 
 });
 
 check("W2-CORR-04B (Negative Control)", "Cache: Out-of-sync build marker in any touchpoint triggers discrepancy failure", () => {
-  const canonical = "20261027-wave2-stage1-rc1";
-  const tampered = "20261027-wave2-stage1-rc0-tampered";
+  const canonical = "20261029-wave2-stage2-rc1";
+  const tampered = "20261029-wave2-stage2-rc0-tampered";
 
   const wouldDetect = canonical !== tampered;
   return {

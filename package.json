@@ -33,6 +33,8 @@
     "test:wave1": "node tools/test_gameplay_wave1_flight_fairness.mjs",
     "test:wave2": "node tools/test_wave2_stage1_corrections.mjs",
     "test:wave2-stage2": "node tools/test_wave2_stage2_gameplay.mjs",
+    "test:wave2-stage2-browser": "python3 tools/test_wave2_stage2_browser_runtime.py",
+    "test:release-upgrade": "python3 tools/run_release_cache_upgrade.py",
     "gate": "npm run verify:syntax && npm run test:survey && npm run test:hangar && npm run test:mobile-hangar-negative && npm run test:mobile-hangar && npm run test:wave0-negative && npm run test:wave0 && npm run test:wave1 && npm run test:wave2 && npm run test:wave2-stage2 && python tools/hot_path_audit.py && npm run context:typecheck && npm run kc:audit",
     "hot-path:audit": "python tools/hot_path_audit.py",
     "mobile:stress:pw": "node tools/playwright_mobile_audit.js",

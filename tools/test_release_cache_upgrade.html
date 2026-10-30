@@ -38,11 +38,11 @@
   </div>
 
   <script>
-    const OLD_BUILD = "20261020-sovereign-hangar-mki-rc1";
+    const OLD_BUILD = "20261027-wave2-stage1-rc1";
     const OLD_CACHE = `starfall-salvage-v${OLD_BUILD}`;
     const LEGACY_CACHE = "starfall-salvage-v20260526-ready-shell";
 
-    const NEW_BUILD = "20261022-sovereign-hangar-mki-rc2";
+    const NEW_BUILD = "20261029-wave2-stage2-rc1";
     const NEW_CACHE = `starfall-salvage-v${NEW_BUILD}`;
 
     const logBox = document.getElementById('console');
@@ -78,7 +78,11 @@
       // PHASE 1: Seed Persistent Storage with Stale RC1 & Legacy Caches
       // =======================================================================
       try {
-        log('info', 'SEED_INIT', `Seeding persistent origin storage with baseline RC1 cache (${OLD_CACHE})...`);
+        log('info', 'SEED_INIT', `Seeding persistent origin storage with baseline RC1 cache (${OLD_CACHE}) and pilot data...`);
+        // Seed pilot profile and best score in LocalStorage to prove persistence across upgrade
+        window.localStorage.setItem("starfall_pilot_profile_v1", JSON.stringify({ callsign: "VANGUARD-7", bestScore: 2450 }));
+        window.localStorage.setItem("starfall_best_score_v1", "2450");
+
         const rc1Cache = await caches.open(OLD_CACHE);
         await rc1Cache.put(
           new Request("/index.html"),
@@ -282,16 +286,33 @@
       const lockdownText = lockdownEl ? lockdownEl.textContent : "";
       const lockdownHasNewBuild = lockdownText.includes(NEW_BUILD);
 
-      if (liveController && controllerHasNewBuild && lockdownHasNewBuild) {
-        log('pass', 'LIVE_UPGRADE_READY', `Upgraded application running with candidate controller & DOM build identity`, {
+      // Verify LocalStorage pilot profile and local scores survive cache upgrade
+      const rawProfile = curWin.localStorage.getItem("starfall_pilot_profile_v1");
+      const rawBest = curWin.localStorage.getItem("starfall_best_score_v1");
+      const profile = rawProfile ? JSON.parse(rawProfile) : {};
+      const profilePreserved = profile.callsign === "VANGUARD-7" && profile.bestScore === 2450;
+      const bestScorePreserved = rawBest === "2450";
+
+      // Verify Stage 2 Wave 2 rescue hooks and boss encounter state on live window
+      const wave2Api = curWin.__starfallWave2;
+      const hasRescues = wave2Api && typeof wave2Api.getRescueState === "function" && typeof wave2Api.setRescueVariant === "function";
+
+      if (liveController && controllerHasNewBuild && lockdownHasNewBuild && profilePreserved && bestScorePreserved && hasRescues) {
+        log('pass', 'LIVE_UPGRADE_READY', `Upgraded application running with candidate controller, build identity, preserved pilot data, and Stage 2 rescues`, {
           controllerURL: controllerScript,
-          buildText: lockdownText
+          buildText: lockdownText,
+          pilotCallsign: profile.callsign,
+          bestScore: rawBest,
+          wave2RescuesAvailable: Boolean(hasRescues)
         });
       } else {
-        log('fail', 'LIVE_UPGRADE_READY', `Upgraded application controller or build identity check failed`, {
+        log('fail', 'LIVE_UPGRADE_READY', `Upgraded application controller, storage or build identity check failed`, {
           hasController: Boolean(liveController),
           controllerScript,
-          lockdownText
+          lockdownText,
+          profilePreserved,
+          bestScorePreserved,
+          hasRescues: Boolean(hasRescues)
         });
       }
 

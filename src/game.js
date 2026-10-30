@@ -703,7 +703,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20261027-wave2-stage1-rc1";
+  const GAME_BUILD = "20261029-wave2-stage2-rc1";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -3609,11 +3609,15 @@
         </div>
       `;
 
+      let lastPulseTime = 0;
       const handlePulseTap = (e) => {
         if (e) {
           e.preventDefault();
           e.stopPropagation();
         }
+        const now = performance.now();
+        if (now - lastPulseTime < 100) return;
+        lastPulseTime = now;
         if (!rescueState.active || state.mode !== "revive") return;
         const pos = cs.needlePos;
         if (pos >= cs.targetMin && pos <= cs.targetMax) {
@@ -3643,8 +3647,13 @@
 
       const tapBtn = document.getElementById("coreSurgeTapBtn");
       const wrap = document.getElementById("coreSurgeWrap");
-      if (tapBtn) tapBtn.addEventListener("pointerdown", handlePulseTap);
-      if (wrap) wrap.addEventListener("pointerdown", handlePulseTap);
+      if (tapBtn) {
+        tapBtn.addEventListener("pointerdown", handlePulseTap);
+        tapBtn.addEventListener("click", handlePulseTap);
+      }
+      if (wrap) {
+        wrap.addEventListener("pointerdown", handlePulseTap);
+      }
     }
   }
 
@@ -3725,11 +3734,14 @@
     btn.style.top = `${rl.nodeY}%`;
     btn.setAttribute("aria-label", `Lock calibration target ${rl.step + 1}`);
 
+    let nodeTapped = false;
     const handleNodeTap = (e) => {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
       }
+      if (nodeTapped) return;
+      nodeTapped = true;
       if (!rescueState.active || state.mode !== "revive") return;
       rl.step++;
       if (hud.reviveProgress) {
@@ -3745,6 +3757,7 @@
     };
 
     btn.addEventListener("pointerdown", handleNodeTap);
+    btn.addEventListener("click", handleNodeTap);
     wrap.appendChild(ringSvg);
     wrap.appendChild(btn);
   }
@@ -3894,6 +3907,11 @@
 
   // --- RESCUE CONTROLLER ---
   function startReviveMiniGame() {
+    if (deathTransitionTimer) {
+      clearTimeout(deathTransitionTimer);
+      deathTransitionTimer = null;
+    }
+    state.isFinalizingDeath = false;
     state.reviveUsedThisRun = true;
     state.mode = "revive";
     rescueState.active = true;
@@ -5271,9 +5289,8 @@
     }, 1100);
 
     playCountSinceSurvey++;
-    if (playCountSinceSurvey >= SURVEY_PLAY_THRESHOLD && !isDiscoverySurveySilenced()) {
-      window.setTimeout(showSurvey, 1800);
-    }
+    // UX preservation: Do not automatically schedule discovery survey over the Sovereign Hangar Hub after death.
+    // The survey is deferred to intentional player actions (via menu / wave2 api), preserving an unobstructed Hub.
   }
 
   function activeWeaponKind() {
@@ -9133,8 +9150,19 @@
             reactionLock: { ...rescueState.reactionLock },
             salvageGlide: { ...rescueState.salvageGlide },
             runCounter: rescueRunCounter,
-            reviveUsedThisRun: state.reviveUsedThisRun
+            reviveUsedThisRun: state.reviveUsedThisRun,
+            hull: state.hull
           };
+        },
+        resetReviveUsed() {
+          if (deathTransitionTimer) {
+            clearTimeout(deathTransitionTimer);
+            deathTransitionTimer = null;
+          }
+          state.isFinalizingDeath = false;
+          state.reviveUsedThisRun = false;
+          rescueRunCounter = 0;
+          return state.reviveUsedThisRun;
         },
         setRescueVariant(variant) {
           forcedRescueVariant = variant;
@@ -9159,12 +9187,18 @@
         },
         tapCoreSurge() {
           const btn = document.getElementById("coreSurgeTapBtn");
-          if (btn) btn.click();
+          if (btn) {
+            btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+            btn.click();
+          }
           return { hits: rescueState.coreSurge.hits, need: rescueState.coreSurge.need };
         },
         tapReactionLockNode() {
           const btn = document.getElementById("reactionActiveNode");
-          if (btn) btn.click();
+          if (btn) {
+            btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+            btn.click();
+          }
           return { step: rescueState.reactionLock.step, total: rescueState.reactionLock.total };
         },
         setGlideDroneX(pct) {
@@ -9242,6 +9276,13 @@
         },
         isBossHealthBarVisible() {
           return hud.bossHealthCard && !hud.bossHealthCard.classList.contains("is-hidden");
+        },
+        openSurvey() {
+          showSurvey();
+          return { visible: hud.surveyModal ? !hud.surveyModal.classList.contains("is-hidden") : false };
+        },
+        isSurveyVisible() {
+          return hud.surveyModal ? !hud.surveyModal.classList.contains("is-hidden") : false;
         }
       });
     }
