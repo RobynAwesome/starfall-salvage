@@ -1,4 +1,4 @@
-const CACHE_NAME = "starfall-salvage-v20261027-wave2-stage1-rc1";
+const CACHE_NAME = "starfall-salvage-v20261029-wave2-stage2-rc1";
 
 const ASSETS = [
   "./",

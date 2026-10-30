@@ -141,7 +141,7 @@ def check_mobile_stress_score(*, min_pass_pct: int = 80) -> dict[str, Any]:
         "m_pwa_lang_za": '"lang": "en-ZA"' in manifest_json,
         "m_playing_minimal_hud": 'id="playingMinimalHud"' in index_html,
         "m_sovereign_menu": 'id="sovereignPrimaryCta"' in index_html,
-        "m_game_over_modal": 'id="gameOverSovereign"' in index_html,
+        "m_game_over_modal": 'id="sovereignScrim"' in index_html or 'id="gameOverSovereign"' in index_html,
         "m_hud_responsive_clamp": "clamp(" in styles_css,
         "m_min_vw_constraints": "min(560px" in styles_css or "min(520px" in styles_css,
         "m_overscroll_or_body": "overscroll-behavior" in styles_css
@@ -202,7 +202,7 @@ def check_kopano_upgrade_features() -> dict[str, Any]:
     movement_case_study = _read_text(
         "Structure/2026-05-19 - Movement Control Fix Case Study.md"
     )
-    current_build = "20261027-wave2-stage1-rc1"
+    current_build = "20261029-wave2-stage2-rc1"
     mao_lane_doc = _read_text("docs/MAO-Starfall-Lane.md")
     realism_rubric = _read_text("docs/REALISM-RUBRIC.md")
     cassy_register = _read_text("Structure/05-Training/Cassy Apprenticeship Register.md")

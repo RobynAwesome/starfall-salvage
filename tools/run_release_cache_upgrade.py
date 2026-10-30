@@ -3,17 +3,19 @@ import os
 import sys
 import time
 import json
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RECEIPT_FILE = os.path.join(ROOT, "Structure", "release_upgrade_receipt.json")
+CHROME_BIN = "/home/rkhol/.cache/puppeteer/chrome/linux-156.0.8078.47/chrome-linux64/chrome"
+EXTRA_LIB_DIR = "/home/rkhol/.cache/chrome-libs/root/usr/lib/x86_64-linux-gnu"
 EDGE_BIN = "/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-URL = "http://localhost:8799/tools/test_release_cache_upgrade.html"
-USER_DATA_DIR = f"C:\\Users\\rkhol\\AppData\\Local\\Temp\\starfall_upgrade_{int(time.time())}"
+HTTP_PORT = 8799
+URL = f"http://127.0.0.1:{HTTP_PORT}/tools/test_release_cache_upgrade.html"
 
 def main():
     print("=" * 80)
-    print("   STARFALL SALVAGE — RC1 TO RC2 RELEASE CACHE UPGRADE AUDIT")
-    print("   Browser: Microsoft Edge (Edg/156) with persistent browser storage")
+    print("   STARFALL SALVAGE — STAGE 1 TO STAGE 2 RELEASE CACHE UPGRADE AUDIT")
     print("   Target:  " + URL)
     print("=" * 80)
 
@@ -23,42 +25,89 @@ def main():
         except Exception:
             pass
 
-    cmd = [
-        EDGE_BIN,
-        "--headless=new",
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--enable-webgl",
-        "--ignore-gpu-blocklist",
-        f"--user-data-dir={USER_DATA_DIR}",
-        "--window-size=1280,1024",
-        URL
-    ]
-
-    print("\n[Edge Launch] Spawning headless Edge with persistent storage...")
-    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    start_time = time.time()
-    max_wait = 45  # seconds
-    receipt = None
-
+    server_proc = None
     try:
-        while time.time() - start_time < max_wait:
-            if os.path.exists(RECEIPT_FILE):
-                try:
-                    with open(RECEIPT_FILE, "r") as f:
-                        data = json.load(f)
-                    if data.get("verdict") in ("PASS", "FAIL"):
-                        receipt = data
-                        break
-                except Exception:
-                    pass
-            time.sleep(0.5)
-    finally:
+        # Check if local server is already running
+        import urllib.request
         try:
-            proc.kill()
+            with urllib.request.urlopen(f"http://127.0.0.1:{HTTP_PORT}/", timeout=1):
+                pass
         except Exception:
-            pass
+            print(f"[Server] Starting background server on port {HTTP_PORT}...")
+            server_proc = subprocess.Popen(
+                [sys.executable, os.path.join(ROOT, "tools", "serve_hangar.py"), str(HTTP_PORT)],
+                cwd=ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            time.sleep(1.0)
+
+        env = os.environ.copy()
+        if os.path.exists(CHROME_BIN):
+            user_data_dir = f"/tmp/starfall_upgrade_{int(time.time())}"
+            env["LD_LIBRARY_PATH"] = f"{EXTRA_LIB_DIR}:{env.get('LD_LIBRARY_PATH', '')}"
+            cmd = [
+                CHROME_BIN,
+                "--headless=new",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--use-gl=angle",
+                "--use-angle=swiftshader",
+                "--enable-unsafe-swiftshader",
+                "--enable-webgl",
+                "--ignore-gpu-blocklist",
+                f"--user-data-dir={user_data_dir}",
+                "--window-size=1280,1024",
+                URL
+            ]
+            print(f"\n[Browser Launch] Spawning headless Linux Chrome with persistent storage ({user_data_dir})...")
+        elif os.path.exists(EDGE_BIN):
+            user_data_dir = f"C:\\Users\\rkhol\\AppData\\Local\\Temp\\starfall_upgrade_{int(time.time())}"
+            cmd = [
+                EDGE_BIN,
+                "--headless=new",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--enable-webgl",
+                "--ignore-gpu-blocklist",
+                f"--user-data-dir={user_data_dir}",
+                "--window-size=1280,1024",
+                URL
+            ]
+            print(f"\n[Browser Launch] Spawning headless Edge with persistent storage...")
+        else:
+            print("[FAIL] Neither Chrome nor Edge binary found on system.")
+            sys.exit(1)
+
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=env)
+
+        start_time = time.time()
+        max_wait = 90  # seconds
+        receipt = None
+
+        try:
+            while time.time() - start_time < max_wait:
+                if os.path.exists(RECEIPT_FILE):
+                    try:
+                        with open(RECEIPT_FILE, "r") as f:
+                            data = json.load(f)
+                        if data.get("verdict") in ("PASS", "FAIL"):
+                            receipt = data
+                            break
+                    except Exception:
+                        pass
+                time.sleep(0.5)
+        finally:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+    finally:
+        if server_proc:
+            try:
+                server_proc.kill()
+            except Exception:
+                pass
 
     if not receipt:
         print(f"[FAIL] Timed out waiting for upgrade receipt after {max_wait}s.")

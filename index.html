@@ -18,9 +18,9 @@
   <link rel="icon" href="data:,">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="starfall-smoke.png">
-  <link rel="stylesheet" href="styles.css?v=20261027-wave2-stage1-rc1">
-  <script type="module" src="src/pwa-boot.js?v=20261027-wave2-stage1-rc1"></script>
-  <script src="src/game.js?v=20261027-wave2-stage1-rc1" defer></script>
+  <link rel="stylesheet" href="styles.css?v=20261029-wave2-stage2-rc1">
+  <script type="module" src="src/pwa-boot.js?v=20261029-wave2-stage2-rc1"></script>
+  <script src="src/game.js?v=20261029-wave2-stage2-rc1" defer></script>
 </head>
 <body>
   <main class="shell is-ready" data-ui-state="ready">
@@ -124,17 +124,19 @@
     <!-- Top Boss & Sector Alert Banner (Prominent, safe from active flight corridor sightline) -->
     <div class="boss-alert-banner is-hidden" id="bossAlertBanner" role="alert" aria-live="assertive"></div>
 
-    <section class="game-over-sovereign" id="gameOverSovereign" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
-      <div class="game-over-sovereign-inner">
-        <h2 id="gameOverTitle">Mission Failed</h2>
-        <p class="game-over-scores">Run <strong id="gameOverFinal">0</strong> · Best <strong id="gameOverBest">0</strong></p>
-        <div class="game-over-actions">
-          <button type="button" id="gameOverFlyAgain" class="is-primary">Fly Again</button>
-          <button type="button" id="gameOverLeaderboard" class="is-secondary">Leaderboard</button>
-          <button type="button" id="gameOverHub" class="is-tertiary">Kopano Hub</button>
+    <!-- Boss Combat Status HUD (Top corridor safe zone) -->
+    <div class="boss-health-card is-hidden" id="bossHealthCard" role="region" aria-label="Boss Combat Status">
+      <div class="boss-health-inner">
+        <div class="boss-health-header">
+          <span class="boss-health-tag">THREAT</span>
+          <strong class="boss-health-name" id="bossHealthName">Sovereign Dreadnought</strong>
+          <span class="boss-health-val" id="bossHealthVal">8 / 8 HP</span>
+        </div>
+        <div class="boss-health-track">
+          <div class="boss-health-bar" id="bossHealthBar" style="width: 100%"></div>
         </div>
       </div>
-    </section>
+    </div>
 
     <section class="hud" aria-live="polite">
       <a class="brand brand-anchor" href="https://kopanolabs.com/" target="_blank" rel="noopener" aria-label="Kopano Labs — open kopanolabs.com">
@@ -248,7 +250,7 @@
         <p><strong>What works now:</strong> Open this URL on a laptop or desktop &mdash; full game with onboarding, danger zone, shooting, and bosses.</p>
         <p><strong>Mobile is being rebuilt</strong> against the Asymmetric Edge Reality test (low-end Android, township infrastructure, zero-budget hardware). Re-open this page after the next deploy.</p>
         <p><strong>Got a mobile-perf fix or upgrade idea?</strong> Email <a href="mailto:rkholofelo@kopanolabs.com">rkholofelo@kopanolabs.com</a> &mdash; Sovereign Tech bounty applies (Tier 2, R500&ndash;R1500 ZAR via Yoco / PayFast / EFT).</p>
-        <p class="mobile-lockdown-meta">Build: 20261027-wave2-stage1-rc1 &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
+        <p class="mobile-lockdown-meta">Build: 20261029-wave2-stage2-rc1 &middot; Gate: KC Protocol 13 / C12 audit hold &middot; Started: 2026-05-06 &middot; Repo: github.com/Kopano-Labs/starfall-salvage</p>
       </div>
     </section>
 

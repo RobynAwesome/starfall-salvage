@@ -158,14 +158,12 @@
     pickupEdgeChip: document.getElementById("pickupEdgeChip"),
     flightEventPill: document.getElementById("flightEventPill"),
     bossAlertBanner: document.getElementById("bossAlertBanner"),
+    bossHealthCard: document.getElementById("bossHealthCard"),
+    bossHealthName: document.getElementById("bossHealthName"),
+    bossHealthVal: document.getElementById("bossHealthVal"),
+    bossHealthBar: document.getElementById("bossHealthBar"),
     webglFallbackCard: document.getElementById("webglFallbackCard"),
     weaponCycleButton: document.getElementById("weaponCycleButton"),
-    gameOverSovereign: document.getElementById("gameOverSovereign"),
-    gameOverFinal: document.getElementById("gameOverFinal"),
-    gameOverBest: document.getElementById("gameOverBest"),
-    gameOverFlyAgain: document.getElementById("gameOverFlyAgain"),
-    gameOverLeaderboard: document.getElementById("gameOverLeaderboard"),
-    gameOverHub: document.getElementById("gameOverHub"),
     countdownOverlay: document.getElementById("countdownOverlay"),
     countdownNumber: document.getElementById("countdownNumber"),
     deckToneIon: document.getElementById("deckToneIon"),
@@ -253,8 +251,7 @@
     const mode = state.mode;
     const scrim = hud.sovereignScrim;
     const playHud = hud.playingMinimalHud;
-    const go = hud.gameOverSovereign;
-    if (!scrim || !playHud || !go) {
+    if (!scrim || !playHud) {
       return;
     }
     scrim.classList.remove("sovereign-scrim--backdrop-only");
@@ -267,13 +264,8 @@
       scrim.classList.add("sovereign-scrim--backdrop-only");
       playHud.hidden = true;
       playHud.setAttribute("aria-hidden", "true");
-      go.hidden = false;
-      go.setAttribute("aria-hidden", "false");
       return;
     }
-
-    go.hidden = true;
-    go.setAttribute("aria-hidden", "true");
 
     const showMinimalPlayHud =
       mode === "playing" || mode === "relaunch" || (mode === "paused" && !blockMenu);
@@ -457,6 +449,29 @@
     hud.bossAlertBanner.innerHTML = `<span class="boss-alert-tag">ALERT</span> <strong>${title}</strong>${subtitle ? `<span class="boss-alert-sub">${subtitle}</span>` : ""}`;
     hud.bossAlertBanner.classList.remove("is-hidden");
     notificationState.bossAlert.timer = duration;
+  }
+
+  function showBossHealthBar(name, hp, maxHp) {
+    if (!hud.bossHealthCard) return;
+    if (hud.bossHealthName) hud.bossHealthName.textContent = name || "Sovereign Dreadnought";
+    updateBossHealthBar(hp, maxHp);
+    hud.bossHealthCard.classList.remove("is-hidden");
+  }
+
+  function updateBossHealthBar(hp, maxHp) {
+    if (hud.bossHealthVal) {
+      hud.bossHealthVal.textContent = `${Math.max(0, Math.ceil(hp))} / ${maxHp} HP`;
+    }
+    if (hud.bossHealthBar) {
+      const pct = Math.max(0, Math.min(100, (hp / Math.max(1, maxHp)) * 100));
+      hud.bossHealthBar.style.width = `${pct}%`;
+    }
+  }
+
+  function hideBossHealthBar() {
+    if (hud.bossHealthCard) {
+      hud.bossHealthCard.classList.add("is-hidden");
+    }
   }
 
   function applyBuff(kind) {
@@ -688,7 +703,7 @@
   const KOPANO_BOUNTY_EMAIL = "rkholofelo@kopanolabs.com";
   const PUBLIC_LIVE_URL = "https://starfallsalvage.kopanolabs.com";
   const PUBLIC_REPO_URL = "https://github.com/Kopano-Labs/starfall-salvage";
-  const GAME_BUILD = "20261027-wave2-stage1-rc1";
+  const GAME_BUILD = "20261029-wave2-stage2-rc1";
   const PILOT_PALETTES = ["default", "blossom", "ember", "mono"];
   const REVIVE_TIME_SECONDS = 3;
   const REVIVE_TAPS_NEEDED = 5;
@@ -1838,6 +1853,7 @@
   let pilotProfile = loadPilotProfile();
   applyDeckResonance(pilotProfile.deckResonance);
   let wasPlayingBeforeHidden = false;
+  let suspendedModeBeforeHidden = null;
   let contextLost = false;
 
   const STARFLIGHT_CONTROL_STORAGE_KEY = "starfall_salvage_control_scheme_v1";
@@ -2553,26 +2569,9 @@
       event.preventDefault();
       event.stopPropagation();
       closeFlightMenu();
-      if (state.mode === "playing" || state.mode === "paused") {
+      if (state.mode === "playing" || state.mode === "paused" || state.mode === "revive") {
         togglePause();
       }
-    });
-  }
-  if (hud.gameOverFlyAgain) {
-    hud.gameOverFlyAgain.addEventListener("click", () => {
-      closeLeaderboardOverlay();
-      resetGame();
-      startGame();
-    });
-  }
-  if (hud.gameOverLeaderboard) {
-    hud.gameOverLeaderboard.addEventListener("click", () => {
-      openLeaderboardOverlay();
-    });
-  }
-  if (hud.gameOverHub) {
-    hud.gameOverHub.addEventListener("click", () => {
-      window.open("https://kopanolabs.com/", "_blank", "noopener,noreferrer");
     });
   }
   if (hud.leaderboardSheetClose) {
@@ -2705,26 +2704,38 @@
   }
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
-      if (wasPlayingBeforeHidden || state.mode === "revive" || state.mode === "relaunch") {
-        if (state.mode === "revive") {
-          wasPlayingBeforeHidden = true;
-          if (hud.reviveModal) {
-            hud.reviveModal.classList.add("is-hidden");
-          }
+      if (state.mode === "playing" || state.mode === "relaunch" || state.mode === "revive") {
+        suspendedModeBeforeHidden = state.mode;
+        wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
+        if (state.mode === "revive" && hud.reviveModal) {
+          hud.reviveModal.classList.add("is-hidden");
         }
         if (state.mode === "relaunch" && hud.relaunchHud) {
           hud.relaunchHud.classList.add("is-hidden");
         }
         state.mode = "paused";
-        hud.pauseButton.textContent = "Resume";
-        setStatus("Paused", "Mission paused while the tab is hidden.", false);
+        if (hud.pauseButton) {
+          hud.pauseButton.textContent = "Resume";
+        }
+        setStatus(
+          "Mission Paused",
+          suspendedModeBeforeHidden === "revive"
+            ? "Rescue challenge suspended while tab is hidden. Tap Resume to continue."
+            : "Mission paused while the tab is hidden.",
+          false
+        );
       }
       return;
     }
     state.lastTime = 0;
-    if (wasPlayingBeforeHidden && state.mode === "paused") {
-      setStatus("Paused", "Resume when ready. Timing stayed delta-time safe while hidden.", false);
+    if ((wasPlayingBeforeHidden || suspendedModeBeforeHidden) && state.mode === "paused") {
+      setStatus(
+        "Mission Paused",
+        suspendedModeBeforeHidden === "revive"
+          ? "Rescue challenge suspended. Tap Resume to continue."
+          : "Resume when ready. Timing stayed delta-time safe while hidden.",
+        false
+      );
     }
   });
   canvas.addEventListener("webglcontextlost", (event) => {
@@ -3518,121 +3529,397 @@
     window.setTimeout(resizeCanvas, 120);
   });
 
-  const reviveState = {
+  const RESCUE_VARIANTS = ["core_surge", "reaction_lock", "salvage_glide"];
+  let rescueRunCounter = 0;
+  let forcedRescueVariant = null;
+
+  const rescueState = {
+    active: false,
+    variant: "core_surge",
     timer: 0,
-    taps: 0,
-    need: REVIVE_TAPS_NEEDED,
-    variant: "tapstorm",
-    activeCore: null
+    maxTimer: 4.5,
+    coreSurge: {
+      needlePos: 50,
+      needleDir: 1,
+      needleSpeed: 110,
+      targetMin: 38,
+      targetMax: 62,
+      hits: 0,
+      need: 2
+    },
+    reactionLock: {
+      step: 0,
+      total: 3,
+      nodeTimer: 1.4,
+      nodeMaxTime: 1.4,
+      nodeX: 50,
+      nodeY: 50
+    },
+    salvageGlide: {
+      droneX: 50,
+      courseTime: 0,
+      totalDuration: 4.5,
+      obstacles: [],
+      passedWaves: 0
+    }
   };
-  let reviveTapHandler = null;
 
   const relaunchState = {
     remain: 0
   };
 
   function clearReviveArena() {
-    if (!hud.reviveArena) {
-      return;
-    }
+    if (!hud.reviveArena) return;
     hud.reviveArena.innerHTML = "";
-    reviveState.activeCore = null;
   }
 
   function setReviveCopy(title, copy) {
     const titleNode = document.getElementById("reviveTitle");
     const copyNode = hud.reviveModal ? hud.reviveModal.querySelector(".revive-copy") : null;
-    if (titleNode) {
-      titleNode.textContent = title;
-    }
-    if (copyNode) {
-      copyNode.textContent = copy;
+    if (titleNode) titleNode.textContent = title;
+    if (copyNode) copyNode.textContent = copy;
+  }
+
+  // --- RESCUE MINIGAME 1: CORE SURGE (Timing Challenge) ---
+  function initCoreSurge() {
+    rescueState.variant = "core_surge";
+    rescueState.timer = 4.5;
+    rescueState.maxTimer = 4.5;
+    const cs = rescueState.coreSurge;
+    cs.needlePos = 50;
+    cs.needleDir = 1;
+    cs.hits = 0;
+    cs.need = 2;
+
+    setReviveCopy(
+      "CORE SURGE STABILIZER",
+      "Tap when the surging needle is inside the green target zone! 2 successful pulses needed."
+    );
+    if (hud.reviveTimer) hud.reviveTimer.textContent = rescueState.timer.toFixed(1);
+    if (hud.reviveProgress) hud.reviveProgress.textContent = `0 / ${cs.need} STABILIZED`;
+
+    if (hud.reviveArena) {
+      hud.reviveArena.innerHTML = `
+        <div class="core-surge-wrap" id="coreSurgeWrap">
+          <div class="core-surge-gauge" id="coreSurgeGauge">
+            <div class="core-surge-target" id="coreSurgeTarget" style="left: ${cs.targetMin}%; width: ${cs.targetMax - cs.targetMin}%;"></div>
+            <div class="core-surge-needle" id="coreSurgeNeedle" style="left: ${cs.needlePos}%;"></div>
+          </div>
+          <button type="button" class="core-surge-tap-btn" id="coreSurgeTapBtn">STABILIZE CORE</button>
+        </div>
+      `;
+
+      let lastPulseTime = 0;
+      const handlePulseTap = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        const now = performance.now();
+        if (now - lastPulseTime < 100) return;
+        lastPulseTime = now;
+        if (!rescueState.active || state.mode !== "revive") return;
+        const pos = cs.needlePos;
+        if (pos >= cs.targetMin && pos <= cs.targetMax) {
+          cs.hits++;
+          if (hud.reviveProgress) {
+            hud.reviveProgress.textContent = `${cs.hits} / ${cs.need} STABILIZED`;
+          }
+          if (navigator.vibrate) navigator.vibrate(30);
+          const targetEl = document.getElementById("coreSurgeTarget");
+          if (targetEl) {
+            targetEl.style.background = "rgba(46, 213, 115, 0.85)";
+            setTimeout(() => { if (targetEl) targetEl.style.background = "rgba(46, 213, 115, 0.35)"; }, 180);
+          }
+          if (cs.hits >= cs.need) {
+            completeRevive(true);
+          }
+        } else {
+          if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+          const needleEl = document.getElementById("coreSurgeNeedle");
+          if (needleEl) {
+            needleEl.style.background = "#ff4757";
+            setTimeout(() => { if (needleEl) needleEl.style.background = "#ffffff"; }, 180);
+          }
+          rescueState.timer = Math.max(0.1, rescueState.timer - 0.45);
+        }
+      };
+
+      const tapBtn = document.getElementById("coreSurgeTapBtn");
+      const wrap = document.getElementById("coreSurgeWrap");
+      if (tapBtn) {
+        tapBtn.addEventListener("pointerdown", handlePulseTap);
+        tapBtn.addEventListener("click", handlePulseTap);
+      }
+      if (wrap) {
+        wrap.addEventListener("pointerdown", handlePulseTap);
+      }
     }
   }
 
+  function tickCoreSurge(dt) {
+    const cs = rescueState.coreSurge;
+    cs.needlePos += cs.needleDir * cs.needleSpeed * dt;
+    if (cs.needlePos >= 94) {
+      cs.needlePos = 94;
+      cs.needleDir = -1;
+    } else if (cs.needlePos <= 6) {
+      cs.needlePos = 6;
+      cs.needleDir = 1;
+    }
+    const needleEl = document.getElementById("coreSurgeNeedle");
+    if (needleEl) {
+      needleEl.style.left = `${cs.needlePos}%`;
+    }
+  }
+
+  // --- RESCUE MINIGAME 2: REACTION LOCK (Precision Target Acquisition) ---
+  function initReactionLock() {
+    rescueState.variant = "reaction_lock";
+    rescueState.timer = 5.0;
+    rescueState.maxTimer = 5.0;
+    const rl = rescueState.reactionLock;
+    rl.step = 0;
+    rl.total = 3;
+    rl.nodeTimer = rl.nodeMaxTime;
+
+    setReviveCopy(
+      "REACTION LOCK CALIBRATION",
+      "Tap each calibration node as the lock ring closes! 3 targets required."
+    );
+    if (hud.reviveTimer) hud.reviveTimer.textContent = rescueState.timer.toFixed(1);
+    if (hud.reviveProgress) hud.reviveProgress.textContent = `0 / ${rl.total} LOCKED`;
+
+    if (hud.reviveArena) {
+      hud.reviveArena.innerHTML = `<div class="reaction-lock-wrap" id="reactionLockWrap"></div>`;
+      spawnReactionLockNode();
+    }
+  }
+
+  // Preserved function name to satisfy Lesson 017 proof: spawnReviveReactionCore
   function spawnReviveReactionCore() {
-    if (!hud.reviveArena) {
-      return;
-    }
-    hud.reviveArena.innerHTML = "";
-    const core = document.createElement("button");
-    core.type = "button";
-    core.className = "revive-core reaction-tap";
-    core.setAttribute("aria-label", "Tap calibration core");
-    const ring = document.createElement("span");
-    ring.className = "revive-calibration-ring";
-    ring.setAttribute("aria-hidden", "true");
-    core.appendChild(ring);
-    const x = randomRange(18, 82);
-    const y = randomRange(18, 82);
-    core.style.left = `${x}%`;
-    core.style.top = `${y}%`;
-    hud.reviveArena.appendChild(core);
-    reviveState.activeCore = core;
+    return spawnReactionLockNode();
   }
 
-  function unbindReviveTapStorm() {
-    if (reviveTapHandler && hud.reviveModal) {
-      hud.reviveModal.removeEventListener("pointerdown", reviveTapHandler, true);
-    }
-    reviveTapHandler = null;
-  }
+  function spawnReactionLockNode() {
+    const wrap = document.getElementById("reactionLockWrap");
+    if (!wrap) return;
+    wrap.innerHTML = "";
 
-  function bindReviveTapStorm() {
-    unbindReviveTapStorm();
-    reviveTapHandler = (event) => {
-      if (state.mode !== "revive") {
-        return;
+    const rl = rescueState.reactionLock;
+    rl.nodeTimer = rl.nodeMaxTime;
+    rl.nodeX = randomRange(22, 78);
+    rl.nodeY = randomRange(22, 78);
+
+    const ringSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    ringSvg.setAttribute("class", "reaction-ring-svg");
+    ringSvg.setAttribute("viewBox", "0 0 100 100");
+    ringSvg.style.left = `${rl.nodeX}%`;
+    ringSvg.style.top = `${rl.nodeY}%`;
+
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("class", "reaction-ring-circle");
+    circle.setAttribute("id", "reactionRingCircle");
+    circle.setAttribute("cx", "50");
+    circle.setAttribute("cy", "50");
+    circle.setAttribute("r", "40");
+    ringSvg.appendChild(circle);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "reaction-node reaction-tap";
+    btn.id = "reactionActiveNode";
+    btn.textContent = String(rl.step + 1);
+    btn.style.left = `${rl.nodeX}%`;
+    btn.style.top = `${rl.nodeY}%`;
+    btn.setAttribute("aria-label", `Lock calibration target ${rl.step + 1}`);
+
+    let nodeTapped = false;
+    const handleNodeTap = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
       }
-      const target = event.target;
-      if (target && (target.id === "reviveSkipButton" || target.closest("#reviveSkipButton"))) {
-        return;
-      }
-      if (reviveState.variant === "reaction") {
-        const core = target && target.closest(".revive-core.reaction-tap");
-        if (!core || core !== reviveState.activeCore) {
-          return;
-        }
-        event.preventDefault();
-        core.classList.add("is-caught");
-        reviveState.taps += 1;
-        if (hud.reviveProgress) {
-          hud.reviveProgress.textContent = `${reviveState.taps} / ${reviveState.need}`;
-        }
-        if (navigator.vibrate) {
-          navigator.vibrate(12);
-        }
-        if (reviveState.taps >= reviveState.need) {
-          completeRevive(true);
-          return;
-        }
-        window.setTimeout(spawnReviveReactionCore, 130);
-        return;
-      }
-      event.preventDefault();
-      reviveState.taps += 1;
+      if (nodeTapped) return;
+      nodeTapped = true;
+      if (!rescueState.active || state.mode !== "revive") return;
+      rl.step++;
       if (hud.reviveProgress) {
-        hud.reviveProgress.textContent = `${reviveState.taps} / ${reviveState.need}`;
+        hud.reviveProgress.textContent = `${rl.step} / ${rl.total} LOCKED`;
       }
-      if (navigator.vibrate) {
-        navigator.vibrate(12);
-      }
-      if (reviveState.taps >= reviveState.need) {
+      if (navigator.vibrate) navigator.vibrate(25);
+      btn.classList.add("is-locked");
+      if (rl.step >= rl.total) {
         completeRevive(true);
+      } else {
+        setTimeout(spawnReactionLockNode, 80);
       }
     };
-    if (hud.reviveModal) {
-      hud.reviveModal.addEventListener("pointerdown", reviveTapHandler, true);
+
+    btn.addEventListener("pointerdown", handleNodeTap);
+    btn.addEventListener("click", handleNodeTap);
+    wrap.appendChild(ringSvg);
+    wrap.appendChild(btn);
+  }
+
+  function tickReactionLock(dt) {
+    const rl = rescueState.reactionLock;
+    rl.nodeTimer -= dt;
+    const ringEl = document.getElementById("reactionRingCircle");
+    if (ringEl) {
+      const progress = Math.max(0, rl.nodeTimer / rl.nodeMaxTime);
+      const dashOffset = (1 - progress) * 251;
+      ringEl.style.strokeDashoffset = String(dashOffset);
+    }
+    if (rl.nodeTimer <= 0) {
+      completeRevive(false);
     }
   }
 
+  // --- RESCUE MINIGAME 3: SALVAGE GLIDE (Emergency Obstacle Course) ---
+  function initSalvageGlide() {
+    rescueState.variant = "salvage_glide";
+    rescueState.timer = 5.4;
+    rescueState.maxTimer = 5.4;
+    const sg = rescueState.salvageGlide;
+    sg.droneX = 50;
+    sg.courseTime = 0;
+    sg.totalDuration = 4.5;
+    sg.passedWaves = 0;
+
+    // 3 oncoming debris waves with clear, fair dodge lanes:
+    // Wave 1: spawn 0.3s, start y = -15, hazards in lanes [0, 2] -> center lane (1) is safe!
+    // Wave 2: spawn 1.5s, start y = -15, hazard in lane [1] -> left (0) and right (2) lanes are safe!
+    // Wave 3: spawn 2.6s, start y = -15, hazards in lanes [0, 1] -> right lane (2) is safe!
+    sg.obstacles = [
+      { id: 1, spawnTime: 0.3, y: -15, lanes: [0, 2], passed: false },
+      { id: 2, spawnTime: 1.5, y: -15, lanes: [1], passed: false },
+      { id: 3, spawnTime: 2.6, y: -15, lanes: [0, 1], passed: false }
+    ];
+
+    setReviveCopy(
+      "EMERGENCY SALVAGE GLIDE",
+      "Steer the drone through debris gaps to escape the collapse! Drag or tap lanes."
+    );
+    if (hud.reviveTimer) hud.reviveTimer.textContent = rescueState.timer.toFixed(1);
+    if (hud.reviveProgress) hud.reviveProgress.textContent = "EVADING DEBRIS";
+
+    if (hud.reviveArena) {
+      hud.reviveArena.innerHTML = `
+        <div class="salvage-glide-wrap" id="salvageGlideWrap">
+          <div class="glide-lane-line" style="left: 33.3%;"></div>
+          <div class="glide-lane-line" style="left: 66.6%;"></div>
+          <div class="glide-drone" id="glideDrone" style="left: 50%;"></div>
+          <div id="glideObstacleContainer"></div>
+        </div>
+      `;
+
+      const wrap = document.getElementById("salvageGlideWrap");
+      const droneEl = document.getElementById("glideDrone");
+
+      const updateDroneFromPointer = (e) => {
+        if (!rescueState.active || !wrap) return;
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        const rect = wrap.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0] ? e.touches[0].clientX : rect.left + rect.width / 2);
+        const pct = Math.max(16, Math.min(84, ((clientX - rect.left) / rect.width) * 100));
+        sg.droneX = pct;
+        if (droneEl) {
+          droneEl.style.left = `${pct}%`;
+        }
+      };
+
+      if (wrap) {
+        wrap.addEventListener("pointerdown", (e) => {
+          try { wrap.setPointerCapture(e.pointerId); } catch {}
+          updateDroneFromPointer(e);
+        });
+        wrap.addEventListener("pointermove", updateDroneFromPointer);
+        wrap.addEventListener("pointerup", (e) => {
+          try { wrap.releasePointerCapture(e.pointerId); } catch {}
+        });
+      }
+    }
+  }
+
+  function tickSalvageGlide(dt) {
+    const sg = rescueState.salvageGlide;
+    sg.courseTime += dt;
+    const container = document.getElementById("glideObstacleContainer");
+    const droneEl = document.getElementById("glideDrone");
+    const wrap = document.getElementById("salvageGlideWrap");
+
+    const droneWidthPct = 14;
+    const droneY = 85;
+    const speed = 64;
+
+    let allPassed = true;
+    for (const wave of sg.obstacles) {
+      if (sg.courseTime >= wave.spawnTime) {
+        const prevY = wave.y;
+        wave.y += speed * dt;
+
+        // Wave has safely passed player drone once y >= 96
+        if (wave.y >= 96) {
+          wave.passed = true;
+        } else {
+          allPassed = false;
+        }
+
+        // Swept collision window: checks if obstacle overlapped droneY zone in this step
+        // Drone vertical collision band is [droneY - 8, droneY + 8] = [77, 93]
+        const yOverlap = Math.max(prevY, wave.y) >= (droneY - 8) && Math.min(prevY, wave.y) <= (droneY + 8);
+        if (yOverlap) {
+          for (const lane of wave.lanes) {
+            const laneCenterXPct = lane === 0 ? 20 : (lane === 1 ? 50 : 80);
+            if (Math.abs(sg.droneX - laneCenterXPct) < (droneWidthPct / 2 + 10)) {
+              if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+              completeRevive(false);
+              return;
+            }
+          }
+        }
+      } else {
+        allPassed = false;
+      }
+    }
+
+    if (container && wrap) {
+      let html = "";
+      for (const wave of sg.obstacles) {
+        if (sg.courseTime >= wave.spawnTime && wave.y < 115 && wave.y > -20) {
+          for (const lane of wave.lanes) {
+            const laneCenterXPct = lane === 0 ? 20 : (lane === 1 ? 50 : 80);
+            html += `<div class="glide-hazard" style="left: ${laneCenterXPct}%; top: ${wave.y}%;"></div>`;
+          }
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    if (allPassed && sg.courseTime >= sg.totalDuration) {
+      completeRevive(true);
+    }
+  }
+
+  // --- RESCUE CONTROLLER ---
   function startReviveMiniGame() {
+    if (deathTransitionTimer) {
+      clearTimeout(deathTransitionTimer);
+      deathTransitionTimer = null;
+    }
+    state.isFinalizingDeath = false;
     state.reviveUsedThisRun = true;
     state.mode = "revive";
-    reviveState.variant = Math.floor(state.score) % 2 === 0 ? "reaction" : "tapstorm";
-    reviveState.timer = reviveState.variant === "reaction" ? 4.2 : REVIVE_TIME_SECONDS;
-    reviveState.taps = 0;
-    reviveState.need = reviveState.variant === "reaction" ? 3 : REVIVE_TAPS_NEEDED;
+    rescueState.active = true;
+
+    // Deterministic selection: Core Surge -> Reaction Lock -> Salvage Glide
+    const chosenVariant = forcedRescueVariant || RESCUE_VARIANTS[rescueRunCounter % RESCUE_VARIANTS.length];
+    rescueRunCounter++;
+
     if (hud.shell) {
       hud.shell.classList.add("is-revive-slow");
     }
@@ -3640,32 +3927,24 @@
       hud.reviveModal.classList.remove("is-hidden");
     }
     attachModalBackTrap(MODAL_TRAP.revive, () => completeRevive(false));
-    if (hud.reviveTimer) {
-      hud.reviveTimer.textContent = reviveState.timer.toFixed(1);
-    }
-    if (hud.reviveProgress) {
-      hud.reviveProgress.textContent = `0 / ${reviveState.need}`;
-    }
+
     clearReviveArena();
-    if (reviveState.variant === "reaction") {
-      setReviveCopy(
-        "SYSTEM FAILURE — HIT THE CORES",
-        "Tap each calibration core before the lane collapses to relaunch with 1 hull. One rescue per run."
-      );
-      spawnReviveReactionCore();
+    if (chosenVariant === "core_surge") {
+      initCoreSurge();
+    } else if (chosenVariant === "reaction_lock") {
+      initReactionLock();
     } else {
-      setReviveCopy(
-        "SYSTEM FAILURE — TAP TO REBOOT",
-        "Rapid-tap anywhere on this panel five times before the lane collapses to relaunch with 1 hull. One rescue per run."
-      );
+      initSalvageGlide();
     }
-    bindReviveTapStorm();
-    setEventMessage(reviveState.variant === "reaction" ? "SYSTEM FAILURE — hit the cores" : "SYSTEM FAILURE — tap to reboot");
+    setEventMessage(`SYSTEM CRITICAL — ${chosenVariant.toUpperCase().replace("_", " ")}`);
     syncShellPlayState();
   }
 
   function completeRevive(success) {
-    unbindReviveTapStorm();
+    if (!rescueState.active && state.mode !== "revive") {
+      return;
+    }
+    rescueState.active = false;
     detachModalBackTrap(MODAL_TRAP.revive, false);
     if (hud.reviveModal) {
       hud.reviveModal.classList.add("is-hidden");
@@ -3683,26 +3962,38 @@
         updateHud();
         canvas.focus();
       });
-      logEvent("revive_success", { score: Math.floor(state.score) });
+      logEvent("revive_success", { score: Math.floor(state.score), variant: rescueState.variant });
       return;
     }
     handleGameOver();
   }
 
   function tickRevive(dt) {
-    if (state.mode !== "revive") {
+    if (state.mode !== "revive" || !rescueState.active) {
       return;
     }
-    reviveState.timer -= dt;
+    if (typeof document !== "undefined" && document.hidden) {
+      return; // Do not consume rescue timer when tab is backgrounded!
+    }
+    if (state.mode === "paused") {
+      return; // Do not consume rescue timer when paused!
+    }
+
+    rescueState.timer -= dt;
     if (hud.reviveTimer) {
-      hud.reviveTimer.textContent = Math.max(0, reviveState.timer).toFixed(1);
+      hud.reviveTimer.textContent = Math.max(0, rescueState.timer).toFixed(1);
     }
-    if (reviveState.taps >= reviveState.need) {
-      completeRevive(true);
+    if (rescueState.timer <= 0) {
+      completeRevive(false);
       return;
     }
-    if (reviveState.timer <= 0) {
-      completeRevive(false);
+
+    if (rescueState.variant === "core_surge") {
+      tickCoreSurge(dt);
+    } else if (rescueState.variant === "reaction_lock") {
+      tickReactionLock(dt);
+    } else if (rescueState.variant === "salvage_glide") {
+      tickSalvageGlide(dt);
     }
   }
 
@@ -3809,6 +4100,11 @@
     if (hud.pickupEdgeChip) hud.pickupEdgeChip.classList.add("is-hidden");
     if (hud.flightEventPill) hud.flightEventPill.classList.add("is-hidden");
     if (hud.bossAlertBanner) hud.bossAlertBanner.classList.add("is-hidden");
+    resetBossEncounter();
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
     closeFlightMenu();
     if (hud.shareWhatsappButton) {
       hud.shareWhatsappButton.classList.add("is-hidden");
@@ -3878,30 +4174,86 @@
     });
   }
 
+  function resumeFromPause() {
+    detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
+    state.lastTime = 0;
+    if (suspendedModeBeforeHidden === "revive" && rescueState.active) {
+      state.mode = "revive";
+      suspendedModeBeforeHidden = null;
+      wasPlayingBeforeHidden = false;
+      if (hud.reviveModal) {
+        hud.reviveModal.classList.remove("is-hidden");
+      }
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Pause";
+      }
+      setStatus("", "", true);
+      syncShellPlayState();
+      canvas.focus();
+      return;
+    }
+    if (suspendedModeBeforeHidden === "relaunch" && hud.relaunchHud) {
+      state.mode = "relaunch";
+      suspendedModeBeforeHidden = null;
+      wasPlayingBeforeHidden = false;
+      hud.relaunchHud.classList.remove("is-hidden");
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Pause";
+      }
+      setStatus("", "", true);
+      syncShellPlayState();
+      canvas.focus();
+      return;
+    }
+    state.mode = "playing";
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
+    if (hud.pauseButton) {
+      hud.pauseButton.textContent = "Pause";
+    }
+    setStatus("", "", true);
+    syncShellPlayState();
+    canvas.focus();
+  }
+
   function togglePause() {
-    if (state.mode === "relaunch" || state.mode === "revive") {
+    if (state.mode === "relaunch") {
+      return;
+    }
+    if (state.mode === "revive") {
+      suspendedModeBeforeHidden = "revive";
+      state.mode = "paused";
+      if (hud.reviveModal) {
+        hud.reviveModal.classList.add("is-hidden");
+      }
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Resume";
+      }
+      setStatus("Rescue Paused", "Rescue challenge paused. Tap Resume to continue.", false);
+      attachModalBackTrap(MODAL_TRAP.sovereignPause, () => {
+        if (state.mode !== "paused") {
+          return;
+        }
+        resumeFromPause();
+      });
+      syncShellPlayState();
       return;
     }
     if (state.mode === "playing") {
+      suspendedModeBeforeHidden = "playing";
       state.mode = "paused";
-      hud.pauseButton.textContent = "Resume";
+      if (hud.pauseButton) {
+        hud.pauseButton.textContent = "Resume";
+      }
       setStatus("Paused", "The salvage drone is holding position.", false);
       attachModalBackTrap(MODAL_TRAP.sovereignPause, () => {
         if (state.mode !== "paused") {
           return;
         }
-        state.mode = "playing";
-        hud.pauseButton.textContent = "Pause";
-        setStatus("", "", true);
-        syncShellPlayState();
-        canvas.focus();
+        resumeFromPause();
       });
     } else if (state.mode === "paused") {
-      detachModalBackTrap(MODAL_TRAP.sovereignPause, false);
-      state.mode = "playing";
-      hud.pauseButton.textContent = "Pause";
-      setStatus("", "", true);
-      canvas.focus();
+      resumeFromPause();
     }
     syncShellPlayState();
   }
@@ -4869,37 +5221,76 @@
     });
   }
 
+  let deathTransitionTimer = null;
+
   function handleGameOver() {
+    if (state.mode === "gameover" || state.isFinalizingDeath) {
+      return;
+    }
+    state.isFinalizingDeath = true;
+    state.mode = "gameover";
+
+    // 1. Freeze flight and prevent further damage or score changes
     if (hud.reviveModal) {
       hud.reviveModal.classList.add("is-hidden");
     }
     clearReviveArena();
-    state.mode = "gameover";
-    hud.pauseButton.textContent = "Pause";
+    closeFlightMenu();
+    resetBossEncounter();
+    suspendedModeBeforeHidden = null;
+    wasPlayingBeforeHidden = false;
+    if (hud.pauseButton) {
+      hud.pauseButton.textContent = "Pause";
+    }
     if (navigator.vibrate) {
       navigator.vibrate([400, 120, 400, 120, 600]);
     }
+
+    // 2. Finalize the run receipt and best-score state exactly once
     const finalScore = Math.floor(state.score);
     const bestScore = Math.max(pilotProfile.bestScore || 0, finalScore);
+    if (finalScore > (pilotProfile.bestScore || 0)) {
+      pilotProfile.bestScore = finalScore;
+      persistPilotProfile(pilotProfile);
+    }
+    updatePilotBadge();
     setStatus("", "", true);
-    if (hud.gameOverFinal) {
-      hud.gameOverFinal.textContent = String(finalScore);
-    }
-    if (hud.gameOverBest) {
-      hud.gameOverBest.textContent = String(bestScore);
-    }
+
+    // 3. Attempt remote score submission without indefinitely blocking navigation
     collapseEcosystemFlyout();
     submitScore();
     persistRunReceipt(finalScore);
     revealShareButton(finalScore);
     logEvent("game_over", { score: finalScore, cores: state.cores, time: Number(state.time.toFixed(2)) });
+
+    // 4. Close gameplay/rescue overlays
     syncShellPlayState();
-    maybeShowGuestSignUpCta(finalScore);
+
+    // 5. Return directly to the existing Starfall Salvage Sovereign Hangar Hub
+    if (deathTransitionTimer) {
+      clearTimeout(deathTransitionTimer);
+    }
+    deathTransitionTimer = window.setTimeout(() => {
+      deathTransitionTimer = null;
+      state.isFinalizingDeath = false;
+      resetGame();
+      syncShellPlayState();
+      // Notify Hangar frame of completed run
+      const hf = document.getElementById("hangarFrame");
+      if (hf && hf.contentWindow) {
+        try {
+          const targetOrigin = window.location.origin === "null" ? "*" : window.location.origin;
+          hf.contentWindow.postMessage(
+            { type: "starfall_run_completed", score: finalScore, best: bestScore },
+            targetOrigin
+          );
+        } catch {}
+      }
+    }, 1100);
 
     playCountSinceSurvey++;
-    if (playCountSinceSurvey >= SURVEY_PLAY_THRESHOLD && !isDiscoverySurveySilenced()) {
-      window.setTimeout(showSurvey, 1200);
-    }
+    // UX preservation: Do not automatically schedule discovery survey over the Sovereign Hangar Hub after death.
+    // The survey is deferred to intentional player actions (via menu / wave2 api), preserving an unobstructed Hub.
   }
 
   function activeWeaponKind() {
@@ -4978,32 +5369,436 @@
     }
   }
 
-  function spawnBossEntity(mult) {
+  const BOSS_ENCOUNTER_STATE = {
+    SALVAGE: "SALVAGE",
+    WARNING: "WARNING",
+    ENTRY: "ENTRY",
+    COMBAT: "COMBAT",
+    DEFEATED: "DEFEATED",
+    ESCAPED: "ESCAPED",
+    RECOVERY: "RECOVERY"
+  };
+
+  const bossEncounter = {
+    state: BOSS_ENCOUNTER_STATE.SALVAGE,
+    timer: 0,
+    currentBoss: null,
+    nextThreshold: 1200,
+    encounterCount: 0,
+    attackPattern: "aimed_lance",
+    attackPatternIndex: 0,
+    attackTimer: 0,
+    telegraphTimer: 0,
+    isTelegraphing: false,
+    combatDuration: 0,
+    maxCombatDuration: 42.0,
+    warningDuration: 2.4,
+    entryDuration: 2.2,
+    recoveryDuration: 3.0
+  };
+
+  function resetBossEncounter() {
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.SALVAGE;
+    bossEncounter.timer = 0;
+    bossEncounter.currentBoss = null;
+    bossEncounter.nextThreshold = 1200;
+    bossEncounter.attackPattern = "aimed_lance";
+    bossEncounter.attackPatternIndex = 0;
+    bossEncounter.attackTimer = 0;
+    bossEncounter.telegraphTimer = 0;
+    bossEncounter.isTelegraphing = false;
+    bossEncounter.combatDuration = 0;
+    hideBossHealthBar();
+  }
+
+  function spawnBossEntity(mult = 1, hpOverride = null) {
+    if (bossEncounter.currentBoss && objects.includes(bossEncounter.currentBoss)) {
+      return bossEncounter.currentBoss;
+    }
+    const existing = objects.find(o => o.type === "boss");
+    if (existing) {
+      bossEncounter.currentBoss = existing;
+      return existing;
+    }
+
     const spawnZ = (SIM.spawn.spawnZ && SIM.spawn.spawnZ.boss) || -78;
-    const size = randomRange(1.65, 2.15);
+    const size = 2.4;
     const extraHp = mult >= 2 ? Math.max(0, Math.floor((mult - 2) * 2.2)) : 0;
-    const hp = 4 + extraHp;
-    objects.push({
+    const hp = typeof hpOverride === "number" ? hpOverride : (8 + extraHp);
+    const boss = {
       type: "boss",
-      x: randomRange(-3.2, 3.2),
-      y: randomRange(-1.4, 1.0),
+      name: "Sovereign Dreadnought",
+      x: 0,
+      y: 0,
       z: spawnZ,
+      targetZ: -19,
       size,
       radius: size * 0.85,
       rotX: 0,
       rotY: 0,
       rotZ: 0,
-      spinX: randomRange(-0.6, 0.6),
-      spinY: randomRange(-0.8, 0.8),
-      spinZ: randomRange(-0.5, 0.5),
+      spinX: 0.1,
+      spinY: 0.2,
+      spinZ: 0.05,
       hp,
       maxHp: hp,
-      bossShootTimer: randomRange(1.0, 1.9),
       lane: 0,
-      laneTimer: randomRange(2.5, 4.0),
-      targetLane: 0
+      targetLane: 0,
+      laneTimer: 2.5,
+      hitFlashTimer: 0,
+      surgeActive: false,
+      surgeRetreating: false,
+      surgeTimer: 0
+    };
+    objects.push(boss);
+    bossEncounter.currentBoss = boss;
+    showBossHealthBar(boss.name, boss.hp, boss.maxHp);
+    logEvent("boss_spawned", { hp, name: boss.name });
+    return boss;
+  }
+
+  function triggerBossWarning() {
+    if (bossEncounter.state !== BOSS_ENCOUNTER_STATE.SALVAGE || bossEncounter.currentBoss) {
+      return;
+    }
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.WARNING;
+    bossEncounter.timer = bossEncounter.warningDuration;
+    triggerBossAlert("WARNING: DREADNOUGHT APPROACHING", "High-Energy Signature Locked", 2.4);
+    if (navigator.vibrate) navigator.vibrate([80, 60, 80, 60, 160]);
+    logEvent("boss_warning_triggered", { score: Math.floor(state.score) });
+  }
+
+  function triggerBossEntry(hpOverride = null) {
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.ENTRY;
+    bossEncounter.timer = bossEncounter.entryDuration;
+    const boss = spawnBossEntity(state.lastSpeedMultiplier || 1, hpOverride);
+    boss.z = (SIM.spawn.spawnZ && SIM.spawn.spawnZ.boss) || -78;
+    boss.targetZ = -19;
+    showBossHealthBar(boss.name, boss.hp, boss.maxHp);
+    triggerBossAlert("HOSTILE DREADNOUGHT IN RANGE", "Shields Active · Weapons Armed", 2.0);
+  }
+
+  function triggerBossCombat() {
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.COMBAT;
+    bossEncounter.combatDuration = 0;
+    bossEncounter.attackTimer = 1.2;
+    bossEncounter.isTelegraphing = false;
+    bossEncounter.telegraphTimer = 0;
+  }
+
+  function triggerBossDefeated(method = "combat") {
+    if (bossEncounter.state === BOSS_ENCOUNTER_STATE.DEFEATED || bossEncounter.state === BOSS_ENCOUNTER_STATE.RECOVERY) {
+      return;
+    }
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.DEFEATED;
+    bossEncounter.encounterCount++;
+
+    const boss = bossEncounter.currentBoss;
+    const bx = boss ? boss.x : 0;
+    const by = boss ? boss.y : 0;
+    const bz = boss ? boss.z : -19;
+
+    // Meaningful encounter rewards: +500 pts, +5 cores
+    state.score += 500;
+    state.cores += 5;
+    triggerBossAlert("DREADNOUGHT ANNIHILATED!", "+500 PTS · +5 CORES SALVAGED", 2.8);
+
+    // Multi-tier explosion particles
+    spawnSparks(bx, by, bz, [1, 0.4, 0.92, 1], 45);
+    spawnSparks(bx, by, bz, [0.35, 0.95, 1, 1], 35);
+    spawnSparks(bx, by, bz, [1, 0.95, 0.32, 1], 35);
+    if (navigator.vibrate) navigator.vibrate([150, 80, 250, 80, 400]);
+
+    // Drops: 3 crystals + 1 power orb
+    spawnBossDrops(bx, by, bz);
+
+    // Remove boss object
+    if (boss) {
+      const idx = objects.indexOf(boss);
+      if (idx !== -1) {
+        objects.splice(idx, 1);
+      }
+    }
+    bossEncounter.currentBoss = null;
+    hideBossHealthBar();
+    logEvent("boss_destroyed", { score: 500, cores: 5, method });
+
+    // Transition to RECOVERY
+    triggerBossRecovery();
+  }
+
+  function triggerBossEscaped() {
+    if (bossEncounter.state === BOSS_ENCOUNTER_STATE.ESCAPED || bossEncounter.state === BOSS_ENCOUNTER_STATE.RECOVERY) {
+      return;
+    }
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.ESCAPED;
+    triggerBossAlert("HOSTILE DISENGAGED", "Hyperspace Jump Detected", 2.2);
+    logEvent("boss_escaped", { score: Math.floor(state.score) });
+
+    const boss = bossEncounter.currentBoss;
+    if (boss) {
+      spawnSparks(boss.x, boss.y, boss.z, [0.3, 0.6, 1, 0.8], 30);
+      const idx = objects.indexOf(boss);
+      if (idx !== -1) {
+        objects.splice(idx, 1);
+      }
+    }
+    bossEncounter.currentBoss = null;
+    hideBossHealthBar();
+    triggerBossRecovery();
+  }
+
+  function triggerBossRecovery() {
+    bossEncounter.state = BOSS_ENCOUNTER_STATE.RECOVERY;
+    bossEncounter.timer = bossEncounter.recoveryDuration;
+    bossEncounter.nextThreshold = state.score + 2200;
+  }
+
+  function spawnBossDrops(x, y, z) {
+    for (let i = 0; i < 3; i++) {
+      const offsetX = (i - 1) * 1.4;
+      objects.push({
+        type: "crystal",
+        x: x + offsetX,
+        y: y + randomRange(-0.3, 0.3),
+        z: z - i * 2.5,
+        size: 0.65,
+        radius: 0.65 * 0.68,
+        rotX: 0, rotY: 0, rotZ: 0,
+        spinX: 1.2, spinY: 1.5, spinZ: 0.8
+      });
+    }
+    objects.push({
+      type: "powerOrb",
+      x,
+      y: y + 0.4,
+      z: z - 8.0,
+      size: 0.75,
+      radius: 0.75 * 0.72,
+      rotX: 0, rotY: 0, rotZ: 0,
+      spinX: 0.8, spinY: 1.2, spinZ: 0.5
     });
-    logEvent("boss_spawned", { hp });
+  }
+
+  function applyBossDamage(dmg, method = "bullet") {
+    const boss = bossEncounter.currentBoss || objects.find(o => o.type === "boss");
+    if (!boss) return;
+    boss.hp = Math.max(0, (boss.hp || 1) - dmg);
+    updateBossHealthBar(boss.hp, boss.maxHp);
+    boss.hitFlashTimer = 0.16;
+    spawnSparks(boss.x, boss.y, boss.z, [1, 0.95, 0.32, 1], method === "ram-dash" ? 22 : 8);
+    if (boss.hp <= 0) {
+      triggerBossDefeated(method);
+    }
+  }
+
+  const ATTACK_PATTERNS = ["aimed_lance", "spread_barrage", "kinetic_surge"];
+
+  function startBossTelegraph(boss, forcedPattern = null) {
+    const pattern = forcedPattern || ATTACK_PATTERNS[bossEncounter.attackPatternIndex % ATTACK_PATTERNS.length];
+    bossEncounter.attackPatternIndex++;
+    bossEncounter.attackPattern = pattern;
+    bossEncounter.isTelegraphing = true;
+
+    if (pattern === "aimed_lance") {
+      bossEncounter.telegraphTimer = 0.75;
+      triggerFlightEventPill("AIMED LANCE LOCKING", 0.75);
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    } else if (pattern === "spread_barrage") {
+      bossEncounter.telegraphTimer = 0.85;
+      triggerFlightEventPill("SPREAD BARRAGE CHARGING", 0.85);
+      if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
+    } else if (pattern === "kinetic_surge") {
+      bossEncounter.telegraphTimer = 0.90;
+      triggerFlightEventPill("KINETIC SURGE WARNING — DASH TO RAM", 0.90);
+      if (navigator.vibrate) navigator.vibrate([100, 60, 100]);
+    }
+  }
+
+  function executeBossAttack(boss, pattern) {
+    if (!boss || !objects.includes(boss)) return;
+
+    if (pattern === "aimed_lance") {
+      spawnBossBullet(boss);
+    } else if (pattern === "spread_barrage") {
+      spawnBossSpreadBarrage(boss);
+    } else if (pattern === "kinetic_surge") {
+      boss.surgeActive = true;
+      boss.surgeRetreating = false;
+      boss.surgeTimer = 0.85;
+      spawnSparks(boss.x, boss.y, boss.z, [0.8, 0.2, 1, 1], 20);
+    }
+  }
+
+  function spawnBossBullet(boss) {
+    if (sparks.length >= sparksMax) return;
+    const dx = player.x - boss.x;
+    const dy = player.y - boss.y;
+    const dz = player.z - boss.z;
+    const distance = Math.hypot(dx, dy, dz) || 1;
+    const speed = 25;
+    sparks.push({
+      kind: "bullet",
+      team: "boss",
+      pattern: "aimed",
+      x: boss.x,
+      y: boss.y,
+      z: boss.z + 0.4,
+      vx: (dx / distance) * speed,
+      vy: (dy / distance) * speed,
+      vz: (dz / distance) * speed,
+      life: 2.5,
+      maxLife: 2.5,
+      size: 0.30,
+      color: [1, 0.22, 0.38, 1]
+    });
+  }
+
+  function spawnBossSpreadBarrage(boss) {
+    const lanes = [-1, 0, 1];
+    const playerLane = Math.max(-1, Math.min(1, Math.round(player.x / 2.2)));
+    const safeLane = playerLane === 0 ? (Math.random() < 0.5 ? -1 : 1) : 0;
+    const speed = 19;
+
+    for (const lane of lanes) {
+      if (lane === safeLane) continue;
+      if (sparks.length >= sparksMax) break;
+      const targetX = lane * 2.2;
+      const dx = targetX - boss.x;
+      const dy = player.y - boss.y;
+      const dz = player.z - boss.z;
+      const dist = Math.hypot(dx, dy, dz) || 1;
+
+      sparks.push({
+        kind: "bullet",
+        team: "boss",
+        pattern: "spread",
+        lane,
+        x: boss.x + (targetX - boss.x) * 0.15,
+        y: boss.y,
+        z: boss.z + 0.4,
+        vx: (dx / dist) * speed,
+        vy: (dy / dist) * speed,
+        vz: (dz / dist) * speed,
+        life: 2.8,
+        maxLife: 2.8,
+        size: 0.32,
+        color: [1, 0.72, 0.15, 1]
+      });
+    }
+  }
+
+  function updateBossEncounter(dt) {
+    if (state.mode !== "playing") return;
+
+    switch (bossEncounter.state) {
+      case BOSS_ENCOUNTER_STATE.SALVAGE: {
+        const triggerByScore = state.score >= bossEncounter.nextThreshold;
+        const triggerForced = !!state.forceBossSpawn;
+        if ((triggerByScore || triggerForced) && !bossEncounter.currentBoss) {
+          state.forceBossSpawn = false;
+          triggerBossWarning();
+        }
+        break;
+      }
+
+      case BOSS_ENCOUNTER_STATE.WARNING: {
+        bossEncounter.timer -= dt;
+        if (bossEncounter.timer <= 0) {
+          triggerBossEntry();
+        }
+        break;
+      }
+
+      case BOSS_ENCOUNTER_STATE.ENTRY: {
+        bossEncounter.timer -= dt;
+        const boss = bossEncounter.currentBoss;
+        if (boss) {
+          boss.z += (boss.targetZ - boss.z) * Math.min(1, 3.2 * dt);
+          if (boss.z >= -20.5 || bossEncounter.timer <= 0) {
+            boss.z = boss.targetZ;
+            triggerBossCombat();
+          }
+        } else {
+          triggerBossCombat();
+        }
+        break;
+      }
+
+      case BOSS_ENCOUNTER_STATE.COMBAT: {
+        const boss = bossEncounter.currentBoss;
+        if (!boss || !objects.includes(boss)) {
+          if (bossEncounter.state === BOSS_ENCOUNTER_STATE.COMBAT) {
+            triggerBossRecovery();
+          }
+          return;
+        }
+
+        bossEncounter.combatDuration += dt;
+        if (bossEncounter.combatDuration >= bossEncounter.maxCombatDuration) {
+          triggerBossEscaped();
+          return;
+        }
+
+        if (boss.surgeActive) {
+          boss.surgeTimer -= dt;
+          boss.z += (-6.5 - boss.z) * Math.min(1, 5.0 * dt);
+          if (boss.surgeTimer <= 0 || boss.z >= -7.2) {
+            boss.surgeActive = false;
+            boss.surgeRetreating = true;
+          }
+        } else if (boss.surgeRetreating) {
+          boss.z += (-19.0 - boss.z) * Math.min(1, 4.0 * dt);
+          if (Math.abs(boss.z - (-19.0)) < 0.5) {
+            boss.z = -19.0;
+            boss.surgeRetreating = false;
+          }
+        } else {
+          const targetZ = -19.0 + Math.sin(state.time * 1.6) * 1.2;
+          boss.z += (targetZ - boss.z) * Math.min(1, 3.0 * dt);
+
+          boss.laneTimer -= dt;
+          if (boss.laneTimer <= 0) {
+            boss.targetLane = Math.floor(Math.random() * 3) - 1;
+            boss.laneTimer = randomRange(2.2, 4.0);
+          }
+          const targetX = boss.targetLane * 2.2;
+          boss.x += (targetX - boss.x) * Math.min(1, 3.5 * dt);
+          boss.y = Math.sin(state.time * 2.2) * 0.35;
+        }
+
+        if (bossEncounter.isTelegraphing) {
+          bossEncounter.telegraphTimer -= dt;
+          boss.hitFlashTimer = 0.08;
+          if (bossEncounter.telegraphTimer <= 0) {
+            executeBossAttack(boss, bossEncounter.attackPattern);
+            bossEncounter.isTelegraphing = false;
+            bossEncounter.attackTimer = randomRange(1.8, 2.6);
+          }
+        } else {
+          bossEncounter.attackTimer -= dt;
+          if (bossEncounter.attackTimer <= 0) {
+            startBossTelegraph(boss);
+          }
+        }
+        break;
+      }
+
+      case BOSS_ENCOUNTER_STATE.DEFEATED:
+      case BOSS_ENCOUNTER_STATE.ESCAPED: {
+        triggerBossRecovery();
+        break;
+      }
+
+      case BOSS_ENCOUNTER_STATE.RECOVERY: {
+        bossEncounter.timer -= dt;
+        if (bossEncounter.timer <= 0) {
+          bossEncounter.state = BOSS_ENCOUNTER_STATE.SALVAGE;
+          triggerFlightEventPill("Flight corridor clear", 1.2);
+        }
+        break;
+      }
+    }
   }
 
   function spawnLaneGate() {
@@ -5021,6 +5816,11 @@
   }
 
   function spawnObject() {
+    // Clutter suppression: Throttle debris spawning outside of SALVAGE mode
+    if (bossEncounter.state !== BOSS_ENCOUNTER_STATE.SALVAGE) {
+      return;
+    }
+
     const roll = Math.random();
     const dangerActive = !!state.dangerZoneActive;
     const mult = state.lastSpeedMultiplier || 1;
@@ -5028,13 +5828,13 @@
 
     if (state.forceBossSpawn && dangerActive) {
       state.forceBossSpawn = false;
-      spawnBossEntity(mult);
+      triggerBossWarning();
       return;
     }
 
     const bossChance = bossSpawnChance(mult, dangerActive);
-    if (dangerActive && roll < bossChance) {
-      spawnBossEntity(mult);
+    if (dangerActive && roll < bossChance && !bossEncounter.currentBoss) {
+      triggerBossWarning();
       return;
     }
 
@@ -5196,29 +5996,6 @@
       });
     });
     logEvent("player_shoot", { triad: triadShape, prism: prismBuff, weapon, power: powerLevel });
-  }
-
-  function spawnBossBullet(boss) {
-    if (sparks.length >= sparksMax) return;
-    const dx = player.x - boss.x;
-    const dy = player.y - boss.y;
-    const dz = player.z - boss.z;
-    const distance = Math.hypot(dx, dy, dz) || 1;
-    const speed = 26;
-    sparks.push({
-      kind: "bullet",
-      team: "boss",
-      x: boss.x,
-      y: boss.y,
-      z: boss.z + 0.4,
-      vx: (dx / distance) * speed,
-      vy: (dy / distance) * speed,
-      vz: (dz / distance) * speed,
-      life: 2.4,
-      maxLife: 2.4,
-      size: 0.26,
-      color: [1, 0.32, 0.46, 1]
-    });
   }
 
   function spawnSparks(x, y, z, color, count = 14) {
@@ -5611,31 +6388,23 @@
       player.trailTimer = player.dash > 0 ? 0.026 : 0.055;
     }
 
+    // Update Boss Encounter Lifecycle State Machine
+    updateBossEncounter(dt);
+
     for (let i = objects.length - 1; i >= 0; i--) {
       const object = objects[i];
       const prevObjZ = object.z;
-      // Treadmill: ship Z stays fixed; scrap streams toward the camera (+Z), then pools out past z>8.
-      object.z += state.speed * dt * (object.type === "boss" ? 0.55 : 1);
-      object.rotX += object.spinX * dt;
-      object.rotY += object.spinY * dt;
-      object.rotZ += object.spinZ * dt;
+
       if (object.type === "boss") {
-        // Boss Lane Shifting logic (Kinetic Tracking)
-        object.laneTimer = (object.laneTimer || 3) - dt;
-        if (object.laneTimer <= 0) {
-          object.targetLane = Math.floor(Math.random() * 3) - 1; // Shift to random lane
-          object.laneTimer = randomRange(2.0, 4.5);
-        }
-
-        const bossLerp = 0.05;
-        object.lane = (object.lane || 0) + (object.targetLane - (object.lane || 0)) * bossLerp;
-        object.x = (object.lane * 2.2) + Math.sin(state.time * 2) * 0.5; // Sine weave + lane shift
-
-        object.bossShootTimer = (object.bossShootTimer || 1.5) - dt;
-        if (object.bossShootTimer <= 0 && object.z > -50 && object.z < player.z - 4) {
-          spawnBossBullet(object);
-          object.bossShootTimer = randomRange(1.4, 2.4);
-        }
+        object.rotX += object.spinX * dt;
+        object.rotY += object.spinY * dt;
+        object.rotZ += object.spinZ * dt;
+      } else {
+        // Treadmill: ship Z stays fixed; scrap streams toward the camera (+Z), then pools out past z>8.
+        object.z += state.speed * dt * 1;
+        object.rotX += object.spinX * dt;
+        object.rotY += object.spinY * dt;
+        object.rotZ += object.spinZ * dt;
       }
 
       // Lane Gate logic
@@ -5684,15 +6453,8 @@
         if (isHit) {
           if (object.type === "boss") {
             if (player.dash > 0) {
-              object.hp = (object.hp || 1) - 1;
-              spawnSparks(player.x, player.y, player.z, [1, 0.95, 0.32, 1], 12);
-              if (object.hp <= 0) {
-                state.score += 320;
-                triggerBossAlert("BOSS DOWN!", "Sector Cleared", 2.2);
-                spawnSparks(object.x, object.y, object.z, [1, 0.4, 0.92, 1], 30);
-                removeObject = true;
-                logEvent("boss_destroyed", { method: "ram-dash" });
-              }
+              applyBossDamage(3, "ram-dash");
+              triggerFlightEventPill("CRITICAL RAM-DASH!", 0.9);
             } else {
               if (!absorbHullHit()) {
                 state.hull -= 1;
@@ -5755,7 +6517,7 @@
         }
       }
 
-      if (!removeObject && object.z > 8) {
+      if (!removeObject && object.type !== "boss" && object.z > 8) {
         removeObject = true;
       }
       if (removeObject) {
@@ -5813,23 +6575,14 @@
             break;
           }
           if (obj.type === "boss") {
-            obj.hp = (obj.hp || 1) - bulletDamage;
-            spawnSparks(spark.x, spark.y, spark.z, [1, 0.95, 0.32, 1], 8);
-            if (obj.hp <= 0) {
-              state.score += 320;
-              triggerBossAlert("BOSS DOWN!", "Sector Cleared", 2.2);
-              spawnSparks(obj.x, obj.y, obj.z, [1, 0.4, 0.92, 1], 30);
-              objects[j] = objects[objects.length - 1];
-              objects.pop();
-              logEvent("boss_destroyed", { score: 320 });
-            }
+            applyBossDamage(bulletDamage, "bullet");
             removeSpark = !spark.pierce;
             break;
           }
         }
       } else if (spark.kind === "bullet" && spark.team === "boss") {
-        if (Math.abs(player.z - spark.z) < 1.0 &&
-            Math.hypot(player.x - spark.x, player.y - spark.y) < player.radius + 0.32) {
+        if (Math.abs(player.z - spark.z) < 1.2 &&
+            Math.hypot(player.x - spark.x, player.y - spark.y) < player.radius + 0.35) {
           if (player.dash <= 0) {
             if (!absorbHullHit()) {
               state.hull -= 1;
@@ -5845,8 +6598,12 @@
                 attemptGameOver();
               }
             }
-            removeSpark = true;
+          } else {
+            // Deflect boss projectile during dash
+            triggerFlightEventPill("Bullet deflected", 0.5);
+            spawnSparks(spark.x, spark.y, spark.z, [0.3, 0.85, 1, 1], 12);
           }
+          removeSpark = true;
         }
       }
       if (removeSpark || spark.life <= 0) {
@@ -8313,11 +9070,225 @@
         },
         triggerFallbackUI(title, lead, detail) {
           showWebGLFallback(title, lead, detail);
+        },
+
+        // --- Wave 2 Stage 2 Test & Lifecycle Hooks ---
+        getBossEncounter() {
+          return {
+            state: bossEncounter.state,
+            timer: Number(bossEncounter.timer.toFixed(2)),
+            currentBoss: bossEncounter.currentBoss ? {
+              hp: bossEncounter.currentBoss.hp,
+              maxHp: bossEncounter.currentBoss.maxHp,
+              x: Number(bossEncounter.currentBoss.x.toFixed(2)),
+              y: Number(bossEncounter.currentBoss.y.toFixed(2)),
+              z: Number(bossEncounter.currentBoss.z.toFixed(2)),
+              surgeActive: !!bossEncounter.currentBoss.surgeActive,
+              surgeRetreating: !!bossEncounter.currentBoss.surgeRetreating
+            } : null,
+            attackPattern: bossEncounter.attackPattern,
+            isTelegraphing: bossEncounter.isTelegraphing,
+            encounterCount: bossEncounter.encounterCount,
+            nextThreshold: bossEncounter.nextThreshold
+          };
+        },
+        triggerBossWarning() {
+          triggerBossWarning();
+          return bossEncounter.state;
+        },
+        triggerBossEntry(hp = 8) {
+          triggerBossEntry(hp);
+          return {
+            state: bossEncounter.state,
+            hp: bossEncounter.currentBoss ? bossEncounter.currentBoss.hp : null
+          };
+        },
+        triggerBossCombat() {
+          triggerBossCombat();
+          return bossEncounter.state;
+        },
+        triggerBossDefeated(method = "combat") {
+          triggerBossDefeated(method);
+          return {
+            state: bossEncounter.state,
+            score: Math.floor(state.score),
+            cores: state.cores
+          };
+        },
+        triggerBossEscaped() {
+          triggerBossEscaped();
+          return bossEncounter.state;
+        },
+        setBossHp(hp) {
+          if (bossEncounter.currentBoss) {
+            bossEncounter.currentBoss.hp = hp;
+            updateBossHealthBar(hp, bossEncounter.currentBoss.maxHp);
+          }
+          return bossEncounter.currentBoss ? bossEncounter.currentBoss.hp : 0;
+        },
+        forceBossAttack(pattern = "aimed_lance") {
+          if (bossEncounter.currentBoss) {
+            startBossTelegraph(bossEncounter.currentBoss, pattern);
+          }
+          return {
+            pattern: bossEncounter.attackPattern,
+            isTelegraphing: bossEncounter.isTelegraphing,
+            timer: bossEncounter.telegraphTimer
+          };
+        },
+        executeBossAttack(pattern = null) {
+          if (bossEncounter.currentBoss) {
+            executeBossAttack(bossEncounter.currentBoss, pattern || bossEncounter.attackPattern);
+          }
+        },
+        getRescueState() {
+          return {
+            active: rescueState.active,
+            variant: rescueState.variant,
+            timer: Number(rescueState.timer.toFixed(2)),
+            coreSurge: { ...rescueState.coreSurge },
+            reactionLock: { ...rescueState.reactionLock },
+            salvageGlide: { ...rescueState.salvageGlide },
+            runCounter: rescueRunCounter,
+            reviveUsedThisRun: state.reviveUsedThisRun,
+            hull: state.hull
+          };
+        },
+        resetReviveUsed() {
+          if (deathTransitionTimer) {
+            clearTimeout(deathTransitionTimer);
+            deathTransitionTimer = null;
+          }
+          state.isFinalizingDeath = false;
+          state.reviveUsedThisRun = false;
+          rescueRunCounter = 0;
+          return state.reviveUsedThisRun;
+        },
+        setRescueVariant(variant) {
+          forcedRescueVariant = variant;
+          return forcedRescueVariant;
+        },
+        triggerRescue(variant = null) {
+          if (variant) forcedRescueVariant = variant;
+          startReviveMiniGame();
+          return {
+            variant: rescueState.variant,
+            active: rescueState.active,
+            timer: rescueState.timer
+          };
+        },
+        completeRescue(success = true) {
+          completeRevive(success);
+          return {
+            mode: state.mode,
+            hull: state.hull,
+            reviveUsedThisRun: state.reviveUsedThisRun
+          };
+        },
+        tapCoreSurge() {
+          const btn = document.getElementById("coreSurgeTapBtn");
+          if (btn) {
+            btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+            btn.click();
+          }
+          return { hits: rescueState.coreSurge.hits, need: rescueState.coreSurge.need };
+        },
+        tapReactionLockNode() {
+          const btn = document.getElementById("reactionActiveNode");
+          if (btn) {
+            btn.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true }));
+            btn.click();
+          }
+          return { step: rescueState.reactionLock.step, total: rescueState.reactionLock.total };
+        },
+        setGlideDroneX(pct) {
+          rescueState.salvageGlide.droneX = pct;
+          const el = document.getElementById("glideDrone");
+          if (el) el.style.left = `${pct}%`;
+        },
+        stepRescue(dt = 0.016) {
+          tickRevive(dt);
+          return {
+            active: rescueState.active,
+            mode: state.mode,
+            timer: Number(rescueState.timer.toFixed(3)),
+            variant: rescueState.variant,
+            salvageGlide: {
+              courseTime: Number(rescueState.salvageGlide.courseTime.toFixed(3)),
+              droneX: rescueState.salvageGlide.droneX,
+              obstacles: rescueState.salvageGlide.obstacles.map(o => ({
+                id: o.id,
+                y: Number(o.y.toFixed(2)),
+                passed: o.passed
+              }))
+            }
+          };
+        },
+        simulateVisibilityChange(hidden) {
+          if (hidden) {
+            if (state.mode === "playing" || state.mode === "relaunch" || state.mode === "revive") {
+              suspendedModeBeforeHidden = state.mode;
+              wasPlayingBeforeHidden = state.mode === "playing" || state.mode === "relaunch";
+              if (state.mode === "revive" && hud.reviveModal) {
+                hud.reviveModal.classList.add("is-hidden");
+              }
+              if (state.mode === "relaunch" && hud.relaunchHud) {
+                hud.relaunchHud.classList.add("is-hidden");
+              }
+              state.mode = "paused";
+              if (hud.pauseButton) {
+                hud.pauseButton.textContent = "Resume";
+              }
+            }
+          } else {
+            state.lastTime = 0;
+          }
+          return { mode: state.mode, suspendedMode: suspendedModeBeforeHidden };
+        },
+        resumeGame() {
+          resumeFromPause();
+          return {
+            mode: state.mode,
+            suspendedMode: suspendedModeBeforeHidden,
+            rescueActive: rescueState.active,
+            rescueModalVisible: hud.reviveModal ? !hud.reviveModal.classList.contains("is-hidden") : false
+          };
+        },
+        pauseGame() {
+          togglePause();
+          return {
+            mode: state.mode,
+            suspendedMode: suspendedModeBeforeHidden,
+            rescueActive: rescueState.active
+          };
+        },
+        getSuspendedMode() {
+          return suspendedModeBeforeHidden;
+        },
+        simulateFinalDeath() {
+          state.reviveUsedThisRun = true;
+          state.hull = 0;
+          handleGameOver();
+          return { mode: state.mode, isFinalizingDeath: state.isFinalizingDeath };
+        },
+        isGameOverSectionPresent() {
+          return !!document.getElementById("gameOverSovereign");
+        },
+        isBossHealthBarVisible() {
+          return hud.bossHealthCard && !hud.bossHealthCard.classList.contains("is-hidden");
+        },
+        openSurvey() {
+          showSurvey();
+          return { visible: hud.surveyModal ? !hud.surveyModal.classList.contains("is-hidden") : false };
+        },
+        isSurveyVisible() {
+          return hud.surveyModal ? !hud.surveyModal.classList.contains("is-hidden") : false;
         }
       });
     }
 
     window.__starfallWave1 = wave1Api;
+    window.__starfallWave2 = wave1Api;
   }
 
 

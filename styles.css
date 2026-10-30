@@ -2777,68 +2777,6 @@ select:focus {
  background: rgba(59, 227, 255, 0.12);
 }
 
-.game-over-sovereign {
- position: fixed;
- inset: 0;
- z-index: 40;
- display: grid;
- place-items: center;
- padding: 24px 18px calc(110px + env(safe-area-inset-bottom, 0px));
- background: rgba(3, 5, 10, 0.78);
- backdrop-filter: blur(14px);
- -webkit-backdrop-filter: blur(14px);
- pointer-events: auto;
-}
-
-.game-over-sovereign[hidden] {
- display: none !important;
-}
-
-.game-over-sovereign-inner {
- width: min(440px, 100%);
- text-align: center;
- padding: 28px 22px;
- border-radius: 14px;
- border: 1px solid rgba(255, 255, 255, 0.12);
- background: var(--panel-strong);
- box-shadow: 0 28px 72px rgba(0, 0, 0, 0.55);
-}
-
-.game-over-sovereign-inner h2 {
- margin: 0 0 12px;
- font-size: clamp(1.35rem, 4vw, 1.85rem);
- letter-spacing: 0.04em;
-}
-
-.game-over-scores {
- margin: 0 0 22px;
- color: var(--muted);
- font-size: 0.95rem;
-}
-
-.game-over-actions {
- display: flex;
- flex-direction: column;
- gap: 10px;
-}
-
-.game-over-actions button.is-primary {
- min-height: 48px;
- font-size: 1rem;
-}
-
-.game-over-actions button.is-secondary,
-.game-over-actions button.is-tertiary {
- min-height: 42px;
- font-size: 0.9rem;
-}
-
-.game-over-actions button.is-tertiary {
- background: transparent;
- border-color: rgba(255, 255, 255, 0.1);
- color: var(--muted);
-}
-
 .shell.leaderboard-overlay::before {
  content: "";
  position: fixed;
@@ -3022,41 +2960,6 @@ select:focus {
   --cyan: #fbbf24;
   --magenta: #ea580c;
   --border-glow-premium: linear-gradient(to bottom right, #fbbf24, #ea580c);
-}
-
-.game-over-sovereign-inner h2 {
- margin: 0 0 12px;
- font-size: clamp(1.35rem, 4vw, 1.85rem);
- letter-spacing: 0.04em;
-}
-
-.game-over-scores {
- margin: 0 0 22px;
- color: var(--muted);
- font-size: 0.95rem;
-}
-
-.game-over-actions {
- display: flex;
- flex-direction: column;
- gap: 10px;
-}
-
-.game-over-actions button.is-primary {
- min-height: 48px;
- font-size: 1rem;
-}
-
-.game-over-actions button.is-secondary,
-.game-over-actions button.is-tertiary {
- min-height: 42px;
- font-size: 0.9rem;
-}
-
-.game-over-actions button.is-tertiary {
- background: transparent;
- border-color: rgba(255, 255, 255, 0.1);
- color: var(--muted);
 }
 
 .shell.leaderboard-overlay::before {
@@ -3779,4 +3682,258 @@ select:focus {
 .pmh-render-tier[data-tier="high"] {
   color: #f472b6;
   border-color: rgba(244, 114, 182, 0.45);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   WAVE 2 STAGE 2 — BOSS COMBAT & RESCUE MINIGAME EXPANSIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Boss Combat Health Status */
+.boss-health-card {
+  position: fixed;
+  top: max(60px, calc(env(safe-area-inset-top, 0px) + 52px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 34;
+  width: min(440px, calc(100vw - 32px));
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(14, 20, 32, 0.94);
+  border: 1px solid rgba(255, 60, 110, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55), 0 0 16px rgba(255, 60, 110, 0.25);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.boss-health-card.is-hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-12px);
+  display: none !important;
+}
+
+.boss-health-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.boss-health-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+}
+
+.boss-health-tag {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 60, 110, 0.25);
+  border: 1px solid rgba(255, 60, 110, 0.6);
+  color: #ff3c6e;
+  font-weight: 800;
+  font-size: 0.68rem;
+}
+
+.boss-health-name {
+  color: #f0f6fc;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.boss-health-val {
+  color: #ff7597;
+  font-weight: 800;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+.boss-health-track {
+  width: 100%;
+  height: 7px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.boss-health-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #ff3c6e, #ff8da6);
+  border-radius: 3px;
+  transition: width 150ms ease-out;
+  box-shadow: 0 0 8px rgba(255, 60, 110, 0.65);
+}
+
+/* Rescue Minigame: Core Surge (Timing Challenge) */
+.core-surge-wrap {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.core-surge-gauge {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  height: 38px;
+  border-radius: 19px;
+  background: rgba(10, 18, 30, 0.85);
+  border: 1.5px solid rgba(59, 227, 255, 0.4);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 16px rgba(59, 227, 255, 0.15);
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.core-surge-target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 40%;
+  width: 20%;
+  background: rgba(46, 213, 115, 0.35);
+  border-left: 2px solid #2ed573;
+  border-right: 2px solid #2ed573;
+  box-shadow: 0 0 14px rgba(46, 213, 115, 0.45);
+}
+
+.core-surge-needle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: #ffffff;
+  box-shadow: 0 0 12px #3be3ff, 0 0 20px #3be3ff;
+  border-radius: 3px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.core-surge-tap-btn {
+  width: 100%;
+  max-width: 260px;
+  padding: 14px 20px;
+  border-radius: 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #03131e;
+  background: var(--cyan);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(59, 227, 255, 0.45);
+  touch-action: manipulation;
+}
+
+.core-surge-tap-btn:active {
+  transform: scale(0.97);
+}
+
+/* Rescue Minigame: Reaction Lock (Target Acquisition) */
+.reaction-lock-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+}
+
+.reaction-node {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 2px solid #3be3ff;
+  background: radial-gradient(circle at 40% 35%, #ffffff, #3be3ff 45%, #0e2038 100%);
+  box-shadow: 0 0 24px rgba(59, 227, 255, 0.7);
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: #03131e;
+  font-size: 1.1rem;
+  touch-action: manipulation;
+}
+
+.reaction-ring-svg {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.reaction-ring-circle {
+  fill: none;
+  stroke: #ff9f43;
+  stroke-width: 3;
+  stroke-dasharray: 251;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 100ms linear;
+}
+
+/* Rescue Minigame: Salvage Glide (Emergency Obstacle Course) */
+.salvage-glide-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(8, 14, 26, 0.95), rgba(4, 8, 16, 0.98));
+  border-radius: 8px;
+  touch-action: none;
+}
+
+.glide-lane-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.glide-drone {
+  position: absolute;
+  bottom: 16px;
+  width: 36px;
+  height: 28px;
+  border-radius: 6px;
+  background: #3be3ff;
+  box-shadow: 0 0 14px #3be3ff, 0 4px 10px rgba(0, 0, 0, 0.6);
+  transform: translateX(-50%);
+  pointer-events: none;
+  transition: left 60ms linear;
+}
+
+.glide-drone::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 6px;
+  background: #ff9f43;
+  border-radius: 3px;
+  box-shadow: 0 0 8px #ff9f43;
+}
+
+.glide-hazard {
+  position: absolute;
+  width: 32px;
+  height: 26px;
+  border-radius: 4px;
+  background: #ff4757;
+  border: 1px solid #ff6b81;
+  box-shadow: 0 0 12px rgba(255, 71, 87, 0.6);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
